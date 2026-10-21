@@ -25,11 +25,20 @@ impl Kind {
 
 /// Converte il file `rel` (relativo a `src`) scrivendo i risultati sotto `dst`.
 /// I file di tipo non supportato non vengono elaborati né copiati (REQ-019).
-pub fn convert(_src: &Path, _dst: &Path, rel: &Path) -> Result<Outcome, String> {
+pub fn convert(src: &Path, dst: &Path, rel: &Path) -> Result<Outcome, String> {
     match Kind::of(rel) {
         None => Ok(Outcome::skipped(SkipReason::Unsupported)),
+        Some(Kind::Spreadsheet) => crate::excel::convert(src, dst, rel),
         Some(_) => Ok(Outcome::default()),
     }
+}
+
+/// Base dei nomi generati: nome del file seguito dall'estensione in minuscolo
+/// (es. `report.PDF` → `report_pdf`).
+pub fn base_name(rel: &Path) -> String {
+    let stem = rel.file_stem().unwrap_or_default().to_string_lossy();
+    let ext = rel.extension().unwrap_or_default().to_string_lossy().to_ascii_lowercase();
+    format!("{stem}_{ext}")
 }
 
 #[cfg(test)]
