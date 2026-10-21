@@ -42,3 +42,4 @@
 - REQ-008 implementato — doc-ripper è la radice del proprio workspace Cargo, senza path dependency (`doc-ripper/Cargo.toml`)
 - REQ-009 implementato — Flag --src e --dst obbligatori; errore se l'origine non è una cartella (`doc-ripper/Cargo.lock`, `doc-ripper/Cargo.toml`, `doc-ripper/src/main.rs`, `doc-ripper/tests/cli.rs`)
 - REQ-017 implementato — Riepilogo di file convertiti, saltati con motivo e falliti con errore (`doc-ripper/src/main.rs`, `doc-ripper/src/report.rs`, `doc-ripper/tests/cli.rs`)
+- REQ-018 implementato — Gli errori di conversione non interrompono l'elaborazione; codice di uscita 1 se ci sono fallimenti (`doc-ripper/src/main.rs`, `doc-ripper/src/run.rs`)

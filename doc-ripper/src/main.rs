@@ -1,11 +1,10 @@
 mod report;
+mod run;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::Parser;
-
-use report::Report;
 
 /// Converte i documenti di una cartella in Markdown e CSV.
 #[derive(Parser)]
@@ -26,7 +25,7 @@ fn main() -> ExitCode {
         return ExitCode::from(2);
     }
     let _ = args.dst;
-    let report = Report::default();
+    let report = run::process(Vec::new(), |_| Ok(run::Outcome::default()));
     print!("{report}");
-    ExitCode::SUCCESS
+    ExitCode::from(run::exit_code(&report))
 }
