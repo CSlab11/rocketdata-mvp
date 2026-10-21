@@ -3,4 +3,7 @@ name = "doc-ripper"
 version = "0.1.0"
 edition = "2024"
 
+# Workspace a sé: doc-ripper non entra in workspace di altre cartelle (REQ-008).
+[workspace]
+
 [dependencies]

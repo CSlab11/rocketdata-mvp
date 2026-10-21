@@ -39,3 +39,4 @@
 - REQ-036 richiesto — gui: accesso solo locale
 - REQ-037 richiesto — gui: script di avvio e arresto
 - REQ-007 implementato — Progetto Cargo autonomo di doc-ripper (`doc-ripper/.gitignore`, `doc-ripper/Cargo.lock`, `doc-ripper/Cargo.toml`, `doc-ripper/src/main.rs`)
+- REQ-008 implementato — doc-ripper è la radice del proprio workspace Cargo, senza path dependency (`doc-ripper/Cargo.toml`)
