@@ -1,0 +1,24 @@
+# Requisiti e tracciabilità — doc-ripper
+
+Requisiti del tool `doc-ripper`. I requisiti di progetto e la tabella dei bug sono in [`../REQUIREMENTS.md`](../REQUIREMENTS.md); gli ID `REQ-NNN` sono unici in tutto il repository.
+
+## Requisiti
+
+| ID | Requisito | Stato | File impattati |
+|----|-----------|-------|----------------|
+| REQ-007 | `doc-ripper` deve essere un progetto Cargo autonomo con il proprio `Cargo.toml` in `doc-ripper/` (da REQ-001, REQ-003). | aperto | — |
+| REQ-008 | `doc-ripper` non deve dipendere da codice, crate, configurazioni o file di build di altri tool: niente workspace Cargo condiviso, niente path dependency verso cartelle esterne a `doc-ripper/` (da REQ-005). | aperto | — |
+| REQ-009 | `doc-ripper` deve ricevere da riga di comando la cartella di origine con il flag `--src <origine>` e la cartella di destinazione con il flag `--dst <destinazione>`. | aperto | — |
+| REQ-010 | `doc-ripper` deve convertire ogni file `.pdf` della cartella di origine in un file Markdown nella destinazione, chiamato `<nome>_pdf.md` (es. `report.pdf` → `report_pdf.md`), riproducendo titoli, paragrafi, elenchi e tabelle; le immagini sono gestite secondo REQ-020. | aperto | — |
+| REQ-011 | `doc-ripper` deve convertire ogni file `.docx` della cartella di origine in un file Markdown nella destinazione, chiamato `<nome>_docx.md` (es. `report.docx` → `report_docx.md`), riproducendo titoli, paragrafi, elenchi e tabelle; le immagini sono gestite secondo REQ-020. | aperto | — |
+| REQ-012 | `doc-ripper` deve convertire ogni foglio di calcolo `.xlsx`, `.xls` e `.ods` della cartella di origine in un file `.csv` per ciascun foglio (tab), anche quando il foglio è uno solo, chiamato `<nome>_<estensione>_<foglio>.csv` (es. `vendite.xlsx`, foglio `Gennaio` → `vendite_xlsx_Gennaio.csv`), sostituendo con `_` i caratteri del nome del foglio non validi in un nome di file; i fogli nascosti vengono esportati, i fogli vuoti vengono saltati e segnalati nel riepilogo (REQ-017). | aperto | — |
+| REQ-013 | `doc-ripper` non deve eseguire OCR: un documento da cui non si estrae alcun testo è considerato scansionato, non viene convertito e viene segnalato nel riepilogo (REQ-017). | aperto | — |
+| REQ-014 | Ogni file `.md` generato da `doc-ripper` deve contenere in testa il link al file originale come URL assoluto `file://` (es. `file:///C:/dati/report.pdf`), con i caratteri speciali codificati (es. spazio → `%20`) in modo che il link sia navigabile; per i `.csv` il link si trova nell'indice (REQ-022). | aperto | — |
+| REQ-015 | `doc-ripper` deve elaborare ricorsivamente le sottocartelle della cartella di origine, riproducendo nella destinazione la stessa struttura di cartelle. | aperto | — |
+| REQ-016 | Se nella destinazione esiste già un file con il nome di un file da generare, `doc-ripper` deve sovrascriverlo. | aperto | — |
+| REQ-017 | Al termine `doc-ripper` deve mostrare un riepilogo con i file convertiti, i file saltati con il motivo (non supportato, scansionato, foglio vuoto) e i file la cui conversione è fallita con il relativo errore. | aperto | — |
+| REQ-018 | Se la conversione di un file fallisce, `doc-ripper` deve proseguire con i file successivi e, se almeno una conversione è fallita, terminare con codice di uscita diverso da 0. | aperto | — |
+| REQ-019 | `doc-ripper` non deve elaborare né copiare i file diversi da `.pdf`, `.docx`, `.xlsx`, `.xls` e `.ods`, e deve segnalarli nel riepilogo (REQ-017) come non supportati. | aperto | — |
+| REQ-020 | `doc-ripper` deve estrarre le immagini contenute in `.pdf` e `.docx` in una cartella accanto al `.md` chiamata `<nome>_<estensione>_img/` (es. `report_pdf_img/`) e richiamarle dal `.md` con link relativi nella posizione in cui compaiono nel documento. | aperto | — |
+| REQ-021 | I `.csv` generati da `doc-ripper` devono rispettare RFC 4180 (separatore virgola, UTF-8 senza BOM) e contenere valori grezzi: il risultato calcolato delle formule, le date in ISO 8601 (es. `2026-10-21`), i numeri con il punto decimale e senza separatore delle migliaia. | aperto | — |
+| REQ-022 | `doc-ripper` deve generare un file `index.md` nella radice della destinazione che elenca ogni file generato (`.md` e `.csv`) con un link relativo al file generato e il link `file://` al file originale, codificato come in REQ-014. | aperto | — |

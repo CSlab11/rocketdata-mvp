@@ -1,0 +1,40 @@
+# Changelog
+
+## 2026-10-21
+- REQ-001 richiesto — Linguaggio Rust
+- REQ-002 richiesto — Architettura a tool
+- REQ-003 richiesto — Cartella per tool
+- REQ-004 richiesto — Tool doc-ripper
+- REQ-005 richiesto — Isolamento dei tool
+- REQ-006 richiesto — Tool gui
+- REQ-007 richiesto — doc-ripper: progetto Rust autonomo
+- REQ-008 richiesto — doc-ripper: nessuna dipendenza da altri tool
+- REQ-009 richiesto — doc-ripper: cartelle di origine e destinazione (`--src`, `--dst`)
+- REQ-010 richiesto — doc-ripper: conversione PDF → Markdown
+- REQ-011 richiesto — doc-ripper: conversione DOCX → Markdown
+- REQ-012 richiesto — doc-ripper: conversione Excel → CSV, un file per foglio
+- REQ-013 richiesto — doc-ripper: documenti scansionati non supportati
+- REQ-014 richiesto — doc-ripper: link navigabile al file originale
+- REQ-015 richiesto — doc-ripper: elaborazione delle sottocartelle
+- REQ-016 richiesto — doc-ripper: sovrascrittura dei file esistenti
+- REQ-017 richiesto — doc-ripper: riepilogo di fine esecuzione
+- REQ-018 richiesto — doc-ripper: gestione degli errori di conversione
+- REQ-019 richiesto — doc-ripper: file non supportati
+- REQ-020 richiesto — doc-ripper: estrazione delle immagini
+- REQ-021 richiesto — doc-ripper: formato dei CSV
+- REQ-022 richiesto — doc-ripper: indice dei file generati
+- REQ-023 richiesto — gui: progetto Rust autonomo
+- REQ-024 richiesto — gui: nessuna dipendenza da altri tool
+- REQ-025 richiesto — gui: piattaforma Windows
+- REQ-026 richiesto — gui: server web locale aperto nel browser
+- REQ-027 richiesto — gui: interfaccia multifunzione
+- REQ-028 richiesto — gui: avvio di doc-ripper come processo esterno
+- REQ-029 richiesto — gui: posizione dell'eseguibile di doc-ripper
+- REQ-030 richiesto — gui: selezione delle cartelle
+- REQ-031 richiesto — gui: avanzamento in tempo reale
+- REQ-032 richiesto — gui: riepilogo finale
+- REQ-033 richiesto — gui: apertura dei risultati
+- REQ-034 richiesto — gui: esecuzione annullabile
+- REQ-035 richiesto — gui: memoria delle ultime cartelle
+- REQ-036 richiesto — gui: accesso solo locale
+- REQ-037 richiesto — gui: script di avvio e arresto
