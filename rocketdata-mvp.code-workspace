@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"name": "rocketdata-mvp",
+			"path": "."
+		}
+	],
+	"settings": {
+		"workbench.colorTheme": "Light Modern",
+		"window.autoDetectColorScheme": false
+	}
+}
