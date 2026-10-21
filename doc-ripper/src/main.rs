@@ -1,4 +1,5 @@
 mod convert;
+mod output;
 mod report;
 mod run;
 mod walk;
