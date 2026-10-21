@@ -44,3 +44,4 @@
 - REQ-017 implementato — Riepilogo di file convertiti, saltati con motivo e falliti con errore (`doc-ripper/src/main.rs`, `doc-ripper/src/report.rs`, `doc-ripper/tests/cli.rs`)
 - REQ-018 implementato — Gli errori di conversione non interrompono l'elaborazione; codice di uscita 1 se ci sono fallimenti (`doc-ripper/src/main.rs`, `doc-ripper/src/run.rs`)
 - REQ-015 implementato — Scansione ricorsiva dell'origine e struttura delle cartelle replicata nella destinazione (`doc-ripper/Cargo.lock`, `doc-ripper/Cargo.toml`, `doc-ripper/src/main.rs`, `doc-ripper/src/walk.rs`, `doc-ripper/tests/cli.rs`)
+- REQ-019 implementato — I file di tipo non supportato vengono segnalati nel riepilogo e non copiati (`doc-ripper/src/convert.rs`, `doc-ripper/src/main.rs`, `doc-ripper/tests/cli.rs`)

@@ -38,6 +38,23 @@ fn replica_le_sottocartelle_nella_destinazione() {
 }
 
 #[test]
+fn segnala_i_file_non_supportati_senza_copiarli() {
+    let src = tempfile::tempdir().unwrap();
+    let dst = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(src.path().join("a")).unwrap();
+    std::fs::write(src.path().join("a/note.txt"), "ciao").unwrap();
+    std::fs::write(src.path().join("vecchio.doc"), "").unwrap();
+    let out = run(&["--src", src.path().to_str().unwrap(), "--dst", dst.path().to_str().unwrap()]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(out.status.success(), "{stdout}");
+    assert!(stdout.contains("Saltati: 2"), "{stdout}");
+    assert!(stdout.contains("note.txt - non supportato"), "{stdout}");
+    assert!(stdout.contains("vecchio.doc - non supportato"), "{stdout}");
+    assert!(!dst.path().join("a/note.txt").exists());
+    assert!(!dst.path().join("vecchio.doc").exists());
+}
+
+#[test]
 fn src_e_dst_sono_obbligatori() {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path().to_str().unwrap();

@@ -1,3 +1,4 @@
+mod convert;
 mod report;
 mod run;
 mod walk;
@@ -35,12 +36,14 @@ fn main() -> ExitCode {
     };
 
     let tree = walk::scan(&src, &dst);
-    let mut report = run::process(tree.files, |_| Ok(run::Outcome::default()));
+    let mut failed_dirs = Vec::new();
     for dir in &tree.dirs {
         if let Err(error) = fs::create_dir_all(dst.join(dir)) {
-            report.failed.push((dir.clone(), error.to_string()));
+            failed_dirs.push((dir.clone(), error.to_string()));
         }
     }
+    let mut report = run::process(tree.files, |rel| convert::convert(&src, &dst, rel));
+    report.failed.extend(failed_dirs);
     report.failed.extend(tree.errors);
 
     print!("{report}");
