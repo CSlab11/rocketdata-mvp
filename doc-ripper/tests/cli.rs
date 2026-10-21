@@ -25,6 +25,19 @@ fn stampa_il_riepilogo() {
 }
 
 #[test]
+fn replica_le_sottocartelle_nella_destinazione() {
+    let src = tempfile::tempdir().unwrap();
+    let dst = tempfile::tempdir().unwrap();
+    std::fs::create_dir_all(src.path().join("clienti/2026")).unwrap();
+    std::fs::create_dir_all(src.path().join("fornitori")).unwrap();
+    let target = dst.path().join("nuova");
+    let out = run(&["--src", src.path().to_str().unwrap(), "--dst", target.to_str().unwrap()]);
+    assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stdout));
+    assert!(target.join("clienti/2026").is_dir());
+    assert!(target.join("fornitori").is_dir());
+}
+
+#[test]
 fn src_e_dst_sono_obbligatori() {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path().to_str().unwrap();

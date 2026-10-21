@@ -1,6 +1,8 @@
 mod report;
 mod run;
+mod walk;
 
+use std::fs;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
@@ -24,8 +26,29 @@ fn main() -> ExitCode {
         eprintln!("Errore: la cartella di origine non esiste o non è una cartella: {}", args.src.display());
         return ExitCode::from(2);
     }
-    let _ = args.dst;
-    let report = run::process(Vec::new(), |_| Ok(run::Outcome::default()));
+    let (src, dst) = match prepare(&args) {
+        Ok(paths) => paths,
+        Err(error) => {
+            eprintln!("Errore: impossibile creare la cartella di destinazione {}: {error}", args.dst.display());
+            return ExitCode::from(2);
+        }
+    };
+
+    let tree = walk::scan(&src, &dst);
+    let mut report = run::process(tree.files, |_| Ok(run::Outcome::default()));
+    for dir in &tree.dirs {
+        if let Err(error) = fs::create_dir_all(dst.join(dir)) {
+            report.failed.push((dir.clone(), error.to_string()));
+        }
+    }
+    report.failed.extend(tree.errors);
+
     print!("{report}");
     ExitCode::from(run::exit_code(&report))
+}
+
+/// Crea la cartella di destinazione se manca e restituisce i percorsi canonici di origine e destinazione.
+fn prepare(args: &Args) -> std::io::Result<(PathBuf, PathBuf)> {
+    fs::create_dir_all(&args.dst)?;
+    Ok((args.src.canonicalize()?, args.dst.canonicalize()?))
 }
