@@ -1,5 +1,6 @@
 mod convert;
 mod csv_out;
+mod docx;
 mod excel;
 mod output;
 mod report;

@@ -48,3 +48,4 @@
 - REQ-016 implementato — Scrittura dei file generati con sovrascrittura di quelli esistenti (`doc-ripper/src/main.rs`, `doc-ripper/src/output.rs`)
 - REQ-021 implementato — CSV RFC 4180 (virgola, CRLF, UTF-8 senza BOM) con valori grezzi e date ISO 8601 (`doc-ripper/Cargo.lock`, `doc-ripper/Cargo.toml`, `doc-ripper/src/csv_out.rs`, `doc-ripper/src/main.rs`)
 - REQ-012 implementato — Conversione di .xlsx, .xls e .ods in un CSV per foglio, nascosti compresi; fogli vuoti segnalati (`doc-ripper/Cargo.lock`, `doc-ripper/Cargo.toml`, `doc-ripper/src/convert.rs`, `doc-ripper/src/excel.rs`, `doc-ripper/src/main.rs`, `doc-ripper/tests/excel.rs`)
+- REQ-011 implementato — Conversione DOCX in Markdown con titoli, paragrafi, elenchi, tabelle e link (`doc-ripper/Cargo.lock`, `doc-ripper/Cargo.toml`, `doc-ripper/src/convert.rs`, `doc-ripper/src/docx.rs`, `doc-ripper/src/main.rs`, `doc-ripper/tests/docx.rs`)

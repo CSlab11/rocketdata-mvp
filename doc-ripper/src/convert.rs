@@ -29,6 +29,7 @@ pub fn convert(src: &Path, dst: &Path, rel: &Path) -> Result<Outcome, String> {
     match Kind::of(rel) {
         None => Ok(Outcome::skipped(SkipReason::Unsupported)),
         Some(Kind::Spreadsheet) => crate::excel::convert(src, dst, rel),
+        Some(Kind::Docx) => crate::docx::convert(src, dst, rel),
         Some(_) => Ok(Outcome::default()),
     }
 }
