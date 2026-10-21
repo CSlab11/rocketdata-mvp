@@ -46,3 +46,4 @@
 - REQ-015 implementato — Scansione ricorsiva dell'origine e struttura delle cartelle replicata nella destinazione (`doc-ripper/Cargo.lock`, `doc-ripper/Cargo.toml`, `doc-ripper/src/main.rs`, `doc-ripper/src/walk.rs`, `doc-ripper/tests/cli.rs`)
 - REQ-019 implementato — I file di tipo non supportato vengono segnalati nel riepilogo e non copiati (`doc-ripper/src/convert.rs`, `doc-ripper/src/main.rs`, `doc-ripper/tests/cli.rs`)
 - REQ-016 implementato — Scrittura dei file generati con sovrascrittura di quelli esistenti (`doc-ripper/src/main.rs`, `doc-ripper/src/output.rs`)
+- REQ-021 implementato — CSV RFC 4180 (virgola, CRLF, UTF-8 senza BOM) con valori grezzi e date ISO 8601 (`doc-ripper/Cargo.lock`, `doc-ripper/Cargo.toml`, `doc-ripper/src/csv_out.rs`, `doc-ripper/src/main.rs`)
