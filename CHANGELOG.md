@@ -40,3 +40,4 @@
 - REQ-037 richiesto — gui: script di avvio e arresto
 - REQ-007 implementato — Progetto Cargo autonomo di doc-ripper (`doc-ripper/.gitignore`, `doc-ripper/Cargo.lock`, `doc-ripper/Cargo.toml`, `doc-ripper/src/main.rs`)
 - REQ-008 implementato — doc-ripper è la radice del proprio workspace Cargo, senza path dependency (`doc-ripper/Cargo.toml`)
+- REQ-009 implementato — Flag --src e --dst obbligatori; errore se l'origine non è una cartella (`doc-ripper/Cargo.lock`, `doc-ripper/Cargo.toml`, `doc-ripper/src/main.rs`, `doc-ripper/tests/cli.rs`)

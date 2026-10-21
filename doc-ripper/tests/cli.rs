@@ -1,0 +1,31 @@
+use std::process::{Command, Output};
+
+fn run(args: &[&str]) -> Output {
+    Command::new(env!("CARGO_BIN_EXE_doc-ripper")).args(args).output().unwrap()
+}
+
+#[test]
+fn accetta_src_e_dst() {
+    let src = tempfile::tempdir().unwrap();
+    let dst = tempfile::tempdir().unwrap();
+    let out = run(&["--src", src.path().to_str().unwrap(), "--dst", dst.path().to_str().unwrap()]);
+    assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+}
+
+#[test]
+fn src_e_dst_sono_obbligatori() {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path().to_str().unwrap();
+    assert_eq!(run(&["--src", p]).status.code(), Some(2));
+    assert_eq!(run(&["--dst", p]).status.code(), Some(2));
+    assert_eq!(run(&[]).status.code(), Some(2));
+}
+
+#[test]
+fn src_inesistente_e_un_errore() {
+    let dst = tempfile::tempdir().unwrap();
+    let missing = dst.path().join("non-esiste");
+    let out = run(&["--src", missing.to_str().unwrap(), "--dst", dst.path().to_str().unwrap()]);
+    assert_eq!(out.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&out.stderr).contains("cartella di origine"));
+}
