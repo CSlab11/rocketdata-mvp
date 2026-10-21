@@ -13,6 +13,18 @@ fn accetta_src_e_dst() {
 }
 
 #[test]
+fn stampa_il_riepilogo() {
+    let src = tempfile::tempdir().unwrap();
+    let dst = tempfile::tempdir().unwrap();
+    let out = run(&["--src", src.path().to_str().unwrap(), "--dst", dst.path().to_str().unwrap()]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(stdout.contains("Riepilogo"), "{stdout}");
+    assert!(stdout.contains("Convertiti: 0"));
+    assert!(stdout.contains("Saltati: 0"));
+    assert!(stdout.contains("Falliti: 0"));
+}
+
+#[test]
 fn src_e_dst_sono_obbligatori() {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path().to_str().unwrap();
