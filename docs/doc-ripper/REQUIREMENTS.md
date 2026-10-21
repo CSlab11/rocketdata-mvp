@@ -6,7 +6,7 @@ Requisiti del tool `doc-ripper`. I requisiti di progetto e la tabella dei bug so
 
 | ID | Requisito | Stato | File impattati |
 |----|-----------|-------|----------------|
-| REQ-007 | `doc-ripper` deve essere un progetto Cargo autonomo con il proprio `Cargo.toml` in `doc-ripper/` (da REQ-001, REQ-003). | aperto | — |
+| REQ-007 | `doc-ripper` deve essere un progetto Cargo autonomo con il proprio `Cargo.toml` in `doc-ripper/` (da REQ-001, REQ-003). | implementato | `doc-ripper/.gitignore`, `doc-ripper/Cargo.lock`, `doc-ripper/Cargo.toml`, `doc-ripper/src/main.rs` |
 | REQ-008 | `doc-ripper` non deve dipendere da codice, crate, configurazioni o file di build di altri tool: niente workspace Cargo condiviso, niente path dependency verso cartelle esterne a `doc-ripper/` (da REQ-005). | aperto | — |
 | REQ-009 | `doc-ripper` deve ricevere da riga di comando la cartella di origine con il flag `--src <origine>` e la cartella di destinazione con il flag `--dst <destinazione>`. | aperto | — |
 | REQ-010 | `doc-ripper` deve convertire ogni file `.pdf` della cartella di origine in un file Markdown nella destinazione, chiamato `<nome>_pdf.md` (es. `report.pdf` → `report_pdf.md`), riproducendo titoli, paragrafi, elenchi e tabelle; le immagini sono gestite secondo REQ-020. | aperto | — |
