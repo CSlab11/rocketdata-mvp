@@ -84,6 +84,40 @@ fn converte_docx_in_markdown_strutturato() {
     assert_eq!(md, expected);
 }
 
+/// PNG 1x1 valido.
+const PNG: &[u8] = &[
+    0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00,
+    0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00,
+    0x0D, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0xF8, 0xCF, 0xC0, 0xF0, 0x1F, 0x00, 0x05, 0x00, 0x01, 0xFF,
+    0x89, 0x99, 0x3D, 0x1D, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+];
+
+#[test]
+fn estrae_le_immagini_accanto_al_markdown() {
+    let src = tempfile::tempdir().unwrap();
+    let dst = tempfile::tempdir().unwrap();
+    let pic = docx_rs::Pic::new_with_dimensions(PNG.to_vec(), 1, 1);
+    Docx::new()
+        .add_paragraph(p("Prima"))
+        .add_paragraph(Paragraph::new().add_run(Run::new().add_image(pic)))
+        .add_paragraph(p("Dopo"))
+        .build()
+        .pack(fs::File::create(src.path().join("Il report.docx")).unwrap())
+        .unwrap();
+
+    let out = run(src.path(), dst.path());
+    assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stdout));
+
+    let img_dir = dst.path().join("Il report_docx_img");
+    let images: Vec<_> = fs::read_dir(&img_dir).unwrap().map(|e| e.unwrap().file_name()).collect();
+    assert_eq!(images.len(), 1);
+    let name = images[0].to_string_lossy().to_string();
+    assert_eq!(fs::read(img_dir.join(&name)).unwrap(), PNG);
+
+    let md = fs::read_to_string(dst.path().join("Il report_docx.md")).unwrap();
+    assert_eq!(md, format!("Prima\n\n![{name}](Il%20report_docx_img/{name})\n\nDopo\n"));
+}
+
 #[test]
 fn docx_corrotto_fallisce() {
     let src = tempfile::tempdir().unwrap();

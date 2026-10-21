@@ -1,25 +1,31 @@
+use std::cell::RefCell;
 use std::fs;
 use std::path::Path;
 
 use docx_rs::{
-    read_docx_with_options, DocumentChild, Docx, HyperlinkData, InsertChild, Paragraph, ParagraphChild,
-    ReadDocxOptions, Run, RunChild, StructuredDataTagChild, Table, TableCellContent, TableChild,
-    TableRowChild,
+    read_docx_with_options, DocumentChild, Docx, DrawingData, HyperlinkData, InsertChild, Paragraph,
+    ParagraphChild, ReadDocxOptions, Run, RunChild, StructuredDataTagChild, Table, TableCellContent,
+    TableChild, TableRowChild,
 };
 
 use crate::convert::base_name;
+use crate::images::Images;
 use crate::output::write_file;
 use crate::run::Outcome;
 
-/// Converte un `.docx` in `<nome>_docx.md` mantenendo titoli, paragrafi, elenchi e tabelle (REQ-011).
+/// Converte un `.docx` in `<nome>_docx.md` mantenendo titoli, paragrafi, elenchi e tabelle (REQ-011)
+/// ed estraendo le immagini (REQ-020).
 pub fn convert(src: &Path, dst: &Path, rel: &Path) -> Result<Outcome, String> {
     let bytes = fs::read(src.join(rel)).map_err(|e| e.to_string())?;
     let options = ReadDocxOptions::default().with_image_previews(false);
     let docx = read_docx_with_options(&bytes, options).map_err(|e| format!("docx non valido: {e}"))?;
 
-    let markdown = Markdown { docx: &docx }.document();
+    let md = Markdown { docx: &docx, images: RefCell::new(Images::new(rel)) };
+    let markdown = md.document();
     let out_rel = rel.with_file_name(format!("{}.md", base_name(rel)));
-    write_file(&dst.join(&out_rel), markdown.as_bytes())?;
+    let out_path = dst.join(&out_rel);
+    md.images.borrow().write(&out_path)?;
+    write_file(&out_path, markdown.as_bytes())?;
     Ok(Outcome { outputs: vec![out_rel], skipped: Vec::new() })
 }
 
@@ -32,6 +38,7 @@ enum Block {
 
 struct Markdown<'a> {
     docx: &'a Docx,
+    images: RefCell<Images>,
 }
 
 impl Markdown<'_> {
@@ -169,10 +176,24 @@ impl Markdown<'_> {
                 RunChild::Text(t) => out.push_str(&escape(&t.text)),
                 RunChild::Tab(_) | RunChild::PTab(_) => out.push(' '),
                 RunChild::Break(_) | RunChild::CarriageReturn(_) => out.push_str("  \n"),
+                RunChild::Drawing(drawing) => {
+                    if let Some(DrawingData::Pic(pic)) = &drawing.data {
+                        out.push_str(&self.image(&pic.id));
+                    }
+                }
                 _ => {}
             }
         }
         out
+    }
+
+    /// Riferimento Markdown all'immagine con relazione `rid`, registrata per la scrittura.
+    fn image(&self, rid: &str) -> String {
+        let Some((_, path, image, _)) = self.docx.images.iter().find(|(id, ..)| id == rid) else {
+            return String::new();
+        };
+        let name = Path::new(path).file_name().map_or(rid.to_string(), |n| n.to_string_lossy().into_owned());
+        self.images.borrow_mut().add(&name, &image.0)
     }
 
     /// Tabella GFM: la prima riga fa da intestazione.

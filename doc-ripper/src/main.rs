@@ -2,6 +2,7 @@ mod convert;
 mod csv_out;
 mod docx;
 mod excel;
+mod images;
 mod output;
 mod report;
 mod run;
