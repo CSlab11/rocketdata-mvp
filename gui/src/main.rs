@@ -4,6 +4,7 @@ compile_error!("gui supporta solo Windows 10 e Windows 11");
 
 mod runner;
 mod server;
+mod summary;
 
 use std::path::PathBuf;
 

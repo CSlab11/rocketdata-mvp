@@ -111,6 +111,24 @@ h1 { font-size: 22px; margin: 0 0 4px; }
   color: var(--text);
 }
 
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.summary section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 14px;
+}
+
+.summary h2 { font-size: 15px; margin: 0 0 6px; }
+
+.summary ul { margin: 0; padding-left: 18px; overflow-wrap: anywhere; }
+
 .output {
   background: var(--surface);
   border: 1px solid var(--border);

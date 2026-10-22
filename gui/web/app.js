@@ -52,8 +52,9 @@ async function renderDocRipper(content) {
   const dst = folderField("dst", "Cartella di destinazione");
   const start = el("button", { id: "start", class: "primary", type: "button", disabled: "" }, "Avvia conversione");
   const result = el("div", { id: "result", class: "alert", hidden: "" });
+  const summary = el("div", { id: "summary", class: "summary", hidden: "" });
   const output = el("pre", { id: "output", class: "output", hidden: "" });
-  content.append(alert, src.row, dst.row, el("div", { class: "actions" }, start), result, output);
+  content.append(alert, src.row, dst.row, el("div", { class: "actions" }, start), result, summary, output);
 
   const showError = (message) => {
     alert.textContent = message;
@@ -77,19 +78,41 @@ async function renderDocRipper(content) {
       output.textContent += (output.textContent ? "\n" : "") + e.data;
       output.scrollTop = output.scrollHeight;
     });
-    events.addEventListener("end", (e) => {
+    events.addEventListener("end", async () => {
       events.close();
-      const code = JSON.parse(e.data);
-      result.className = code === 0 ? "alert ok" : "alert error";
-      result.textContent = `doc-ripper terminato con codice di uscita ${code ?? "sconosciuto"}`;
-      result.hidden = false;
+      showResult(await fetch("/api/doc-ripper/output").then((r) => r.json()));
       start.disabled = false;
     });
+  };
+
+  // Esito in base al codice di uscita e riepilogo di doc-ripper (REQ-032).
+  const showResult = (snapshot) => {
+    const code = snapshot.exit_code;
+    result.className = code === 0 ? "alert ok" : "alert error";
+    result.textContent =
+      code === 0 ? "Conversione completata." : `Conversione terminata con errori (codice di uscita ${code ?? "sconosciuto"}).`;
+    result.hidden = false;
+    output.textContent = snapshot.lines.join("\n");
+    output.hidden = false;
+    const s = snapshot.summary;
+    if (!s) {
+      summary.hidden = true;
+      return;
+    }
+    const section = (title, items, render) =>
+      el("section", {}, el("h2", {}, `${title}: ${items.length}`), el("ul", {}, ...items.map((i) => el("li", {}, render(i)))));
+    summary.replaceChildren(
+      section("Convertiti", s.converted, (c) => `${c.file} → ${c.outputs.join(", ")}`),
+      section("Saltati", s.skipped, (e) => `${e.file} — ${e.reason}`),
+      section("Falliti", s.failed, (e) => `${e.file} — ${e.reason}`),
+    );
+    summary.hidden = false;
   };
 
   start.addEventListener("click", async () => {
     alert.hidden = true;
     result.hidden = true;
+    summary.hidden = true;
     const response = await fetch("/api/doc-ripper/run", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -102,10 +125,14 @@ async function renderDocRipper(content) {
     follow();
   });
 
-  // Se un'esecuzione è in corso (es. pagina ricaricata), si ricollega all'output.
+  // Pagina ricaricata: si ricollega all'esecuzione in corso o mostra l'esito dell'ultima.
   const snapshot = await fetch("/api/doc-ripper/output").then((r) => r.json());
-  if (snapshot.running) follow();
-  else start.disabled = false;
+  if (snapshot.running) {
+    follow();
+  } else {
+    if (snapshot.lines.length > 0) showResult(snapshot);
+    start.disabled = false;
+  }
 }
 
 window.addEventListener("hashchange", show);

@@ -7,12 +7,16 @@ use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader};
 use tokio::process::Command;
 use tokio::sync::broadcast;
 
+use crate::summary::{self, Summary};
+
 /// Stato dell'ultima esecuzione di doc-ripper.
 #[derive(Debug, Default, Clone, Serialize)]
 pub struct Snapshot {
     pub running: bool,
     pub lines: Vec<String>,
     pub exit_code: Option<i32>,
+    /// Riepilogo letto dall'output a fine esecuzione (REQ-032).
+    pub summary: Option<Summary>,
 }
 
 /// Evento dell'esecuzione in corso, inoltrato in tempo reale (REQ-031).
@@ -82,6 +86,7 @@ impl Runner {
             let code = child.wait().await.ok().and_then(|s| s.code());
             let mut state = runner.state.lock().unwrap();
             state.exit_code = code;
+            state.summary = summary::parse(&state.lines);
             state.running = false;
             let _ = runner.events.send(Event::End(code));
         });
