@@ -3,6 +3,7 @@ mod csv_out;
 mod docx;
 mod excel;
 mod images;
+mod index;
 mod link;
 mod output;
 mod pdf;
@@ -52,6 +53,9 @@ fn main() -> ExitCode {
     let mut report = run::process(tree.files, |rel| convert::convert(&src, &dst, rel));
     report.failed.extend(failed_dirs);
     report.failed.extend(tree.errors);
+    if let Err(error) = index::write_index(&src, &dst, &report) {
+        report.failed.push((PathBuf::from("index.md"), error));
+    }
 
     print!("{report}");
     ExitCode::from(run::exit_code(&report))
