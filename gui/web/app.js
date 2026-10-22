@@ -51,10 +51,11 @@ async function renderDocRipper(content) {
   const src = folderField("src", "Cartella di origine");
   const dst = folderField("dst", "Cartella di destinazione");
   const start = el("button", { id: "start", class: "primary", type: "button", disabled: "" }, "Avvia conversione");
+  const cancel = el("button", { id: "cancel", type: "button", hidden: "" }, "Annulla");
   const result = el("div", { id: "result", class: "alert", hidden: "" });
   const summary = el("div", { id: "summary", class: "summary", hidden: "" });
   const output = el("pre", { id: "output", class: "output", hidden: "" });
-  content.append(alert, src.row, dst.row, el("div", { class: "actions" }, start), result, summary, output);
+  content.append(alert, src.row, dst.row, el("div", { class: "actions" }, start, cancel), result, summary, output);
 
   const showError = (message) => {
     alert.textContent = message;
@@ -71,6 +72,8 @@ async function renderDocRipper(content) {
   // Output in tempo reale (REQ-031) e codice di uscita a fine esecuzione (REQ-028).
   const follow = () => {
     start.disabled = true;
+    cancel.hidden = false;
+    cancel.disabled = false;
     output.textContent = "";
     output.hidden = false;
     const events = new EventSource("/api/doc-ripper/events");
@@ -82,15 +85,28 @@ async function renderDocRipper(content) {
       events.close();
       showResult(await fetch("/api/doc-ripper/output").then((r) => r.json()));
       start.disabled = false;
+      cancel.hidden = true;
     });
   };
+
+  // Interruzione dell'esecuzione in corso (REQ-034).
+  cancel.addEventListener("click", async () => {
+    cancel.disabled = true;
+    const response = await fetch("/api/doc-ripper/cancel", { method: "POST" });
+    if (!response.ok) showError(await response.text());
+  });
 
   // Esito in base al codice di uscita e riepilogo di doc-ripper (REQ-032).
   const showResult = (snapshot) => {
     const code = snapshot.exit_code;
-    result.className = code === 0 ? "alert ok" : "alert error";
-    result.textContent =
-      code === 0 ? "Conversione completata." : `Conversione terminata con errori (codice di uscita ${code ?? "sconosciuto"}).`;
+    if (snapshot.cancelled) {
+      result.className = "alert warn";
+      result.textContent = "Conversione annullata: i file già generati restano nella destinazione.";
+    } else {
+      result.className = code === 0 ? "alert ok" : "alert error";
+      result.textContent =
+        code === 0 ? "Conversione completata." : `Conversione terminata con errori (codice di uscita ${code ?? "sconosciuto"}).`;
+    }
     result.hidden = false;
     output.textContent = snapshot.lines.join("\n");
     output.hidden = false;

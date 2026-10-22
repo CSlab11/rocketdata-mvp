@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use serde::Serialize;
 use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader};
 use tokio::process::Command;
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, oneshot};
 
 use crate::summary::{self, Summary};
 
@@ -17,6 +17,8 @@ pub struct Snapshot {
     pub exit_code: Option<i32>,
     /// Riepilogo letto dall'output a fine esecuzione (REQ-032).
     pub summary: Option<Summary>,
+    /// L'esecuzione è stata interrotta con "Annulla" (REQ-034).
+    pub cancelled: bool,
 }
 
 /// Evento dell'esecuzione in corso, inoltrato in tempo reale (REQ-031).
@@ -30,11 +32,13 @@ pub enum Event {
 pub struct Runner {
     state: Mutex<Snapshot>,
     events: broadcast::Sender<Event>,
+    /// Segnale per interrompere l'esecuzione in corso (REQ-034).
+    cancel: Mutex<Option<oneshot::Sender<()>>>,
 }
 
 impl Default for Runner {
     fn default() -> Self {
-        Runner { state: Mutex::default(), events: broadcast::channel(1024).0 }
+        Runner { state: Mutex::default(), events: broadcast::channel(1024).0, cancel: Mutex::default() }
     }
 }
 
@@ -80,17 +84,45 @@ impl Runner {
 
         let stdout = child.stdout.take().unwrap();
         let stderr = child.stderr.take().unwrap();
+        let (cancel_tx, cancel_rx) = oneshot::channel();
+        *self.cancel.lock().unwrap() = Some(cancel_tx);
         let runner = Arc::clone(self);
         tokio::spawn(async move {
-            tokio::join!(runner.collect(stdout), runner.collect(stderr));
-            let code = child.wait().await.ok().and_then(|s| s.code());
+            let output = async { tokio::join!(runner.collect(stdout), runner.collect(stderr)) };
+            let process = async {
+                let mut status = None;
+                let cancelled = tokio::select! {
+                    result = child.wait() => {
+                        status = result.ok();
+                        false
+                    }
+                    _ = cancel_rx => true,
+                };
+                if cancelled {
+                    let _ = child.kill().await;
+                    status = child.wait().await.ok();
+                }
+                (status.and_then(|s| s.code()), cancelled)
+            };
+            let (_, (code, cancelled)) = tokio::join!(output, process);
+            runner.cancel.lock().unwrap().take();
             let mut state = runner.state.lock().unwrap();
             state.exit_code = code;
+            state.cancelled = cancelled;
             state.summary = summary::parse(&state.lines);
             state.running = false;
             let _ = runner.events.send(Event::End(code));
         });
         Ok(())
+    }
+
+    /// Interrompe l'esecuzione in corso (REQ-034); errore se non ce n'è una.
+    pub fn cancel(&self) -> Result<(), String> {
+        let signal = self.cancel.lock().unwrap().take();
+        match signal.map(|s| s.send(())) {
+            Some(Ok(())) => Ok(()),
+            _ => Err("nessuna esecuzione di doc-ripper in corso".into()),
+        }
     }
 
     async fn collect(&self, stream: impl AsyncRead + Unpin) {

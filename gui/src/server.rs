@@ -40,6 +40,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/doc-ripper/run", post(doc_ripper_run))
         .route("/api/doc-ripper/output", get(doc_ripper_output))
         .route("/api/doc-ripper/events", get(doc_ripper_events))
+        .route("/api/doc-ripper/cancel", post(doc_ripper_cancel))
         .layer(middleware::from_fn_with_state(state.port, local_only))
         .with_state(state)
 }
@@ -83,6 +84,12 @@ async fn doc_ripper_run(
         .runner
         .start(exe, request.src.trim(), request.dst.trim())
         .map_err(|e| (StatusCode::CONFLICT, e))?;
+    Ok(StatusCode::ACCEPTED)
+}
+
+/// Interrompe l'esecuzione in corso (REQ-034).
+async fn doc_ripper_cancel(State(state): State<Arc<AppState>>) -> Result<StatusCode, (StatusCode, String)> {
+    state.runner.cancel().map_err(|e| (StatusCode::CONFLICT, e))?;
     Ok(StatusCode::ACCEPTED)
 }
 

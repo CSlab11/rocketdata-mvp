@@ -18,6 +18,7 @@
 - REQ-028 implementato — doc-ripper avviato come processo separato con --src/--dst; output e codice di uscita mostrati a fine esecuzione (`gui/examples/fake_doc_ripper.rs`, `gui/src/main.rs`, `gui/src/runner.rs`, `gui/src/server.rs`, `gui/tests/common/mod.rs`, `gui/tests/run_doc_ripper.rs`, `gui/web/app.js`, `gui/web/style.css`)
 - REQ-031 implementato — Output di doc-ripper inoltrato in tempo reale con Server-Sent Events (`gui/Cargo.lock`, `gui/Cargo.toml`, `gui/src/runner.rs`, `gui/src/server.rs`, `gui/tests/live_output.rs`, `gui/web/app.js`)
 - REQ-032 implementato — Esito dal codice di uscita e riepilogo di convertiti, saltati e falliti letto dall'output di doc-ripper (`gui/src/main.rs`, `gui/src/runner.rs`, `gui/src/summary.rs`, `gui/tests/summary.rs`, `gui/web/app.js`, `gui/web/style.css`)
+- REQ-034 implementato — Pulsante Annulla che termina doc-ripper; interfaccia sempre utilizzabile durante l'esecuzione (`gui/src/runner.rs`, `gui/src/server.rs`, `gui/tests/cancel.rs`, `gui/web/app.js`)
 
 ## 2026-10-21
 - REQ-001 richiesto — Linguaggio Rust
