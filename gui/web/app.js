@@ -41,7 +41,20 @@ function show() {
   fn.render(content);
 }
 
-function renderDocRipper(content) {}
+async function renderDocRipper(content) {
+  const alert = el("div", { class: "alert error", role: "alert", hidden: "" });
+  const start = el("button", { id: "start", class: "primary", type: "button", disabled: "" }, "Avvia conversione");
+  content.append(alert, el("div", { class: "actions" }, start));
+
+  // doc-ripper.exe deve trovarsi accanto a gui.exe (REQ-029).
+  const status = await fetch("/api/doc-ripper/status").then((r) => r.json());
+  if (status.available) {
+    start.disabled = false;
+  } else {
+    alert.textContent = status.message;
+    alert.hidden = false;
+  }
+}
 
 window.addEventListener("hashchange", show);
 show();

@@ -4,6 +4,8 @@ compile_error!("gui supporta solo Windows 10 e Windows 11");
 
 mod server;
 
+use std::path::PathBuf;
+
 use clap::Parser;
 use tokio::net::TcpListener;
 
@@ -38,8 +40,15 @@ async fn main() {
         }
     }
 
-    if let Err(error) = axum::serve(listener, server::router(port)).await {
+    let state = server::AppState { port, doc_ripper: find_doc_ripper() };
+    if let Err(error) = axum::serve(listener, server::router(state)).await {
         eprintln!("Errore del server: {error}");
         std::process::exit(1);
     }
+}
+
+/// `doc-ripper.exe` nella cartella di `gui.exe`, se presente (REQ-029).
+fn find_doc_ripper() -> Option<PathBuf> {
+    let path = std::env::current_exe().ok()?.parent()?.join("doc-ripper.exe");
+    path.is_file().then_some(path)
 }

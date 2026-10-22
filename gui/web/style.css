@@ -83,6 +83,37 @@ h1 { font-size: 22px; margin: 0 0 4px; }
 
 .lead { color: var(--muted); margin: 0 0 24px; }
 
+.alert {
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: 1px solid currentColor;
+  margin-bottom: 16px;
+}
+
+.alert.error { color: var(--error); }
+.alert.ok { color: var(--ok); }
+.alert.warn { color: var(--warn); }
+
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
+
+button {
+  font: inherit;
+  padding: 7px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
 @media (max-width: 640px) {
   .layout { grid-template-columns: 1fr; }
   .sidebar { border-right: 0; border-bottom: 1px solid var(--border); }

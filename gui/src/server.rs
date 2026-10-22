@@ -1,26 +1,56 @@
-use axum::Router;
+use std::path::PathBuf;
+use std::sync::Arc;
+
 use axum::extract::{Request, State};
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::middleware::{self, Next};
 use axum::response::{Html, IntoResponse, Response};
 use axum::routing::get;
+use axum::{Json, Router};
+use serde::Serialize;
 
 /// Interfaccia web incorporata nell'eseguibile (REQ-026).
 const INDEX_HTML: &str = include_str!("../web/index.html");
 const STYLE_CSS: &str = include_str!("../web/style.css");
 const APP_JS: &str = include_str!("../web/app.js");
 
-/// Applicazione HTTP della gui, per un server in ascolto sulla porta `port` di 127.0.0.1.
-pub fn router(port: u16) -> Router {
+pub struct AppState {
+    /// Porta di 127.0.0.1 su cui ascolta il server.
+    pub port: u16,
+    /// `doc-ripper.exe` accanto a `gui.exe`, se presente (REQ-029).
+    pub doc_ripper: Option<PathBuf>,
+}
+
+/// Applicazione HTTP della gui.
+pub fn router(state: AppState) -> Router {
+    let state = Arc::new(state);
     Router::new()
         .route("/", get(|| async { Html(INDEX_HTML) }))
         .route("/style.css", get(|| async { asset("text/css; charset=utf-8", STYLE_CSS) }))
         .route("/app.js", get(|| async { asset("text/javascript; charset=utf-8", APP_JS) }))
-        .layer(middleware::from_fn_with_state(port, local_only))
+        .route("/api/doc-ripper/status", get(doc_ripper_status))
+        .layer(middleware::from_fn_with_state(state.port, local_only))
+        .with_state(state)
 }
 
 fn asset(content_type: &'static str, body: &'static str) -> impl IntoResponse {
     ([(header::CONTENT_TYPE, content_type)], body)
+}
+
+#[derive(Serialize)]
+struct DocRipperStatus {
+    available: bool,
+    message: Option<String>,
+}
+
+async fn doc_ripper_status(State(state): State<Arc<AppState>>) -> Json<DocRipperStatus> {
+    Json(match &state.doc_ripper {
+        Some(_) => DocRipperStatus { available: true, message: None },
+        None => DocRipperStatus {
+            available: false,
+            message: Some("doc-ripper.exe non trovato nella cartella di gui.exe: copiarlo lì e riavviare la gui.".into()),
+        },
+    })
 }
 
 /// Accetta solo richieste indirizzate a localhost (REQ-036): un sito esterno aperto nel browser
@@ -56,12 +86,16 @@ mod tests {
     use axum::body::{Body, to_bytes};
     use tower::ServiceExt;
 
+    fn app() -> Router {
+        router(AppState { port: 4000, doc_ripper: None })
+    }
+
     async fn get(path: &str, host: &str, origin: Option<&str>) -> Response {
         let mut request = Request::builder().uri(path).header(header::HOST, host);
         if let Some(origin) = origin {
             request = request.header(header::ORIGIN, origin);
         }
-        router(4000).oneshot(request.body(Body::empty()).unwrap()).await.unwrap()
+        app().oneshot(request.body(Body::empty()).unwrap()).await.unwrap()
     }
 
     async fn status(host: &str, origin: Option<&str>) -> StatusCode {
