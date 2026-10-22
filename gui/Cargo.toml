@@ -3,4 +3,7 @@ name = "gui"
 version = "0.1.0"
 edition = "2024"
 
+# Workspace a sé: gui non entra in workspace di altre cartelle (REQ-024).
+[workspace]
+
 [dependencies]

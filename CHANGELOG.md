@@ -9,6 +9,7 @@
 - REQ-038 richiesto — doc-ripper: firma del codice di doc-ripper.exe e pdfium.dll
 - REQ-039 richiesto — gui: pulsante Esci che arresta il server
 - REQ-023 implementato — Progetto Cargo autonomo di gui (`gui/.gitignore`, `gui/Cargo.lock`, `gui/Cargo.toml`, `gui/src/main.rs`)
+- REQ-024 implementato — gui è la radice del proprio workspace Cargo, senza path dependency (`gui/Cargo.toml`)
 
 ## 2026-10-21
 - REQ-001 richiesto — Linguaggio Rust
