@@ -106,6 +106,28 @@ fn estrae_le_immagini_dei_pdf() {
 }
 
 #[test]
+fn salta_i_pdf_scansionati() {
+    let src = tempfile::tempdir().unwrap();
+    let dst = tempfile::tempdir().unwrap();
+    let pdfium = pdfium();
+    let mut document = pdfium.create_new_pdf().unwrap();
+    let mut page = document.pages_mut().create_page_at_end(PdfPagePaperSize::a4()).unwrap();
+    let scan = image::DynamicImage::ImageLuma8(image::GrayImage::from_pixel(20, 30, image::Luma([240])));
+    page.objects_mut()
+        .create_image_object(PdfPoints::new(0.0), PdfPoints::new(0.0), &scan, Some(PdfPoints::new(595.0)), None)
+        .unwrap();
+    document.save_to_file(&src.path().join("scansione.pdf")).unwrap();
+
+    let out = run(src.path(), dst.path());
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(out.status.success(), "{stdout}");
+    assert!(stdout.contains("scansione.pdf - scansionato"), "{stdout}");
+    assert!(stdout.contains("Convertiti: 0"), "{stdout}");
+    assert!(!dst.path().join("scansione_pdf.md").exists());
+    assert!(!dst.path().join("scansione_pdf_img").exists());
+}
+
+#[test]
 fn pdf_corrotto_fallisce() {
     let src = tempfile::tempdir().unwrap();
     let dst = tempfile::tempdir().unwrap();

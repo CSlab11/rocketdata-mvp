@@ -119,6 +119,25 @@ fn estrae_le_immagini_accanto_al_markdown() {
 }
 
 #[test]
+fn salta_i_docx_scansionati() {
+    let src = tempfile::tempdir().unwrap();
+    let dst = tempfile::tempdir().unwrap();
+    let pic = docx_rs::Pic::new_with_dimensions(PNG.to_vec(), 1, 1);
+    Docx::new()
+        .add_paragraph(Paragraph::new().add_run(Run::new().add_image(pic)))
+        .build()
+        .pack(fs::File::create(src.path().join("scansione.docx")).unwrap())
+        .unwrap();
+
+    let out = run(src.path(), dst.path());
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(out.status.success(), "{stdout}");
+    assert!(stdout.contains("scansione.docx - scansionato"), "{stdout}");
+    assert!(!dst.path().join("scansione_docx.md").exists());
+    assert!(!dst.path().join("scansione_docx_img").exists());
+}
+
+#[test]
 fn docx_corrotto_fallisce() {
     let src = tempfile::tempdir().unwrap();
     let dst = tempfile::tempdir().unwrap();

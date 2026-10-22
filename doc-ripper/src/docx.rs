@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::fs;
 use std::path::Path;
 
@@ -11,6 +11,7 @@ use docx_rs::{
 use crate::convert::base_name;
 use crate::images::Images;
 use crate::output::write_file;
+use crate::report::SkipReason;
 use crate::run::Outcome;
 
 /// Converte un `.docx` in `<nome>_docx.md` mantenendo titoli, paragrafi, elenchi e tabelle (REQ-011)
@@ -20,8 +21,12 @@ pub fn convert(src: &Path, dst: &Path, rel: &Path) -> Result<Outcome, String> {
     let options = ReadDocxOptions::default().with_image_previews(false);
     let docx = read_docx_with_options(&bytes, options).map_err(|e| format!("docx non valido: {e}"))?;
 
-    let md = Markdown { docx: &docx, images: RefCell::new(Images::new(rel)) };
+    let md = Markdown { docx: &docx, images: RefCell::new(Images::new(rel)), has_text: Cell::new(false) };
     let markdown = md.document();
+    // Nessun testo estraibile: documento scansionato, non supportato (REQ-013).
+    if !md.has_text.get() {
+        return Ok(Outcome::skipped(SkipReason::Scanned));
+    }
     let out_rel = rel.with_file_name(format!("{}.md", base_name(rel)));
     let out_path = dst.join(&out_rel);
     md.images.borrow().write(&out_path)?;
@@ -39,6 +44,7 @@ enum Block {
 struct Markdown<'a> {
     docx: &'a Docx,
     images: RefCell<Images>,
+    has_text: Cell<bool>,
 }
 
 impl Markdown<'_> {
@@ -173,7 +179,12 @@ impl Markdown<'_> {
         let mut out = String::new();
         for child in &run.children {
             match child {
-                RunChild::Text(t) => out.push_str(&escape(&t.text)),
+                RunChild::Text(t) => {
+                    if !t.text.trim().is_empty() {
+                        self.has_text.set(true);
+                    }
+                    out.push_str(&escape(&t.text));
+                }
                 RunChild::Tab(_) | RunChild::PTab(_) => out.push(' '),
                 RunChild::Break(_) | RunChild::CarriageReturn(_) => out.push_str("  \n"),
                 RunChild::Drawing(drawing) => {
