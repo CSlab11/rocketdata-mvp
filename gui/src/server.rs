@@ -16,7 +16,7 @@ use tokio_stream::{Stream, StreamExt};
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use crate::dialogs::FolderPicker;
+use crate::dialogs::{FolderPicker, Opener, Opening};
 use crate::settings::{self, Settings};
 use crate::runner::{self, Event, Runner, Snapshot};
 
@@ -39,6 +39,8 @@ pub struct AppState {
     pub picking: AtomicBool,
     /// File delle impostazioni (REQ-035); `None` se `%APPDATA%` non è definita.
     pub settings_path: Option<PathBuf>,
+    /// Apertura dei risultati sul desktop (REQ-033); sostituibile nei test.
+    pub opener: Opener,
 }
 
 /// Applicazione HTTP della gui.
@@ -56,6 +58,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/shutdown", post(shutdown))
         .route("/api/pick-folder", post(pick_folder))
         .route("/api/settings", get(get_settings))
+        .route("/api/open", post(open_result))
         .layer(middleware::from_fn_with_state(state.port, local_only))
         .with_state(state)
 }
@@ -104,6 +107,44 @@ async fn doc_ripper_run(
         }
     }
     Ok(StatusCode::ACCEPTED)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum OpenTarget {
+    Destination,
+    Index,
+}
+
+#[derive(Deserialize)]
+struct OpenRequest {
+    target: OpenTarget,
+}
+
+/// Apre la cartella di destinazione o `index.md` dell'ultima esecuzione (REQ-033). Il percorso
+/// non arriva dal browser: una pagina non può far aprire al server file arbitrari.
+async fn open_result(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<OpenRequest>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    let snapshot = state.runner.snapshot();
+    let dst = match (&snapshot.dst, snapshot.running) {
+        (Some(dst), false) => PathBuf::from(dst),
+        _ => return Err((StatusCode::CONFLICT, "nessuna conversione terminata".into())),
+    };
+    let opening = match request.target {
+        OpenTarget::Destination => Opening::Folder(dst),
+        OpenTarget::Index => Opening::File(dst.join("index.md")),
+    };
+    let exists = match &opening {
+        Opening::Folder(path) => path.is_dir(),
+        Opening::File(path) => path.is_file(),
+    };
+    if !exists {
+        return Err((StatusCode::NOT_FOUND, "il risultato non esiste più o non è stato generato".into()));
+    }
+    (state.opener)(opening).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 /// Ultime cartelle usate (REQ-035).
@@ -225,6 +266,7 @@ mod tests {
             folder_picker,
             picking: AtomicBool::new(false),
             settings_path: None,
+            opener: Arc::new(|_| Ok(())),
         }
     }
 
@@ -244,6 +286,47 @@ mod tests {
         let status = response.status();
         let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
         (status, String::from_utf8_lossy(&body).into_owned())
+    }
+
+    async fn open(app: Router, target: &str) -> StatusCode {
+        let request = Request::builder()
+            .method("POST")
+            .uri("/api/open")
+            .header(header::HOST, "127.0.0.1:4000")
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(format!(r#"{{"target":"{target}"}}"#)))
+            .unwrap();
+        app.oneshot(request).await.unwrap().status()
+    }
+
+    #[tokio::test]
+    async fn apre_destinazione_e_indice() {
+        let dst = tempfile::tempdir().unwrap();
+        let opened = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let record = Arc::clone(&opened);
+        let app = |runner: Runner| {
+            let record = Arc::clone(&record);
+            let mut s = state(Arc::new(|_, _| None));
+            s.runner = Arc::new(runner);
+            s.opener = Arc::new(move |o| {
+                record.lock().unwrap().push(o);
+                Ok(())
+            });
+            router(s)
+        };
+        let finished = || Runner::finished(dst.path().to_str().unwrap());
+
+        assert_eq!(open(app(Runner::default()), "destination").await, StatusCode::CONFLICT);
+        assert_eq!(open(app(finished()), "destination").await, StatusCode::NO_CONTENT);
+        assert_eq!(open(app(finished()), "index").await, StatusCode::NOT_FOUND, "index.md non ancora generato");
+        std::fs::write(dst.path().join("index.md"), "# Indice").unwrap();
+        assert_eq!(open(app(finished()), "index").await, StatusCode::NO_CONTENT);
+        assert_eq!(open(app(finished()), "C:/Windows/system32").await, StatusCode::UNPROCESSABLE_ENTITY);
+
+        assert_eq!(
+            *opened.lock().unwrap(),
+            vec![Opening::Folder(dst.path().to_path_buf()), Opening::File(dst.path().join("index.md"))]
+        );
     }
 
     #[tokio::test]

@@ -24,6 +24,10 @@ fn riepilogo_strutturato_ed_esito() {
     assert!(dom.contains("<h2>Convertiti: 2</h2>"), "{dom}");
     assert!(dom.contains("<li>note.txt — non supportato</li>"), "{dom}");
     assert!(dom.contains("<h2>Falliti: 0</h2>"), "{dom}");
+    // Pulsanti per aprire i risultati (REQ-033).
+    assert!(dom.contains(r#"<div id="results" class="actions">"#), "{dom}");
+    assert!(dom.contains(">Apri cartella di destinazione</button>"), "{dom}");
+    assert!(dom.contains(">Apri index.md</button>"), "{dom}");
 }
 
 #[test]

@@ -56,6 +56,7 @@ async fn main() {
         folder_picker: dialogs::system_folder_picker(),
         picking: Default::default(),
         settings_path: settings::default_path(),
+        opener: dialogs::system_opener(),
     };
     let stop = async move {
         shutdown.notified().await;

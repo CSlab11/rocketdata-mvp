@@ -7,6 +7,29 @@ use raw_window_handle::{
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
 
+/// Risultato di doc-ripper da aprire sul desktop (REQ-033).
+#[derive(Debug, Clone, PartialEq)]
+pub enum Opening {
+    /// Cartella in Esplora file.
+    Folder(PathBuf),
+    /// File con il programma predefinito.
+    File(PathBuf),
+}
+
+pub type Opener = Arc<dyn Fn(Opening) -> Result<(), String> + Send + Sync>;
+
+/// Apre cartelle con Esplora file e file con il programma associato.
+pub fn system_opener() -> Opener {
+    Arc::new(|opening| match opening {
+        Opening::Folder(path) => std::process::Command::new("explorer.exe")
+            .arg(&path)
+            .spawn()
+            .map(drop)
+            .map_err(|e| format!("impossibile aprire Esplora file: {e}")),
+        Opening::File(path) => open::that_detached(&path).map_err(|e| format!("impossibile aprire {}: {e}", path.display())),
+    })
+}
+
 /// Selettore di cartelle: (titolo, cartella iniziale) → cartella scelta, `None` se annullato.
 pub type FolderPicker = Arc<dyn Fn(&str, Option<PathBuf>) -> Option<PathBuf> + Send + Sync>;
 

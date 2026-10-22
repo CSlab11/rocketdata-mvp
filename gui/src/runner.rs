@@ -19,6 +19,8 @@ pub struct Snapshot {
     pub summary: Option<Summary>,
     /// L'esecuzione è stata interrotta con "Annulla" (REQ-034).
     pub cancelled: bool,
+    /// Cartella di destinazione dell'esecuzione (REQ-033).
+    pub dst: Option<String>,
 }
 
 /// Evento dell'esecuzione in corso, inoltrato in tempo reale (REQ-031).
@@ -46,6 +48,14 @@ impl Default for Runner {
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 impl Runner {
+    /// Runner con un'esecuzione già terminata su `dst`, per i test.
+    #[cfg(test)]
+    pub fn finished(dst: &str) -> Runner {
+        let runner = Runner::default();
+        *runner.state.lock().unwrap() = Snapshot { dst: Some(dst.into()), exit_code: Some(0), ..Snapshot::default() };
+        runner
+    }
+
     pub fn snapshot(&self) -> Snapshot {
         self.state.lock().unwrap().clone()
     }
@@ -64,7 +74,7 @@ impl Runner {
             if state.running {
                 return Err("doc-ripper è già in esecuzione".into());
             }
-            *state = Snapshot { running: true, ..Snapshot::default() };
+            *state = Snapshot { running: true, dst: Some(dst.to_string()), ..Snapshot::default() };
         }
         let spawned = Command::new(exe)
             .args(["--src", src, "--dst", dst])

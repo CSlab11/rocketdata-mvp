@@ -73,7 +73,21 @@ async function renderDocRipper(content) {
   const result = el("div", { id: "result", class: "alert", hidden: "" });
   const summary = el("div", { id: "summary", class: "summary", hidden: "" });
   const output = el("pre", { id: "output", class: "output", hidden: "" });
-  content.append(alert, src.row, dst.row, el("div", { class: "actions" }, start, cancel), result, summary, output);
+
+  // Apertura dei risultati dell'ultima esecuzione (REQ-033).
+  const openResult = async (target) => {
+    const response = await fetch("/api/open", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target }),
+    });
+    if (!response.ok) showError(await response.text());
+  };
+  const openDst = el("button", { id: "open-dst", type: "button", onclick: () => openResult("destination") }, "Apri cartella di destinazione");
+  const openIndex = el("button", { id: "open-index", type: "button", onclick: () => openResult("index") }, "Apri index.md");
+  const results = el("div", { id: "results", class: "actions", hidden: "" }, openDst, openIndex);
+
+  content.append(alert, src.row, dst.row, el("div", { class: "actions" }, start, cancel), result, results, summary, output);
 
   const showError = (message) => {
     alert.textContent = message;
@@ -128,6 +142,7 @@ async function renderDocRipper(content) {
         code === 0 ? "Conversione completata." : `Conversione terminata con errori (codice di uscita ${code ?? "sconosciuto"}).`;
     }
     result.hidden = false;
+    results.hidden = !snapshot.dst;
     output.textContent = snapshot.lines.join("\n");
     output.hidden = false;
     const s = snapshot.summary;
@@ -148,6 +163,7 @@ async function renderDocRipper(content) {
   start.addEventListener("click", async () => {
     alert.hidden = true;
     result.hidden = true;
+    results.hidden = true;
     summary.hidden = true;
     const response = await fetch("/api/doc-ripper/run", {
       method: "POST",
