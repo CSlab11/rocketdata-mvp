@@ -34,6 +34,20 @@ fn sample(pdfium: &Pdfium, path: &Path, texts: &[(f32, f32, f32, &str)]) {
     document.save_to_file(path).unwrap();
 }
 
+
+/// Separa la riga "Origine" dal resto del Markdown e verifica che il link porti al file originale.
+fn split_origin(md: &str, original: &Path) -> String {
+    let (first, rest) = md.split_once("
+
+").unwrap();
+    assert!(first.starts_with("Origine: ["), "{first}");
+    let url = first.split_once("](").unwrap().1.strip_suffix(')').unwrap();
+    assert!(url.starts_with("file:///"), "{url}");
+    let path = url::Url::parse(url).unwrap().to_file_path().unwrap();
+    assert_eq!(fs::canonicalize(path).unwrap(), fs::canonicalize(original).unwrap());
+    rest.to_string()
+}
+
 #[test]
 fn converte_pdf_in_markdown_strutturato() {
     let src = tempfile::tempdir().unwrap();
@@ -65,6 +79,7 @@ fn converte_pdf_in_markdown_strutturato() {
     assert!(stdout.contains("Convertiti: 1"), "{stdout}");
 
     let md = fs::read_to_string(dst.path().join("pdf/report_pdf.md")).unwrap();
+    let md = split_origin(&md, &src.path().join("pdf/report.pdf"));
     let expected = concat!(
         "# Relazione annuale\n\n",
         "## Introduzione\n\n",
@@ -97,6 +112,7 @@ fn estrae_le_immagini_dei_pdf() {
     assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stdout));
 
     let md = fs::read_to_string(dst.path().join("foto_pdf.md")).unwrap();
+    let md = split_origin(&md, &src.path().join("foto.pdf"));
     assert_eq!(
         md,
         "Sopra.\n\n![pagina1_immagine1.png](foto_pdf_img/pagina1_immagine1.png)\n\nSotto.\n"

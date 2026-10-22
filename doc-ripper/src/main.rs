@@ -3,6 +3,7 @@ mod csv_out;
 mod docx;
 mod excel;
 mod images;
+mod link;
 mod output;
 mod pdf;
 mod report;

@@ -10,6 +10,7 @@ use docx_rs::{
 
 use crate::convert::base_name;
 use crate::images::Images;
+use crate::link::origin_line;
 use crate::output::write_file;
 use crate::report::SkipReason;
 use crate::run::Outcome;
@@ -30,6 +31,7 @@ pub fn convert(src: &Path, dst: &Path, rel: &Path) -> Result<Outcome, String> {
     let out_rel = rel.with_file_name(format!("{}.md", base_name(rel)));
     let out_path = dst.join(&out_rel);
     md.images.borrow().write(&out_path)?;
+    let markdown = format!("{}\n\n{markdown}", origin_line(&src.join(rel)));
     write_file(&out_path, markdown.as_bytes())?;
     Ok(Outcome { outputs: vec![out_rel], skipped: Vec::new() })
 }

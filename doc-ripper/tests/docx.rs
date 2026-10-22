@@ -59,6 +59,20 @@ fn sample(path: &Path) {
     docx.build().pack(fs::File::create(path).unwrap()).unwrap();
 }
 
+
+/// Separa la riga "Origine" dal resto del Markdown e verifica che il link porti al file originale.
+fn split_origin(md: &str, original: &Path) -> String {
+    let (first, rest) = md.split_once("
+
+").unwrap();
+    assert!(first.starts_with("Origine: ["), "{first}");
+    let url = first.split_once("](").unwrap().1.strip_suffix(')').unwrap();
+    assert!(url.starts_with("file:///"), "{url}");
+    let path = url::Url::parse(url).unwrap().to_file_path().unwrap();
+    assert_eq!(fs::canonicalize(path).unwrap(), fs::canonicalize(original).unwrap());
+    rest.to_string()
+}
+
 #[test]
 fn converte_docx_in_markdown_strutturato() {
     let src = tempfile::tempdir().unwrap();
@@ -72,6 +86,7 @@ fn converte_docx_in_markdown_strutturato() {
     assert!(stdout.contains("Convertiti: 1"), "{stdout}");
 
     let md = fs::read_to_string(dst.path().join("doc/report_docx.md")).unwrap();
+    let md = split_origin(&md, &src.path().join("doc/report.docx"));
     let expected = concat!(
         "# Relazione trimestrale\n\n",
         "Testo con \\*asterischi\\* e una riga  \na capo.\n\n",
@@ -115,6 +130,7 @@ fn estrae_le_immagini_accanto_al_markdown() {
     assert_eq!(fs::read(img_dir.join(&name)).unwrap(), PNG);
 
     let md = fs::read_to_string(dst.path().join("Il report_docx.md")).unwrap();
+    let md = split_origin(&md, &src.path().join("Il report.docx"));
     assert_eq!(md, format!("Prima\n\n![{name}](Il%20report_docx_img/{name})\n\nDopo\n"));
 }
 
