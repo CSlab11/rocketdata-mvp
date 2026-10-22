@@ -12,6 +12,7 @@ Requisiti di progetto. I requisiti dei singoli tool sono in [`doc-ripper/REQUIRE
 | REQ-004 | L'applicazione deve includere il tool `doc-ripper`, nella cartella `doc-ripper/`. | aperto | — |
 | REQ-005 | I tool non devono condividere nulla tra loro: nessun codice, libreria interna, configurazione o file di build in comune. | aperto | — |
 | REQ-006 | L'applicazione deve includere il tool `gui`, nella cartella `gui/`. | aperto | — |
+| REQ-040 | Il repository deve fornire nella radice uno script `package.ps1` che compila in release `doc-ripper` e `gui` e crea la cartella `dist\` con `gui.exe`, `doc-ripper.exe`, `pdfium.dll`, `start.cmd` e `stop.cmd`, così che `dist\start.cmd` avvii la gui con `doc-ripper` disponibile. Lo script non appartiene a nessun tool (REQ-005). | aperto | — |
 
 ### Note
 
