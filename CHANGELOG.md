@@ -16,6 +16,7 @@
 - REQ-027 implementato — Menu laterale delle funzioni con navigazione; prima funzione doc-ripper (`gui/src/server.rs`, `gui/tests/common/mod.rs`, `gui/tests/ui.rs`, `gui/web/app.js`, `gui/web/index.html`, `gui/web/style.css`)
 - REQ-029 implementato — doc-ripper.exe cercato accanto a gui.exe; se manca, messaggio d'errore e avvio disabilitato (`gui/Cargo.lock`, `gui/Cargo.toml`, `gui/src/main.rs`, `gui/src/server.rs`, `gui/tests/doc_ripper_lookup.rs`, `gui/web/app.js`, `gui/web/style.css`)
 - REQ-028 implementato — doc-ripper avviato come processo separato con --src/--dst; output e codice di uscita mostrati a fine esecuzione (`gui/examples/fake_doc_ripper.rs`, `gui/src/main.rs`, `gui/src/runner.rs`, `gui/src/server.rs`, `gui/tests/common/mod.rs`, `gui/tests/run_doc_ripper.rs`, `gui/web/app.js`, `gui/web/style.css`)
+- REQ-031 implementato — Output di doc-ripper inoltrato in tempo reale con Server-Sent Events (`gui/Cargo.lock`, `gui/Cargo.toml`, `gui/src/runner.rs`, `gui/src/server.rs`, `gui/tests/live_output.rs`, `gui/web/app.js`)
 
 ## 2026-10-21
 - REQ-001 richiesto — Linguaggio Rust

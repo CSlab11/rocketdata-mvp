@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex};
 use serde::Serialize;
 use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader};
 use tokio::process::Command;
+use tokio::sync::broadcast;
 
 /// Stato dell'ultima esecuzione di doc-ripper.
 #[derive(Debug, Default, Clone, Serialize)]
@@ -14,10 +15,23 @@ pub struct Snapshot {
     pub exit_code: Option<i32>,
 }
 
+/// Evento dell'esecuzione in corso, inoltrato in tempo reale (REQ-031).
+#[derive(Debug, Clone)]
+pub enum Event {
+    Line(String),
+    End(Option<i32>),
+}
+
 /// Esegue doc-ripper come processo separato, uno alla volta (REQ-028).
-#[derive(Default)]
 pub struct Runner {
     state: Mutex<Snapshot>,
+    events: broadcast::Sender<Event>,
+}
+
+impl Default for Runner {
+    fn default() -> Self {
+        Runner { state: Mutex::default(), events: broadcast::channel(1024).0 }
+    }
 }
 
 /// Il processo non ha una console propria: niente finestre che si aprono.
@@ -26,6 +40,13 @@ const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 impl Runner {
     pub fn snapshot(&self) -> Snapshot {
         self.state.lock().unwrap().clone()
+    }
+
+    /// Stato attuale e iscrizione agli eventi successivi, presi insieme: nessuna riga va persa
+    /// né arriva due volte.
+    pub fn subscribe(&self) -> (Snapshot, broadcast::Receiver<Event>) {
+        let state = self.state.lock().unwrap();
+        (state.clone(), self.events.subscribe())
     }
 
     /// Avvia `exe --src <src> --dst <dst>`; errore se un'esecuzione è già in corso.
@@ -62,6 +83,7 @@ impl Runner {
             let mut state = runner.state.lock().unwrap();
             state.exit_code = code;
             state.running = false;
+            let _ = runner.events.send(Event::End(code));
         });
         Ok(())
     }
@@ -71,7 +93,10 @@ impl Runner {
         let mut buf = Vec::new();
         while reader.read_until(b'\n', &mut buf).await.is_ok_and(|n| n > 0) {
             let line = String::from_utf8_lossy(&buf).trim_end_matches(['\r', '\n']).to_string();
-            self.state.lock().unwrap().lines.push(line);
+            let mut state = self.state.lock().unwrap();
+            state.lines.push(line.clone());
+            let _ = self.events.send(Event::Line(line));
+            drop(state);
             buf.clear();
         }
     }

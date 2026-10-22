@@ -4,12 +4,17 @@ use std::sync::Arc;
 use axum::extract::{Request, State};
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::middleware::{self, Next};
+use std::convert::Infallible;
+
+use axum::response::sse::{self, KeepAlive, Sse};
 use axum::response::{Html, IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
+use tokio_stream::wrappers::BroadcastStream;
+use tokio_stream::{Stream, StreamExt};
 
-use crate::runner::{self, Runner, Snapshot};
+use crate::runner::{self, Event, Runner, Snapshot};
 
 /// Interfaccia web incorporata nell'eseguibile (REQ-026).
 const INDEX_HTML: &str = include_str!("../web/index.html");
@@ -34,6 +39,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/doc-ripper/status", get(doc_ripper_status))
         .route("/api/doc-ripper/run", post(doc_ripper_run))
         .route("/api/doc-ripper/output", get(doc_ripper_output))
+        .route("/api/doc-ripper/events", get(doc_ripper_events))
         .layer(middleware::from_fn_with_state(state.port, local_only))
         .with_state(state)
 }
@@ -82,6 +88,26 @@ async fn doc_ripper_run(
 
 async fn doc_ripper_output(State(state): State<Arc<AppState>>) -> Json<Snapshot> {
     Json(state.runner.snapshot())
+}
+
+/// Output dell'esecuzione in tempo reale (REQ-031): prima le righe già prodotte, poi le nuove.
+/// Eventi `line` (una riga di output) e `end` (codice di uscita).
+async fn doc_ripper_events(State(state): State<Arc<AppState>>) -> Sse<impl Stream<Item = Result<sse::Event, Infallible>>> {
+    let (snapshot, receiver) = state.runner.subscribe();
+    let mut past: Vec<Event> = snapshot.lines.into_iter().map(Event::Line).collect();
+    if !snapshot.running && (snapshot.exit_code.is_some() || !past.is_empty()) {
+        past.push(Event::End(snapshot.exit_code));
+    }
+    let live = BroadcastStream::new(receiver).filter_map(Result::ok);
+    let stream = tokio_stream::iter(past).chain(live).map(|event| {
+        Ok(match event {
+            Event::Line(line) => sse::Event::default().event("line").data(line),
+            Event::End(code) => sse::Event::default()
+                .event("end")
+                .data(code.map_or("null".to_string(), |c| c.to_string())),
+        })
+    });
+    Sse::new(stream).keep_alive(KeepAlive::default())
 }
 
 /// Accetta solo richieste indirizzate a localhost (REQ-036): un sito esterno aperto nel browser

@@ -66,9 +66,27 @@ async function renderDocRipper(content) {
     showError(status.message);
     return;
   }
-  start.disabled = false;
 
-  // Avvio di doc-ripper e lettura di output e codice di uscita (REQ-028).
+  // Output in tempo reale (REQ-031) e codice di uscita a fine esecuzione (REQ-028).
+  const follow = () => {
+    start.disabled = true;
+    output.textContent = "";
+    output.hidden = false;
+    const events = new EventSource("/api/doc-ripper/events");
+    events.addEventListener("line", (e) => {
+      output.textContent += (output.textContent ? "\n" : "") + e.data;
+      output.scrollTop = output.scrollHeight;
+    });
+    events.addEventListener("end", (e) => {
+      events.close();
+      const code = JSON.parse(e.data);
+      result.className = code === 0 ? "alert ok" : "alert error";
+      result.textContent = `doc-ripper terminato con codice di uscita ${code ?? "sconosciuto"}`;
+      result.hidden = false;
+      start.disabled = false;
+    });
+  };
+
   start.addEventListener("click", async () => {
     alert.hidden = true;
     result.hidden = true;
@@ -81,20 +99,13 @@ async function renderDocRipper(content) {
       showError(await response.text());
       return;
     }
-    start.disabled = true;
-    output.textContent = "";
-    output.hidden = false;
-    let snapshot;
-    do {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      snapshot = await fetch("/api/doc-ripper/output").then((r) => r.json());
-    } while (snapshot.running);
-    output.textContent = snapshot.lines.join("\n");
-    result.className = snapshot.exit_code === 0 ? "alert ok" : "alert error";
-    result.textContent = `doc-ripper terminato con codice di uscita ${snapshot.exit_code ?? "sconosciuto"}`;
-    result.hidden = false;
-    start.disabled = false;
+    follow();
   });
+
+  // Se un'esecuzione è in corso (es. pagina ricaricata), si ricollega all'output.
+  const snapshot = await fetch("/api/doc-ripper/output").then((r) => r.json());
+  if (snapshot.running) follow();
+  else start.disabled = false;
 }
 
 window.addEventListener("hashchange", show);
