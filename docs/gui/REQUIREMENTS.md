@@ -21,3 +21,4 @@ Requisiti del tool `gui`. I requisiti di progetto e la tabella dei bug sono in [
 | REQ-035 | `gui` deve ricordare le ultime cartelle di origine e destinazione usate e proporle precompilate anche dopo il riavvio del server. | aperto | — |
 | REQ-036 | Il server di `gui` deve accettare connessioni solo da `localhost` (`127.0.0.1`), così che l'interfaccia non sia raggiungibile da altri computer in rete. | aperto | — |
 | REQ-037 | `gui` deve fornire uno script di avvio, che avvia il server se non è già in esecuzione, e uno script di arresto, che lo termina insieme a un eventuale `doc-ripper` in corso. | aperto | — |
+| REQ-039 | L'interfaccia di `gui` deve offrire un pulsante "Esci" che arresta il server, terminando anche un eventuale `doc-ripper` in corso. | aperto | — |

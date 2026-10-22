@@ -7,6 +7,7 @@
 - REQ-014 implementato — Riga Origine con link file:// assoluto e codificato in testa a ogni .md (`doc-ripper/Cargo.lock`, `doc-ripper/Cargo.toml`, `doc-ripper/src/docx.rs`, `doc-ripper/src/link.rs`, `doc-ripper/src/main.rs`, `doc-ripper/src/pdf.rs`, `doc-ripper/tests/docx.rs`, `doc-ripper/tests/pdf.rs`)
 - REQ-022 implementato — index.md nella radice della destinazione con link relativi ai file generati e link file:// agli originali (`doc-ripper/src/index.rs`, `doc-ripper/src/main.rs`, `doc-ripper/tests/index.rs`)
 - REQ-038 richiesto — doc-ripper: firma del codice di doc-ripper.exe e pdfium.dll
+- REQ-039 richiesto — gui: pulsante Esci che arresta il server
 
 ## 2026-10-21
 - REQ-001 richiesto — Linguaggio Rust
