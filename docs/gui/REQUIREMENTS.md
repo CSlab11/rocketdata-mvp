@@ -8,7 +8,7 @@ Requisiti del tool `gui`. I requisiti di progetto e la tabella dei bug sono in [
 |----|-----------|-------|----------------|
 | REQ-023 | `gui` deve essere un progetto Cargo autonomo con il proprio `Cargo.toml` in `gui/` (da REQ-001, REQ-003). | implementato | `gui/.gitignore`, `gui/Cargo.lock`, `gui/Cargo.toml`, `gui/src/main.rs` |
 | REQ-024 | `gui` non deve dipendere da codice, crate, configurazioni o file di build di altri tool: niente workspace Cargo condiviso, niente path dependency verso cartelle esterne a `gui/` (da REQ-005). | implementato | `gui/Cargo.toml` |
-| REQ-025 | `gui` deve funzionare su Windows 10 e Windows 11. | aperto | — |
+| REQ-025 | `gui` deve funzionare su Windows 10 e Windows 11. | implementato | `gui/src/main.rs` |
 | REQ-026 | `gui` deve essere un server web locale scritto in Rust che serve un'interfaccia web (HTML/CSS/JS) e, all'avvio, la apre automaticamente nel browser predefinito (da REQ-001). | aperto | — |
 | REQ-027 | `gui` deve offrire più funzioni all'interno della stessa interfaccia, tra cui l'avvio di `doc-ripper`. | aperto | — |
 | REQ-028 | `gui` deve avviare `doc-ripper` eseguendone il binario come processo separato con i parametri `--src` e `--dst`, leggendone output e codice di uscita, senza importare né includere codice di `doc-ripper` (da REQ-005). | aperto | — |
