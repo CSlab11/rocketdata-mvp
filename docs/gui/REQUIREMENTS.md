@@ -6,7 +6,7 @@ Requisiti del tool `gui`. I requisiti di progetto e la tabella dei bug sono in [
 
 | ID | Requisito | Stato | File impattati |
 |----|-----------|-------|----------------|
-| REQ-023 | `gui` deve essere un progetto Cargo autonomo con il proprio `Cargo.toml` in `gui/` (da REQ-001, REQ-003). | aperto | — |
+| REQ-023 | `gui` deve essere un progetto Cargo autonomo con il proprio `Cargo.toml` in `gui/` (da REQ-001, REQ-003). | implementato | `gui/.gitignore`, `gui/Cargo.lock`, `gui/Cargo.toml`, `gui/src/main.rs` |
 | REQ-024 | `gui` non deve dipendere da codice, crate, configurazioni o file di build di altri tool: niente workspace Cargo condiviso, niente path dependency verso cartelle esterne a `gui/` (da REQ-005). | aperto | — |
 | REQ-025 | `gui` deve funzionare su Windows 10 e Windows 11. | aperto | — |
 | REQ-026 | `gui` deve essere un server web locale scritto in Rust che serve un'interfaccia web (HTML/CSS/JS) e, all'avvio, la apre automaticamente nel browser predefinito (da REQ-001). | aperto | — |

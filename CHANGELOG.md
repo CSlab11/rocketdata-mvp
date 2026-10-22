@@ -8,6 +8,7 @@
 - REQ-022 implementato — index.md nella radice della destinazione con link relativi ai file generati e link file:// agli originali (`doc-ripper/src/index.rs`, `doc-ripper/src/main.rs`, `doc-ripper/tests/index.rs`)
 - REQ-038 richiesto — doc-ripper: firma del codice di doc-ripper.exe e pdfium.dll
 - REQ-039 richiesto — gui: pulsante Esci che arresta il server
+- REQ-023 implementato — Progetto Cargo autonomo di gui (`gui/.gitignore`, `gui/Cargo.lock`, `gui/Cargo.toml`, `gui/src/main.rs`)
 
 ## 2026-10-21
 - REQ-001 richiesto — Linguaggio Rust
