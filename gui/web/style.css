@@ -48,4 +48,44 @@ body {
 
 .brand { font-weight: 600; letter-spacing: 0.02em; }
 
-main { padding: 24px; }
+.layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  min-height: calc(100vh - 49px);
+}
+
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 12px 8px;
+}
+
+.sidebar ul { list-style: none; margin: 0; padding: 0; }
+
+.sidebar a {
+  display: block;
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.sidebar a:hover { background: var(--bg); }
+
+.sidebar a[aria-current="page"] {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+main { padding: 24px 32px; max-width: 960px; }
+
+h1 { font-size: 22px; margin: 0 0 4px; }
+
+.lead { color: var(--muted); margin: 0 0 24px; }
+
+@media (max-width: 640px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { border-right: 0; border-bottom: 1px solid var(--border); }
+  .sidebar ul { display: flex; gap: 4px; overflow-x: auto; }
+  main { padding: 16px; }
+}

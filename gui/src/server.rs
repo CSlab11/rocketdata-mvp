@@ -91,4 +91,11 @@ mod tests {
             assert!(String::from_utf8_lossy(&body).contains(needle), "{path}");
         }
     }
+
+    #[test]
+    fn menu_delle_funzioni_con_doc_ripper() {
+        assert!(INDEX_HTML.contains(r#"<nav class="sidebar" aria-label="Funzioni">"#));
+        assert!(APP_JS.contains("const FUNCTIONS = ["));
+        assert!(APP_JS.contains(r#"id: "doc-ripper""#));
+    }
 }

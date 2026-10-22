@@ -13,6 +13,7 @@
 - REQ-025 implementato — gui compila solo per Windows; verificato su Windows 11 (`gui/src/main.rs`)
 - REQ-036 implementato — Server su 127.0.0.1 con rifiuto delle richieste con Host o Origin non locali (`gui/Cargo.lock`, `gui/Cargo.toml`, `gui/src/main.rs`, `gui/src/server.rs`, `gui/tests/common/mod.rs`, `gui/tests/local_only.rs`)
 - REQ-026 implementato — Interfaccia web incorporata servita dal server e aperta nel browser predefinito all'avvio (`gui/Cargo.lock`, `gui/Cargo.toml`, `gui/src/main.rs`, `gui/src/server.rs`, `gui/web/app.js`, `gui/web/index.html`, `gui/web/style.css`)
+- REQ-027 implementato — Menu laterale delle funzioni con navigazione; prima funzione doc-ripper (`gui/src/server.rs`, `gui/tests/common/mod.rs`, `gui/tests/ui.rs`, `gui/web/app.js`, `gui/web/index.html`, `gui/web/style.css`)
 
 ## 2026-10-21
 - REQ-001 richiesto — Linguaggio Rust

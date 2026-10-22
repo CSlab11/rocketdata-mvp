@@ -43,3 +43,21 @@ impl Drop for Gui {
 pub fn gui_exe() -> &'static Path {
     Path::new(env!("CARGO_BIN_EXE_gui"))
 }
+
+/// DOM della pagina dopo l'esecuzione degli script, ottenuto con Edge headless
+/// (presente in Windows 10 e 11).
+#[allow(dead_code)]
+pub fn dump_dom(url: &str) -> String {
+    let edge = [r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe", r"C:\Program Files\Microsoft\Edge\Application\msedge.exe"]
+        .into_iter()
+        .find(|p| Path::new(p).is_file())
+        .expect("Microsoft Edge non trovato");
+    let profile = tempfile::tempdir().unwrap();
+    let output = Command::new(edge)
+        .args(["--headless", "--disable-gpu", "--no-first-run", "--virtual-time-budget=3000"])
+        .arg(format!("--user-data-dir={}", profile.path().display()))
+        .args(["--dump-dom", url])
+        .output()
+        .unwrap();
+    String::from_utf8_lossy(&output.stdout).into_owned()
+}
