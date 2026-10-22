@@ -18,7 +18,7 @@ struct Args {
 
 #[tokio::main]
 async fn main() {
-    let _args = Args::parse();
+    let args = Args::parse();
     // Solo l'interfaccia di loopback: la gui non è raggiungibile da altri computer (REQ-036).
     let listener = match TcpListener::bind(("127.0.0.1", 0)).await {
         Ok(listener) => listener,
@@ -28,7 +28,15 @@ async fn main() {
         }
     };
     let port = listener.local_addr().unwrap().port();
-    println!("gui in ascolto su http://127.0.0.1:{port}/");
+    let url = format!("http://127.0.0.1:{port}/");
+    println!("gui in ascolto su {url}");
+
+    // Apre l'interfaccia nel browser predefinito (REQ-026).
+    if !args.no_browser {
+        if let Err(error) = open::that_detached(&url) {
+            eprintln!("Impossibile aprire il browser ({error}): aprire {url} manualmente.");
+        }
+    }
 
     if let Err(error) = axum::serve(listener, server::router(port)).await {
         eprintln!("Errore del server: {error}");
