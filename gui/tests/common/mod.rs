@@ -117,3 +117,35 @@ pub fn dump_dom(url: &str) -> String {
         .unwrap();
     String::from_utf8_lossy(&output.stdout).into_owned()
 }
+
+/// Numero di processi in esecuzione con questo percorso esatto.
+#[allow(dead_code)]
+pub fn running_from(path: &Path) -> usize {
+    let script = format!(
+        "@(Get-Process | Where-Object {{ $_.Path -eq '{}' }}).Count",
+        path.display().to_string().replace('\'', "''")
+    );
+    let out = Command::new("powershell").args(["-NoProfile", "-Command", &script]).output().unwrap();
+    String::from_utf8_lossy(&out.stdout).trim().parse().unwrap()
+}
+
+/// Attende fino a 5 s che i processi avviati da `path` siano `expected`: un eseguibile appena
+/// copiato può partire in ritardo (es. per la scansione antivirus).
+#[allow(dead_code)]
+pub fn wait_running(path: &Path, expected: usize) -> bool {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    while std::time::Instant::now() < deadline {
+        if running_from(path) == expected {
+            return true;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+    false
+}
+
+/// Percorso canonico senza il prefisso \?\ aggiunto da canonicalize (come lo riporta Get-Process).
+#[allow(dead_code)]
+pub fn plain_canonical(path: &Path) -> std::path::PathBuf {
+    let canonical = path.canonicalize().unwrap().display().to_string();
+    std::path::PathBuf::from(canonical.trim_start_matches(r"\\?\"))
+}

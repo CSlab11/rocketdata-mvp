@@ -23,6 +23,7 @@
 - REQ-030 implementato — Pulsanti Sfoglia che aprono dal server il selettore di cartelle di Windows davanti al browser (`gui/Cargo.lock`, `gui/Cargo.toml`, `gui/src/dialogs.rs`, `gui/src/main.rs`, `gui/src/server.rs`, `gui/web/app.js`)
 - REQ-035 implementato — Ultime cartelle salvate in %APPDATA%\rocketdata-gui\settings.json e precompilate anche dopo il riavvio (`gui/Cargo.toml`, `gui/src/main.rs`, `gui/src/server.rs`, `gui/src/settings.rs`, `gui/tests/common/mod.rs`, `gui/tests/settings.rs`, `gui/web/app.js`)
 - REQ-033 implementato — Pulsanti per aprire la cartella di destinazione in Esplora file e index.md con il programma predefinito (`gui/src/dialogs.rs`, `gui/src/main.rs`, `gui/src/runner.rs`, `gui/src/server.rs`, `gui/tests/summary.rs`, `gui/web/app.js`)
+- REQ-037 implementato — start.cmd e stop.cmd verificati sul vero gui.exe, con argomenti passati a gui.exe e test automatico (`gui/start.cmd`, `gui/stop.cmd`, `gui/tests/common/mod.rs`, `gui/tests/quit.rs`, `gui/tests/scripts.rs`)
 
 ## 2026-10-21
 - REQ-001 richiesto — Linguaggio Rust
