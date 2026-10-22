@@ -161,6 +161,11 @@ async function renderDocRipper(content) {
     follow();
   });
 
+  // Ultime cartelle usate, anche dopo un riavvio del server (REQ-035).
+  const saved = await fetch("/api/settings").then((r) => r.json());
+  if (!src.input.value) src.input.defaultValue = saved.src;
+  if (!dst.input.value) dst.input.defaultValue = saved.dst;
+
   // Pagina ricaricata: si ricollega all'esecuzione in corso o mostra l'esito dell'ultima.
   const snapshot = await fetch("/api/doc-ripper/output").then((r) => r.json());
   if (snapshot.running) {

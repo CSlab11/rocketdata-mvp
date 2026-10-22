@@ -17,6 +17,7 @@ use tokio_stream::{Stream, StreamExt};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::dialogs::FolderPicker;
+use crate::settings::{self, Settings};
 use crate::runner::{self, Event, Runner, Snapshot};
 
 /// Interfaccia web incorporata nell'eseguibile (REQ-026).
@@ -36,6 +37,8 @@ pub struct AppState {
     pub folder_picker: FolderPicker,
     /// Un solo selettore aperto alla volta.
     pub picking: AtomicBool,
+    /// File delle impostazioni (REQ-035); `None` se `%APPDATA%` non è definita.
+    pub settings_path: Option<PathBuf>,
 }
 
 /// Applicazione HTTP della gui.
@@ -52,6 +55,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/doc-ripper/cancel", post(doc_ripper_cancel))
         .route("/api/shutdown", post(shutdown))
         .route("/api/pick-folder", post(pick_folder))
+        .route("/api/settings", get(get_settings))
         .layer(middleware::from_fn_with_state(state.port, local_only))
         .with_state(state)
 }
@@ -91,11 +95,20 @@ async fn doc_ripper_run(
     if request.src.trim().is_empty() || request.dst.trim().is_empty() {
         return Err((StatusCode::BAD_REQUEST, "indicare la cartella di origine e quella di destinazione".into()));
     }
-    state
-        .runner
-        .start(exe, request.src.trim(), request.dst.trim())
-        .map_err(|e| (StatusCode::CONFLICT, e))?;
+    let (src, dst) = (request.src.trim(), request.dst.trim());
+    state.runner.start(exe, src, dst).map_err(|e| (StatusCode::CONFLICT, e))?;
+    // Ultime cartelle usate, riproposte ai prossimi avvii (REQ-035).
+    if let Some(path) = &state.settings_path {
+        if let Err(error) = settings::save(path, &Settings { src: src.into(), dst: dst.into() }) {
+            eprintln!("Impossibile salvare le impostazioni in {}: {error}", path.display());
+        }
+    }
     Ok(StatusCode::ACCEPTED)
+}
+
+/// Ultime cartelle usate (REQ-035).
+async fn get_settings(State(state): State<Arc<AppState>>) -> Json<Settings> {
+    Json(state.settings_path.as_deref().map(settings::load).unwrap_or_default())
 }
 
 /// Interrompe l'esecuzione in corso (REQ-034).
@@ -211,6 +224,7 @@ mod tests {
             shutdown: Arc::default(),
             folder_picker,
             picking: AtomicBool::new(false),
+            settings_path: None,
         }
     }
 

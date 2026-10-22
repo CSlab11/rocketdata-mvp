@@ -5,6 +5,7 @@ compile_error!("gui supporta solo Windows 10 e Windows 11");
 mod dialogs;
 mod runner;
 mod server;
+mod settings;
 mod summary;
 
 use std::path::PathBuf;
@@ -54,6 +55,7 @@ async fn main() {
         shutdown: Arc::clone(&shutdown),
         folder_picker: dialogs::system_folder_picker(),
         picking: Default::default(),
+        settings_path: settings::default_path(),
     };
     let stop = async move {
         shutdown.notified().await;

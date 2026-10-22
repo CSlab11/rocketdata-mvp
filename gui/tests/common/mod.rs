@@ -6,13 +6,25 @@ use std::process::{Child, Command, Stdio};
 pub struct Gui {
     pub child: Child,
     pub port: u16,
+    /// %APPDATA% temporanea: i test non toccano le impostazioni reali.
+    _appdata: Option<tempfile::TempDir>,
 }
 
 impl Gui {
-    /// Avvia `exe` senza browser e attende la riga con l'indirizzo del server.
+    /// Avvia `exe` senza browser, con una %APPDATA% temporanea.
+    #[allow(dead_code)]
     pub fn start(exe: &Path) -> Gui {
+        let appdata = tempfile::tempdir().unwrap();
+        let mut gui = Gui::start_with_appdata(exe, appdata.path());
+        gui._appdata = Some(appdata);
+        gui
+    }
+
+    /// Avvia `exe` senza browser con la %APPDATA% indicata e attende l'indirizzo del server.
+    pub fn start_with_appdata(exe: &Path, appdata: &Path) -> Gui {
         let mut child = Command::new(exe)
             .arg("--no-browser")
+            .env("APPDATA", appdata)
             .stdout(Stdio::piped())
             .spawn()
             .unwrap();
@@ -25,7 +37,7 @@ impl Gui {
             .next()
             .and_then(|p| p.parse().ok())
             .unwrap_or_else(|| panic!("indirizzo non trovato in {line:?}"));
-        Gui { child, port }
+        Gui { child, port, _appdata: None }
     }
 
     pub fn url(&self, path: &str) -> String {
