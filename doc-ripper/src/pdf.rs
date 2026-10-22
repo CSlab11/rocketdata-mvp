@@ -1,10 +1,13 @@
 use std::cell::OnceCell;
+use std::io::Cursor;
 use std::path::Path;
 
+use image::ImageFormat;
 use pdfium_render::prelude::*;
 
 use crate::convert::base_name;
 use crate::docx::escape;
+use crate::images::Images;
 use crate::output::write_file;
 use crate::run::Outcome;
 
@@ -23,32 +26,50 @@ fn load_pdfium() -> Result<Pdfium, String> {
     Ok(Pdfium::new(bindings))
 }
 
-/// Converte un `.pdf` in `<nome>_pdf.md` ricostruendo titoli, paragrafi, elenchi e tabelle (REQ-010).
+/// Converte un `.pdf` in `<nome>_pdf.md` ricostruendo titoli, paragrafi, elenchi e tabelle (REQ-010)
+/// ed estraendo le immagini (REQ-020).
 pub fn convert(src: &Path, dst: &Path, rel: &Path) -> Result<Outcome, String> {
+    let mut images = Images::new(rel);
     let pages = PDFIUM.with(|cell| match cell.get_or_init(load_pdfium) {
-        Ok(pdfium) => extract(pdfium, &src.join(rel)),
+        Ok(pdfium) => extract(pdfium, &src.join(rel), &mut images),
         Err(e) => Err(e.clone()),
     })?;
     let markdown = layout::to_markdown(&pages);
     let out_rel = rel.with_file_name(format!("{}.md", base_name(rel)));
-    write_file(&dst.join(&out_rel), markdown.as_bytes())?;
+    let out_path = dst.join(&out_rel);
+    images.write(&out_path)?;
+    write_file(&out_path, markdown.as_bytes())?;
     Ok(Outcome { outputs: vec![out_rel], skipped: Vec::new() })
 }
 
-/// Frammenti di testo di ogni pagina, con posizione e dimensione del carattere.
-fn extract(pdfium: &Pdfium, path: &Path) -> Result<Vec<Vec<layout::Run>>, String> {
+/// Frammenti di testo di ogni pagina, con posizione e dimensione del carattere, e immagini
+/// con la loro posizione verticale.
+fn extract(pdfium: &Pdfium, path: &Path, images: &mut Images) -> Result<Vec<layout::Page>, String> {
     let document = pdfium.load_pdf_from_file(path, None).map_err(|e| format!("pdf non valido: {e}"))?;
     let mut pages = Vec::new();
-    for page in document.pages().iter() {
-        let mut runs = Vec::new();
+    for (index, page) in document.pages().iter().enumerate() {
+        let mut result = layout::Page::default();
         for object in page.objects().iter() {
+            let Ok(bounds) = object.bounds() else { continue };
+            if let Some(image_object) = object.as_image_object() {
+                let Some(png) = image_object
+                    .get_raw_image()
+                    .or_else(|_| image_object.get_processed_image(&document))
+                    .ok()
+                    .and_then(|img| encode_png(&img))
+                else {
+                    continue;
+                };
+                let name = format!("pagina{}_immagine{}.png", index + 1, result.images.len() + 1);
+                result.images.push((bounds.top().value, images.add(&name, &png)));
+                continue;
+            }
             let Some(text_object) = object.as_text_object() else { continue };
             let text = text_object.text();
-            let Ok(bounds) = object.bounds() else { continue };
             if text.trim().is_empty() {
                 continue;
             }
-            runs.push(layout::Run {
+            result.runs.push(layout::Run {
                 left: bounds.left().value,
                 right: bounds.right().value,
                 top: bounds.top().value,
@@ -57,9 +78,15 @@ fn extract(pdfium: &Pdfium, path: &Path) -> Result<Vec<Vec<layout::Run>>, String
                 text,
             });
         }
-        pages.push(runs);
+        pages.push(result);
     }
     Ok(pages)
+}
+
+fn encode_png(image: &image::DynamicImage) -> Option<Vec<u8>> {
+    let mut bytes = Cursor::new(Vec::new());
+    image.write_to(&mut bytes, ImageFormat::Png).ok()?;
+    Some(bytes.into_inner())
 }
 
 /// Ricostruzione della struttura da testo posizionato. Coordinate PDF: y cresce verso l'alto.
@@ -74,6 +101,13 @@ mod layout {
         pub bottom: f32,
         pub size: f32,
         pub text: String,
+    }
+
+    /// Contenuto di una pagina: frammenti di testo e immagini (bordo superiore, riferimento Markdown).
+    #[derive(Debug, Default)]
+    pub struct Page {
+        pub runs: Vec<Run>,
+        pub images: Vec<(f32, String)>,
     }
 
     /// Riga di testo; `cells` separate da spazi orizzontali ampi (possibili colonne di tabella).
@@ -180,21 +214,30 @@ mod layout {
         Paragraph(String),
         Item { bullet: bool, indent: f32, text: String },
         Table(Vec<Vec<String>>),
+        Image(String),
     }
 
-    pub fn to_markdown(pages: &[Vec<Run>]) -> String {
-        let pages: Vec<Vec<Line>> = pages.iter().map(|runs| lines(runs)).collect();
-        let body = body_size(&pages);
-        let heading_sizes = heading_sizes(&pages, body);
+    pub fn to_markdown(pages: &[Page]) -> String {
+        let lines_by_page: Vec<Vec<Line>> = pages.iter().map(|p| lines(&p.runs)).collect();
+        let body = body_size(&lines_by_page);
+        let heading_sizes = heading_sizes(&lines_by_page, body);
 
         let mut blocks: Vec<Block> = Vec::new();
-        for page in &pages {
+        for (page, source) in lines_by_page.iter().zip(pages) {
+            let mut images: Vec<&(f32, String)> = source.images.iter().collect();
+            images.sort_by(|a, b| b.0.total_cmp(&a.0));
+            let mut images = images.into_iter().peekable();
             let mut i = 0;
-            // Un paragrafo può proseguire dalla pagina precedente.
             let mut prev: Option<&Line> = None;
             while i < page.len() {
                 let line = &page[i];
                 let text = line.text();
+
+                // Le immagini che iniziano sopra la riga vengono prima.
+                while let Some((_, md)) = images.next_if(|(top, _)| *top >= line.top) {
+                    blocks.push(Block::Image(md.clone()));
+                    prev = None;
+                }
 
                 // Tabella: almeno due righe consecutive con due o più colonne.
                 let rows = page[i..].iter().take_while(|l| l.cells.len() >= 2).count();
@@ -222,6 +265,7 @@ mod layout {
                 }
                 i += 1;
             }
+            blocks.extend(images.map(|(_, md)| Block::Image(md.clone())));
         }
         render(&blocks)
     }
@@ -307,7 +351,7 @@ mod layout {
             }
             match block {
                 Block::Heading(level, text) => out.push_str(&format!("{} {text}", "#".repeat(*level))),
-                Block::Paragraph(text) => out.push_str(text),
+                Block::Paragraph(text) | Block::Image(text) => out.push_str(text),
                 Block::Item { bullet, indent, text } => {
                     // Livello di annidamento dal rientro del marcatore.
                     while list_indents.last().is_some_and(|&l| *indent < l - 2.0) {
@@ -369,6 +413,15 @@ mod layout {
         }
 
         #[test]
+        fn immagini_nella_posizione_verticale() {
+            let page = Page {
+                runs: vec![run(72.0, 700.0, 11.0, "Sopra."), run(72.0, 400.0, 11.0, "Sotto.")],
+                images: vec![(100.0, "![b](x_img/b.png)".into()), (600.0, "![a](x_img/a.png)".into())],
+            };
+            assert_eq!(to_markdown(&[page]), "Sopra.\n\n![a](x_img/a.png)\n\nSotto.\n\n![b](x_img/b.png)\n");
+        }
+
+        #[test]
         fn struttura_completa() {
             let page = vec![
                 run(72.0, 780.0, 24.0, "Relazione annuale"),
@@ -391,7 +444,7 @@ mod layout {
                 run(72.0, 545.0, 14.0, "Conclusioni"),
                 run(72.0, 525.0, 11.0, "Fine."),
             ];
-            let md = to_markdown(&[page]);
+            let md = to_markdown(&[Page { runs: page, images: Vec::new() }]);
             let expected = concat!(
                 "# Relazione annuale\n\n",
                 "## Introduzione\n\n",

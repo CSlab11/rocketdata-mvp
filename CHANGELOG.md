@@ -2,6 +2,7 @@
 
 ## 2026-10-22
 - REQ-010 implementato — Conversione PDF in Markdown con PDFium: titoli, paragrafi, elenchi e tabelle ricostruiti dal layout (`doc-ripper/.gitignore`, `doc-ripper/Cargo.lock`, `doc-ripper/Cargo.toml`, `doc-ripper/build.rs`, `doc-ripper/scripts/fetch-pdfium.ps1`, `doc-ripper/src/convert.rs`, `doc-ripper/src/docx.rs`, `doc-ripper/src/main.rs`, `doc-ripper/src/pdf.rs`, `doc-ripper/tests/pdf.rs`)
+- REQ-020 implementato — Immagini di docx e pdf estratte in <nome>_<ext>_img/ e richiamate dal Markdown (`doc-ripper/Cargo.lock`, `doc-ripper/Cargo.toml`, `doc-ripper/src/docx.rs`, `doc-ripper/src/images.rs`, `doc-ripper/src/main.rs`, `doc-ripper/src/pdf.rs`, `doc-ripper/tests/docx.rs`, `doc-ripper/tests/pdf.rs`)
 
 ## 2026-10-21
 - REQ-001 richiesto — Linguaggio Rust
