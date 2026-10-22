@@ -13,6 +13,10 @@ Requisiti di progetto. I requisiti dei singoli tool sono in [`doc-ripper/REQUIRE
 | REQ-005 | I tool non devono condividere nulla tra loro: nessun codice, libreria interna, configurazione o file di build in comune. | aperto | — |
 | REQ-006 | L'applicazione deve includere il tool `gui`, nella cartella `gui/`. | aperto | — |
 
+### Note
+
+- **Sotto-tool.** Un tool può dichiarare più sotto-tool: implementazioni diverse della stessa funzione, con funzioni e interfaccia equivalenti almeno nell'utilizzo (stessi ingressi, stesso tipo di risultato), così che chi li usa possa scambiarli senza cambiare il modo in cui li invoca. Esempio: la ricerca può avere più implementazioni, ciascuna un sotto-tool del tool di ricerca.
+
 ## Bug
 
 | ID | Descrizione | Req | Stato | File impattati | Modifiche necessarie |
