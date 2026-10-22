@@ -25,6 +25,7 @@
 - REQ-033 implementato — Pulsanti per aprire la cartella di destinazione in Esplora file e index.md con il programma predefinito (`gui/src/dialogs.rs`, `gui/src/main.rs`, `gui/src/runner.rs`, `gui/src/server.rs`, `gui/tests/summary.rs`, `gui/web/app.js`)
 - REQ-037 implementato — start.cmd e stop.cmd verificati sul vero gui.exe, con argomenti passati a gui.exe e test automatico (`gui/start.cmd`, `gui/stop.cmd`, `gui/tests/common/mod.rs`, `gui/tests/quit.rs`, `gui/tests/scripts.rs`)
 - REQ-040 richiesto — Script package.ps1 che prepara la cartella dist\ con gui e doc-ripper
+- REQ-040 implementato — package.ps1 compila doc-ripper e gui e prepara dist\ con eseguibili, pdfium.dll, script e licenza di PDFium (`.gitignore`, `package.ps1`)
 
 ## 2026-10-21
 - REQ-001 richiesto — Linguaggio Rust
