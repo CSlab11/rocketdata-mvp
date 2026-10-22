@@ -14,6 +14,9 @@ use serde::{Deserialize, Serialize};
 use tokio_stream::wrappers::BroadcastStream;
 use tokio_stream::{Stream, StreamExt};
 
+use std::sync::atomic::{AtomicBool, Ordering};
+
+use crate::dialogs::FolderPicker;
 use crate::runner::{self, Event, Runner, Snapshot};
 
 /// Interfaccia web incorporata nell'eseguibile (REQ-026).
@@ -29,6 +32,10 @@ pub struct AppState {
     pub runner: Arc<Runner>,
     /// Segnala al server di spegnersi (REQ-039).
     pub shutdown: Arc<tokio::sync::Notify>,
+    /// Selettore di cartelle (REQ-030); sostituibile nei test.
+    pub folder_picker: FolderPicker,
+    /// Un solo selettore aperto alla volta.
+    pub picking: AtomicBool,
 }
 
 /// Applicazione HTTP della gui.
@@ -44,6 +51,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/doc-ripper/events", get(doc_ripper_events))
         .route("/api/doc-ripper/cancel", post(doc_ripper_cancel))
         .route("/api/shutdown", post(shutdown))
+        .route("/api/pick-folder", post(pick_folder))
         .layer(middleware::from_fn_with_state(state.port, local_only))
         .with_state(state)
 }
@@ -94,6 +102,34 @@ async fn doc_ripper_run(
 async fn doc_ripper_cancel(State(state): State<Arc<AppState>>) -> Result<StatusCode, (StatusCode, String)> {
     state.runner.cancel().map_err(|e| (StatusCode::CONFLICT, e))?;
     Ok(StatusCode::ACCEPTED)
+}
+
+#[derive(Deserialize)]
+struct PickRequest {
+    title: String,
+    initial: Option<String>,
+}
+
+#[derive(Serialize)]
+struct PickResponse {
+    path: Option<String>,
+}
+
+/// Apre il selettore di cartelle di Windows dal server (REQ-030): il browser non può fornire
+/// il percorso completo di una cartella.
+async fn pick_folder(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<PickRequest>,
+) -> Result<Json<PickResponse>, (StatusCode, String)> {
+    if state.picking.swap(true, Ordering::SeqCst) {
+        return Err((StatusCode::CONFLICT, "un selettore di cartelle è già aperto".into()));
+    }
+    let picker = Arc::clone(&state.folder_picker);
+    let initial = request.initial.filter(|s| !s.trim().is_empty()).map(PathBuf::from);
+    let chosen = tokio::task::spawn_blocking(move || picker(&request.title, initial)).await;
+    state.picking.store(false, Ordering::SeqCst);
+    let chosen = chosen.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    Ok(Json(PickResponse { path: chosen.map(|p| p.display().to_string()) }))
 }
 
 /// Pulsante "Esci" (REQ-039): termina un eventuale doc-ripper in corso, poi spegne il server.
@@ -167,8 +203,54 @@ mod tests {
     use axum::body::{Body, to_bytes};
     use tower::ServiceExt;
 
+    fn state(folder_picker: FolderPicker) -> AppState {
+        AppState {
+            port: 4000,
+            doc_ripper: None,
+            runner: Arc::default(),
+            shutdown: Arc::default(),
+            folder_picker,
+            picking: AtomicBool::new(false),
+        }
+    }
+
     fn app() -> Router {
-        router(AppState { port: 4000, doc_ripper: None, runner: Arc::default(), shutdown: Arc::default() })
+        router(state(Arc::new(|_, _| None)))
+    }
+
+    async fn pick(app: Router, body: &str) -> (StatusCode, String) {
+        let request = Request::builder()
+            .method("POST")
+            .uri("/api/pick-folder")
+            .header(header::HOST, "127.0.0.1:4000")
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(body.to_string()))
+            .unwrap();
+        let response = app.oneshot(request).await.unwrap();
+        let status = response.status();
+        let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        (status, String::from_utf8_lossy(&body).into_owned())
+    }
+
+    #[tokio::test]
+    async fn selettore_di_cartelle() {
+        let seen = Arc::new(std::sync::Mutex::new(None));
+        let record = Arc::clone(&seen);
+        let picker: FolderPicker = Arc::new(move |title, initial| {
+            *record.lock().unwrap() = Some((title.to_string(), initial));
+            Some(PathBuf::from(r"C:\Dati\Città"))
+        });
+        let (status, body) =
+            pick(router(state(picker)), r#"{"title":"Cartella di origine","initial":"C:\\Prima"}"#).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(body, r#"{"path":"C:\\Dati\\Città"}"#);
+        assert_eq!(
+            *seen.lock().unwrap(),
+            Some(("Cartella di origine".to_string(), Some(PathBuf::from(r"C:\Prima"))))
+        );
+
+        let (status, body) = pick(app(), r#"{"title":"x","initial":""}"#).await;
+        assert_eq!((status, body.as_str()), (StatusCode::OK, r#"{"path":null}"#));
     }
 
     async fn get(path: &str, host: &str, origin: Option<&str>) -> Response {

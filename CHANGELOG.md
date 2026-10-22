@@ -20,6 +20,7 @@
 - REQ-032 implementato — Esito dal codice di uscita e riepilogo di convertiti, saltati e falliti letto dall'output di doc-ripper (`gui/src/main.rs`, `gui/src/runner.rs`, `gui/src/summary.rs`, `gui/tests/summary.rs`, `gui/web/app.js`, `gui/web/style.css`)
 - REQ-034 implementato — Pulsante Annulla che termina doc-ripper; interfaccia sempre utilizzabile durante l'esecuzione (`gui/src/runner.rs`, `gui/src/server.rs`, `gui/tests/cancel.rs`, `gui/web/app.js`)
 - REQ-039 implementato — Pulsante Esci che interrompe doc-ripper e arresta il server (`gui/src/main.rs`, `gui/src/server.rs`, `gui/tests/quit.rs`, `gui/web/app.js`, `gui/web/index.html`, `gui/web/style.css`)
+- REQ-030 implementato — Pulsanti Sfoglia che aprono dal server il selettore di cartelle di Windows davanti al browser (`gui/Cargo.lock`, `gui/Cargo.toml`, `gui/src/dialogs.rs`, `gui/src/main.rs`, `gui/src/server.rs`, `gui/web/app.js`)
 
 ## 2026-10-21
 - REQ-001 richiesto — Linguaggio Rust

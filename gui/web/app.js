@@ -41,9 +41,27 @@ function show() {
   fn.render(content);
 }
 
+// Campo cartella con "Sfoglia…": il selettore di Windows lo apre il server (REQ-030).
 function folderField(id, label) {
   const input = el("input", { id, type: "text", spellcheck: "false", autocomplete: "off" });
-  return { input, row: el("div", { class: "field" }, el("label", { for: id }, label), el("div", { class: "field-row" }, input)) };
+  const browse = el("button", { id: `${id}-browse`, type: "button" }, "Sfoglia…");
+  browse.addEventListener("click", async () => {
+    browse.disabled = true;
+    try {
+      const response = await fetch("/api/pick-folder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: label, initial: input.value }),
+      });
+      if (response.ok) {
+        const { path } = await response.json();
+        if (path) input.value = path;
+      }
+    } finally {
+      browse.disabled = false;
+    }
+  });
+  return { input, row: el("div", { class: "field" }, el("label", { for: id }, label), el("div", { class: "field-row" }, input, browse)) };
 }
 
 async function renderDocRipper(content) {

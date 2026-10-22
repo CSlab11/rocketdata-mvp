@@ -2,6 +2,7 @@
 #[cfg(not(windows))]
 compile_error!("gui supporta solo Windows 10 e Windows 11");
 
+mod dialogs;
 mod runner;
 mod server;
 mod summary;
@@ -51,6 +52,8 @@ async fn main() {
         doc_ripper: find_doc_ripper(),
         runner: Default::default(),
         shutdown: Arc::clone(&shutdown),
+        folder_picker: dialogs::system_folder_picker(),
+        picking: Default::default(),
     };
     let stop = async move {
         shutdown.notified().await;
