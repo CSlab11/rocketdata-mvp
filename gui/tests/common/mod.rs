@@ -44,6 +44,50 @@ pub fn gui_exe() -> &'static Path {
     Path::new(env!("CARGO_BIN_EXE_gui"))
 }
 
+/// gui.exe in una cartella temporanea con il doc-ripper finto (examples/fake_doc_ripper.rs)
+/// copiato accanto come doc-ripper.exe.
+#[allow(dead_code)]
+pub fn install_with_fake() -> (tempfile::TempDir, std::path::PathBuf) {
+    let dir = tempfile::tempdir().unwrap();
+    let exe = dir.path().join("gui.exe");
+    std::fs::copy(gui_exe(), &exe).unwrap();
+    let fake = gui_exe().parent().unwrap().join("examples").join("fake_doc_ripper.exe");
+    std::fs::copy(&fake, dir.path().join("doc-ripper.exe")).unwrap();
+    (dir, exe)
+}
+
+/// Avvia doc-ripper dalla gui; restituisce lo stato HTTP della risposta.
+#[allow(dead_code)]
+pub fn run(gui: &Gui, src: &str, dst: &str) -> u16 {
+    let body = format!(r#"{{"src":{},"dst":{}}}"#, json_string(src), json_string(dst));
+    let agent = ureq::Agent::config_builder().http_status_as_error(false).build().new_agent();
+    agent
+        .post(&gui.url("/api/doc-ripper/run"))
+        .header("Content-Type", "application/json")
+        .send(body.as_str())
+        .unwrap()
+        .status()
+        .as_u16()
+}
+
+/// Attende la fine dell'esecuzione e restituisce lo stato finale.
+#[allow(dead_code)]
+pub fn wait_output(gui: &Gui) -> serde_json::Value {
+    for _ in 0..100 {
+        let body = ureq::get(&gui.url("/api/doc-ripper/output")).call().unwrap().into_body().read_to_string().unwrap();
+        let snapshot: serde_json::Value = serde_json::from_str(&body).unwrap();
+        if snapshot["running"] == false {
+            return snapshot;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+    panic!("doc-ripper non è terminato");
+}
+
+fn json_string(s: &str) -> String {
+    serde_json::Value::String(s.to_string()).to_string()
+}
+
 /// DOM della pagina dopo l'esecuzione degli script, ottenuto con Edge headless
 /// (presente in Windows 10 e 11).
 #[allow(dead_code)]

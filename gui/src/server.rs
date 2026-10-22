@@ -5,9 +5,11 @@ use axum::extract::{Request, State};
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::middleware::{self, Next};
 use axum::response::{Html, IntoResponse, Response};
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::{Json, Router};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+
+use crate::runner::{self, Runner, Snapshot};
 
 /// Interfaccia web incorporata nell'eseguibile (REQ-026).
 const INDEX_HTML: &str = include_str!("../web/index.html");
@@ -19,6 +21,7 @@ pub struct AppState {
     pub port: u16,
     /// `doc-ripper.exe` accanto a `gui.exe`, se presente (REQ-029).
     pub doc_ripper: Option<PathBuf>,
+    pub runner: Arc<Runner>,
 }
 
 /// Applicazione HTTP della gui.
@@ -29,6 +32,8 @@ pub fn router(state: AppState) -> Router {
         .route("/style.css", get(|| async { asset("text/css; charset=utf-8", STYLE_CSS) }))
         .route("/app.js", get(|| async { asset("text/javascript; charset=utf-8", APP_JS) }))
         .route("/api/doc-ripper/status", get(doc_ripper_status))
+        .route("/api/doc-ripper/run", post(doc_ripper_run))
+        .route("/api/doc-ripper/output", get(doc_ripper_output))
         .layer(middleware::from_fn_with_state(state.port, local_only))
         .with_state(state)
 }
@@ -51,6 +56,32 @@ async fn doc_ripper_status(State(state): State<Arc<AppState>>) -> Json<DocRipper
             message: Some("doc-ripper.exe non trovato nella cartella di gui.exe: copiarlo lì e riavviare la gui.".into()),
         },
     })
+}
+
+#[derive(Deserialize)]
+struct RunRequest {
+    src: String,
+    dst: String,
+}
+
+/// Avvia doc-ripper con le cartelle indicate (REQ-028).
+async fn doc_ripper_run(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<RunRequest>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    let exe = runner::require(&state.doc_ripper).map_err(|e| (StatusCode::SERVICE_UNAVAILABLE, e))?;
+    if request.src.trim().is_empty() || request.dst.trim().is_empty() {
+        return Err((StatusCode::BAD_REQUEST, "indicare la cartella di origine e quella di destinazione".into()));
+    }
+    state
+        .runner
+        .start(exe, request.src.trim(), request.dst.trim())
+        .map_err(|e| (StatusCode::CONFLICT, e))?;
+    Ok(StatusCode::ACCEPTED)
+}
+
+async fn doc_ripper_output(State(state): State<Arc<AppState>>) -> Json<Snapshot> {
+    Json(state.runner.snapshot())
 }
 
 /// Accetta solo richieste indirizzate a localhost (REQ-036): un sito esterno aperto nel browser
@@ -87,7 +118,7 @@ mod tests {
     use tower::ServiceExt;
 
     fn app() -> Router {
-        router(AppState { port: 4000, doc_ripper: None })
+        router(AppState { port: 4000, doc_ripper: None, runner: Arc::default() })
     }
 
     async fn get(path: &str, host: &str, origin: Option<&str>) -> Response {

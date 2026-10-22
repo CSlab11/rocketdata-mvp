@@ -94,6 +94,34 @@ h1 { font-size: 22px; margin: 0 0 4px; }
 .alert.ok { color: var(--ok); }
 .alert.warn { color: var(--warn); }
 
+.field { margin-bottom: 14px; }
+
+.field label { display: block; font-weight: 600; margin-bottom: 4px; }
+
+.field-row { display: flex; gap: 8px; }
+
+.field input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.output {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  max-height: 360px;
+  overflow: auto;
+  font: 13px/1.45 Consolas, "Cascadia Mono", monospace;
+  white-space: pre-wrap;
+}
+
 .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
 
 button {

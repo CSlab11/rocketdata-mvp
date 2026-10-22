@@ -2,6 +2,7 @@
 #[cfg(not(windows))]
 compile_error!("gui supporta solo Windows 10 e Windows 11");
 
+mod runner;
 mod server;
 
 use std::path::PathBuf;
@@ -40,7 +41,7 @@ async fn main() {
         }
     }
 
-    let state = server::AppState { port, doc_ripper: find_doc_ripper() };
+    let state = server::AppState { port, doc_ripper: find_doc_ripper(), runner: Default::default() };
     if let Err(error) = axum::serve(listener, server::router(state)).await {
         eprintln!("Errore del server: {error}");
         std::process::exit(1);

@@ -41,19 +41,60 @@ function show() {
   fn.render(content);
 }
 
+function folderField(id, label) {
+  const input = el("input", { id, type: "text", spellcheck: "false", autocomplete: "off" });
+  return { input, row: el("div", { class: "field" }, el("label", { for: id }, label), el("div", { class: "field-row" }, input)) };
+}
+
 async function renderDocRipper(content) {
   const alert = el("div", { class: "alert error", role: "alert", hidden: "" });
+  const src = folderField("src", "Cartella di origine");
+  const dst = folderField("dst", "Cartella di destinazione");
   const start = el("button", { id: "start", class: "primary", type: "button", disabled: "" }, "Avvia conversione");
-  content.append(alert, el("div", { class: "actions" }, start));
+  const result = el("div", { id: "result", class: "alert", hidden: "" });
+  const output = el("pre", { id: "output", class: "output", hidden: "" });
+  content.append(alert, src.row, dst.row, el("div", { class: "actions" }, start), result, output);
+
+  const showError = (message) => {
+    alert.textContent = message;
+    alert.hidden = false;
+  };
 
   // doc-ripper.exe deve trovarsi accanto a gui.exe (REQ-029).
   const status = await fetch("/api/doc-ripper/status").then((r) => r.json());
-  if (status.available) {
-    start.disabled = false;
-  } else {
-    alert.textContent = status.message;
-    alert.hidden = false;
+  if (!status.available) {
+    showError(status.message);
+    return;
   }
+  start.disabled = false;
+
+  // Avvio di doc-ripper e lettura di output e codice di uscita (REQ-028).
+  start.addEventListener("click", async () => {
+    alert.hidden = true;
+    result.hidden = true;
+    const response = await fetch("/api/doc-ripper/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ src: src.input.value, dst: dst.input.value }),
+    });
+    if (!response.ok) {
+      showError(await response.text());
+      return;
+    }
+    start.disabled = true;
+    output.textContent = "";
+    output.hidden = false;
+    let snapshot;
+    do {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      snapshot = await fetch("/api/doc-ripper/output").then((r) => r.json());
+    } while (snapshot.running);
+    output.textContent = snapshot.lines.join("\n");
+    result.className = snapshot.exit_code === 0 ? "alert ok" : "alert error";
+    result.textContent = `doc-ripper terminato con codice di uscita ${snapshot.exit_code ?? "sconosciuto"}`;
+    result.hidden = false;
+    start.disabled = false;
+  });
 }
 
 window.addEventListener("hashchange", show);
