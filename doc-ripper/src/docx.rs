@@ -248,7 +248,7 @@ impl Markdown<'_> {
 }
 
 /// Protegge i caratteri che Markdown interpreterebbe come formattazione.
-fn escape(text: &str) -> String {
+pub fn escape(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     for c in text.chars() {
         if "\\`*_[]<>".contains(c) {

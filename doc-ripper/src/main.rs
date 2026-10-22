@@ -4,6 +4,7 @@ mod docx;
 mod excel;
 mod images;
 mod output;
+mod pdf;
 mod report;
 mod run;
 mod walk;
