@@ -7,9 +7,12 @@ mod server;
 mod summary;
 
 use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::Duration;
 
 use clap::Parser;
 use tokio::net::TcpListener;
+use tokio::sync::Notify;
 
 /// Interfaccia web locale dei tool RocketData.
 #[derive(Parser)]
@@ -42,11 +45,27 @@ async fn main() {
         }
     }
 
-    let state = server::AppState { port, doc_ripper: find_doc_ripper(), runner: Default::default() };
-    if let Err(error) = axum::serve(listener, server::router(state)).await {
+    let shutdown = Arc::new(Notify::new());
+    let state = server::AppState {
+        port,
+        doc_ripper: find_doc_ripper(),
+        runner: Default::default(),
+        shutdown: Arc::clone(&shutdown),
+    };
+    let stop = async move {
+        shutdown.notified().await;
+        // Connessioni rimaste aperte (es. una scheda in ascolto dell'output) non tengono
+        // acceso il server oltre qualche secondo.
+        tokio::spawn(async {
+            tokio::time::sleep(Duration::from_secs(3)).await;
+            std::process::exit(0);
+        });
+    };
+    if let Err(error) = axum::serve(listener, server::router(state)).with_graceful_shutdown(stop).await {
         eprintln!("Errore del server: {error}");
         std::process::exit(1);
     }
+    println!("gui arrestata");
 }
 
 /// `doc-ripper.exe` nella cartella di `gui.exe`, se presente (REQ-029).

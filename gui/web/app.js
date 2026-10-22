@@ -77,12 +77,14 @@ async function renderDocRipper(content) {
     output.textContent = "";
     output.hidden = false;
     const events = new EventSource("/api/doc-ripper/events");
+    openStreams.add(events);
     events.addEventListener("line", (e) => {
       output.textContent += (output.textContent ? "\n" : "") + e.data;
       output.scrollTop = output.scrollHeight;
     });
     events.addEventListener("end", async () => {
       events.close();
+      openStreams.delete(events);
       showResult(await fetch("/api/doc-ripper/output").then((r) => r.json()));
       start.disabled = false;
       cancel.hidden = true;
@@ -150,6 +152,19 @@ async function renderDocRipper(content) {
     start.disabled = false;
   }
 }
+
+// Connessioni in tempo reale aperte: vanno chiuse prima di spegnere il server.
+const openStreams = new Set();
+
+// Pulsante "Esci" (REQ-039): spegne il server, interrompendo un doc-ripper in corso.
+document.getElementById("quit").addEventListener("click", async () => {
+  if (!confirm("Chiudere RocketData? Un'eventuale conversione in corso verrà interrotta.")) return;
+  openStreams.forEach((s) => s.close());
+  await fetch("/api/shutdown", { method: "POST" }).catch(() => {});
+  document.body.replaceChildren(
+    el("div", { class: "closed" }, el("h1", {}, "RocketData è stato chiuso"), el("p", { class: "lead" }, "Puoi chiudere questa scheda.")),
+  );
+});
 
 window.addEventListener("hashchange", show);
 show();

@@ -27,6 +27,8 @@ pub struct AppState {
     /// `doc-ripper.exe` accanto a `gui.exe`, se presente (REQ-029).
     pub doc_ripper: Option<PathBuf>,
     pub runner: Arc<Runner>,
+    /// Segnala al server di spegnersi (REQ-039).
+    pub shutdown: Arc<tokio::sync::Notify>,
 }
 
 /// Applicazione HTTP della gui.
@@ -41,6 +43,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/doc-ripper/output", get(doc_ripper_output))
         .route("/api/doc-ripper/events", get(doc_ripper_events))
         .route("/api/doc-ripper/cancel", post(doc_ripper_cancel))
+        .route("/api/shutdown", post(shutdown))
         .layer(middleware::from_fn_with_state(state.port, local_only))
         .with_state(state)
 }
@@ -91,6 +94,20 @@ async fn doc_ripper_run(
 async fn doc_ripper_cancel(State(state): State<Arc<AppState>>) -> Result<StatusCode, (StatusCode, String)> {
     state.runner.cancel().map_err(|e| (StatusCode::CONFLICT, e))?;
     Ok(StatusCode::ACCEPTED)
+}
+
+/// Pulsante "Esci" (REQ-039): termina un eventuale doc-ripper in corso, poi spegne il server.
+async fn shutdown(State(state): State<Arc<AppState>>) -> StatusCode {
+    if state.runner.cancel().is_ok() {
+        for _ in 0..50 {
+            if !state.runner.snapshot().running {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        }
+    }
+    state.shutdown.notify_one();
+    StatusCode::ACCEPTED
 }
 
 async fn doc_ripper_output(State(state): State<Arc<AppState>>) -> Json<Snapshot> {
@@ -151,7 +168,7 @@ mod tests {
     use tower::ServiceExt;
 
     fn app() -> Router {
-        router(AppState { port: 4000, doc_ripper: None, runner: Arc::default() })
+        router(AppState { port: 4000, doc_ripper: None, runner: Arc::default(), shutdown: Arc::default() })
     }
 
     async fn get(path: &str, host: &str, origin: Option<&str>) -> Response {

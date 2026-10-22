@@ -19,6 +19,7 @@
 - REQ-031 implementato — Output di doc-ripper inoltrato in tempo reale con Server-Sent Events (`gui/Cargo.lock`, `gui/Cargo.toml`, `gui/src/runner.rs`, `gui/src/server.rs`, `gui/tests/live_output.rs`, `gui/web/app.js`)
 - REQ-032 implementato — Esito dal codice di uscita e riepilogo di convertiti, saltati e falliti letto dall'output di doc-ripper (`gui/src/main.rs`, `gui/src/runner.rs`, `gui/src/summary.rs`, `gui/tests/summary.rs`, `gui/web/app.js`, `gui/web/style.css`)
 - REQ-034 implementato — Pulsante Annulla che termina doc-ripper; interfaccia sempre utilizzabile durante l'esecuzione (`gui/src/runner.rs`, `gui/src/server.rs`, `gui/tests/cancel.rs`, `gui/web/app.js`)
+- REQ-039 implementato — Pulsante Esci che interrompe doc-ripper e arresta il server (`gui/src/main.rs`, `gui/src/server.rs`, `gui/tests/quit.rs`, `gui/web/app.js`, `gui/web/index.html`, `gui/web/style.css`)
 
 ## 2026-10-21
 - REQ-001 richiesto — Linguaggio Rust

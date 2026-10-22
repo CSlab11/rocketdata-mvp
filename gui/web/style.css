@@ -48,6 +48,10 @@ body {
 
 .brand { font-weight: 600; letter-spacing: 0.02em; }
 
+.quit { margin-left: auto; }
+
+.closed { max-width: 480px; margin: 15vh auto; text-align: center; }
+
 .layout {
   display: grid;
   grid-template-columns: 220px 1fr;
