@@ -15,7 +15,7 @@ Requisiti di progetto. I requisiti dei singoli tool sono in [`doc-ripper/REQUIRE
 
 ### Note
 
-- **Sotto-tool.** Un tool può dichiarare più sotto-tool: implementazioni diverse della stessa funzione, con funzioni e interfaccia equivalenti almeno nell'utilizzo (stessi ingressi, stesso tipo di risultato), così che chi li usa possa scambiarli senza cambiare il modo in cui li invoca. Esempio: la ricerca può avere più implementazioni, ciascuna un sotto-tool del tool di ricerca.
+- **Sotto-tool.** Un tool può dichiarare più sotto-tool: implementazioni diverse della stessa funzione, con funzioni e interfaccia equivalenti almeno nell'utilizzo (stessi ingressi, stesso tipo di risultato), così che chi li usa possa scambiarli senza cambiare il modo in cui li invoca. Ogni sotto-tool sta in una sottocartella del tool il cui nome inizia con il nome della cartella del tool, seguito da un suffisso diverso per ciascun sotto-tool. Esempio: la ricerca può avere più implementazioni, ciascuna un sotto-tool di `search/`, come `search/search-fulltext/` e `search/search-semantica/`.
 
 ## Bug
 
