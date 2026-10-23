@@ -23,6 +23,7 @@
 - REQ-049 implementato — Anteprima "Nessun indice disponibile" all'avvio e senza index.md (`gui/tests/index_preview.rs`, `gui/web/app.js`, `gui/web/style.css`)
 - REQ-050 richiesto — README principale con le istruzioni d'uso dopo il clone
 - REQ-051 richiesto — dist\ versionata e aggiornata solo nei commit di release taggati vX.Y.Z
+- REQ-051 implementato — dist\ versionata, release v0.1.0 (`.gitignore`, `dist/doc-ripper.exe`, `dist/gui.exe`, `dist/pdfium-LICENSE.txt`, `dist/pdfium.dll`, `dist/start.cmd`, `dist/stop.cmd`)
 
 ## 2026-10-22
 - REQ-010 implementato — Conversione PDF in Markdown con PDFium: titoli, paragrafi, elenchi e tabelle ricostruiti dal layout (`doc-ripper/.gitignore`, `doc-ripper/Cargo.lock`, `doc-ripper/Cargo.toml`, `doc-ripper/build.rs`, `doc-ripper/scripts/fetch-pdfium.ps1`, `doc-ripper/src/convert.rs`, `doc-ripper/src/docx.rs`, `doc-ripper/src/main.rs`, `doc-ripper/src/pdf.rs`, `doc-ripper/tests/pdf.rs`)
