@@ -14,10 +14,10 @@ fn xlsx(path: &Path, sheets: &[&str]) {
     wb.save(path).unwrap();
 }
 
-/// Verifica che il link `file://` porti al file indicato.
-fn assert_points_to(url: &str, file: &Path) {
-    assert!(url.starts_with("file:///"), "{url}");
-    let path = url::Url::parse(url).unwrap().to_file_path().unwrap();
+/// Verifica che il link, un percorso assoluto senza `file://`, porti al file indicato.
+fn assert_points_to(link: &str, file: &Path) {
+    assert!(!link.starts_with("file:"), "{link}");
+    let path = url::Url::parse(&format!("file:///{link}")).unwrap().to_file_path().unwrap();
     assert_eq!(fs::canonicalize(path).unwrap(), fs::canonicalize(file).unwrap());
 }
 
