@@ -71,3 +71,15 @@ fn src_inesistente_e_un_errore() {
     assert_eq!(out.status.code(), Some(2));
     assert!(String::from_utf8_lossy(&out.stderr).contains("cartella di origine"));
 }
+
+#[test]
+fn scrive_una_riga_di_avanzamento_per_file() {
+    let src = tempfile::tempdir().unwrap();
+    let dst = tempfile::tempdir().unwrap();
+    std::fs::write(src.path().join("a.txt"), "").unwrap();
+    std::fs::write(src.path().join("b.txt"), "").unwrap();
+    let out = run(&["--src", src.path().to_str().unwrap(), "--dst", dst.path().to_str().unwrap()]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let lines: Vec<&str> = stdout.lines().collect();
+    assert_eq!(lines[..3], ["[1/2] a.txt", "[2/2] b.txt", "Riepilogo"], "{stdout}");
+}

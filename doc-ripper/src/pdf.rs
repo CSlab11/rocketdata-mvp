@@ -30,10 +30,10 @@ fn load_pdfium() -> Result<Pdfium, String> {
 
 /// Converte un `.pdf` in `<nome>_pdf.md` ricostruendo titoli, paragrafi, elenchi e tabelle (REQ-010)
 /// ed estraendo le immagini (REQ-020).
-pub fn convert(src: &Path, dst: &Path, rel: &Path) -> Result<Outcome, String> {
+pub fn convert(src: &Path, dst: &Path, rel: &Path, progress: &str) -> Result<Outcome, String> {
     let mut images = Images::new(rel);
     let pages = PDFIUM.with(|cell| match cell.get_or_init(load_pdfium) {
-        Ok(pdfium) => extract(pdfium, &src.join(rel), &mut images),
+        Ok(pdfium) => extract(pdfium, &src.join(rel), &mut images, progress),
         Err(e) => Err(e.clone()),
     })?;
     // Nessun testo estraibile: documento scansionato, non supportato (REQ-013).
@@ -50,9 +50,10 @@ pub fn convert(src: &Path, dst: &Path, rel: &Path) -> Result<Outcome, String> {
 }
 
 /// Frammenti di testo di ogni pagina, con posizione e dimensione del carattere, e immagini
-/// con la loro posizione verticale.
-fn extract(pdfium: &Pdfium, path: &Path, images: &mut Images) -> Result<Vec<layout::Page>, String> {
+/// con la loro posizione verticale. Dopo ogni pagina scrive una riga di avanzamento (REQ-043).
+fn extract(pdfium: &Pdfium, path: &Path, images: &mut Images, progress: &str) -> Result<Vec<layout::Page>, String> {
     let document = pdfium.load_pdf_from_file(path, None).map_err(|e| format!("pdf non valido: {e}"))?;
+    let total = document.pages().len();
     let mut pages = Vec::new();
     for (index, page) in document.pages().iter().enumerate() {
         let mut result = layout::Page::default();
@@ -86,6 +87,7 @@ fn extract(pdfium: &Pdfium, path: &Path, images: &mut Images) -> Result<Vec<layo
             });
         }
         pages.push(result);
+        println!("{progress} pagina {}/{total}", index + 1);
     }
     Ok(pages)
 }

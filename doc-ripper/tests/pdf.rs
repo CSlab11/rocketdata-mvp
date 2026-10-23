@@ -154,3 +154,25 @@ fn pdf_corrotto_fallisce() {
     assert_eq!(out.status.code(), Some(1), "{stdout}");
     assert!(stdout.contains("rotto.pdf - pdf non valido"), "{stdout}");
 }
+
+#[test]
+fn scrive_una_riga_di_avanzamento_per_pagina() {
+    let src = tempfile::tempdir().unwrap();
+    let dst = tempfile::tempdir().unwrap();
+    let pdfium = pdfium();
+    let mut document = pdfium.create_new_pdf().unwrap();
+    let font = document.fonts_mut().helvetica();
+    for text in ["Prima pagina.", "Seconda pagina."] {
+        let mut page = document.pages_mut().create_page_at_end(PdfPagePaperSize::a4()).unwrap();
+        page.objects_mut()
+            .create_text_object(PdfPoints::new(72.0), PdfPoints::new(780.0), text, font, PdfPoints::new(11.0))
+            .unwrap();
+    }
+    document.save_to_file(&src.path().join("doc.pdf")).unwrap();
+
+    let out = run(src.path(), dst.path());
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(out.status.success(), "{stdout}");
+    let lines: Vec<&str> = stdout.lines().collect();
+    assert_eq!(lines[..4], ["[1/1] doc.pdf", "[1/1] pagina 1/2", "[1/1] pagina 2/2", "Riepilogo"], "{stdout}");
+}

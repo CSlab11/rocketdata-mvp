@@ -25,12 +25,13 @@ impl Kind {
 
 /// Converte il file `rel` (relativo a `src`) scrivendo i risultati sotto `dst`.
 /// I file di tipo non supportato non vengono elaborati né copiati (REQ-019).
-pub fn convert(src: &Path, dst: &Path, rel: &Path) -> Result<Outcome, String> {
+/// `progress` è il prefisso delle righe di avanzamento del file (es. `[3/12]`, REQ-043).
+pub fn convert(src: &Path, dst: &Path, rel: &Path, progress: &str) -> Result<Outcome, String> {
     match Kind::of(rel) {
         None => Ok(Outcome::skipped(SkipReason::Unsupported)),
         Some(Kind::Spreadsheet) => crate::excel::convert(src, dst, rel),
         Some(Kind::Docx) => crate::docx::convert(src, dst, rel),
-        Some(Kind::Pdf) => crate::pdf::convert(src, dst, rel),
+        Some(Kind::Pdf) => crate::pdf::convert(src, dst, rel, progress),
     }
 }
 

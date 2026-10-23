@@ -50,7 +50,15 @@ fn main() -> ExitCode {
             failed_dirs.push((dir.clone(), error.to_string()));
         }
     }
-    let mut report = run::process(tree.files, |rel| convert::convert(&src, &dst, rel));
+    // Riga di avanzamento prima di ogni file (REQ-043).
+    let total = tree.files.len();
+    let mut current = 0;
+    let mut report = run::process(tree.files, |rel| {
+        current += 1;
+        let progress = format!("[{current}/{total}]");
+        println!("{progress} {}", rel.display());
+        convert::convert(&src, &dst, rel, &progress)
+    });
     report.failed.extend(failed_dirs);
     report.failed.extend(tree.errors);
     if let Err(error) = index::write_index(&src, &dst, &report) {
