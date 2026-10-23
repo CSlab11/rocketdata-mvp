@@ -73,6 +73,9 @@ async function renderDocRipper(content) {
   const result = el("div", { id: "result", class: "alert", hidden: "" });
   const summary = el("div", { id: "summary", class: "summary", hidden: "" });
   const output = el("pre", { id: "output", class: "output", hidden: "" });
+  const progressBar = el("progress", { max: "100", value: "0" });
+  const progressText = el("span");
+  const progress = el("div", { id: "progress", class: "progress", hidden: "" }, progressBar, progressText);
 
   // Apertura dei risultati dell'ultima esecuzione (REQ-033).
   const openResult = async (target) => {
@@ -87,7 +90,7 @@ async function renderDocRipper(content) {
   const openIndex = el("button", { id: "open-index", type: "button", onclick: () => openResult("index") }, "Apri index.md");
   const results = el("div", { id: "results", class: "actions", hidden: "" }, openDst, openIndex);
 
-  content.append(alert, src.row, dst.row, el("div", { class: "actions" }, start, cancel), result, results, summary, output);
+  content.append(alert, src.row, dst.row, el("div", { class: "actions" }, start, cancel), progress, result, results, summary, output);
 
   const showError = (message) => {
     alert.textContent = message;
@@ -101,6 +104,28 @@ async function renderDocRipper(content) {
     return;
   }
 
+  // Barra di avanzamento dalle righe `[n/totale] <file>` e `[n/totale] pagina p/pagine` (REQ-044):
+  // ogni file pesa uguale, dentro un pdf conta la frazione di pagine elaborate.
+  const FILE_LINE = /^\[(\d+)\/(\d+)\] /;
+  const PAGE_LINE = /^\[(\d+)\/(\d+)\] pagina (\d+)\/(\d+)$/;
+  let position = null;
+  const track = (line) => {
+    const page = PAGE_LINE.exec(line);
+    const file = page || FILE_LINE.exec(line);
+    if (file) position = { file: +file[1], total: +file[2], page: page ? +page[3] : 0, pages: page ? +page[4] : 0 };
+  };
+  const drawProgress = (finished) => {
+    progress.hidden = !position;
+    if (!position) return;
+    const { file, total, page, pages } = position;
+    const fraction = finished ? 1 : (file - 1 + (pages ? page / pages : 0)) / total;
+    const percent = Math.floor(fraction * 100);
+    progressBar.setAttribute("value", percent);
+    progressText.textContent = `File ${file} di ${total}${pages ? ` — pagina ${page} di ${pages}` : ""} (${percent}%)`;
+  };
+  // Le righe per pagina servono solo alla barra: non compaiono nell'output.
+  const visible = (lines) => lines.filter((l) => !PAGE_LINE.test(l));
+
   // Output in tempo reale (REQ-031) e codice di uscita a fine esecuzione (REQ-028).
   const follow = () => {
     start.disabled = true;
@@ -108,9 +133,14 @@ async function renderDocRipper(content) {
     cancel.disabled = false;
     output.textContent = "";
     output.hidden = false;
+    position = null;
+    drawProgress(false);
     const events = new EventSource("/api/doc-ripper/events");
     openStreams.add(events);
     events.addEventListener("line", (e) => {
+      track(e.data);
+      drawProgress(false);
+      if (PAGE_LINE.test(e.data)) return;
       output.textContent += (output.textContent ? "\n" : "") + e.data;
       output.scrollTop = output.scrollHeight;
     });
@@ -143,7 +173,10 @@ async function renderDocRipper(content) {
     }
     result.hidden = false;
     results.hidden = !snapshot.dst;
-    output.textContent = snapshot.lines.join("\n");
+    output.textContent = visible(snapshot.lines).join("\n");
+    position = null;
+    snapshot.lines.forEach(track);
+    drawProgress(!snapshot.cancelled);
     output.hidden = false;
     const s = snapshot.summary;
     if (!s) {

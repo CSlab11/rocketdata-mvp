@@ -144,6 +144,12 @@ h1 { font-size: 22px; margin: 0 0 4px; }
   white-space: pre-wrap;
 }
 
+.progress { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+
+.progress progress { flex: 1; min-width: 0; height: 14px; accent-color: var(--accent); }
+
+.progress span { white-space: nowrap; font-variant-numeric: tabular-nums; }
+
 .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
 
 button {

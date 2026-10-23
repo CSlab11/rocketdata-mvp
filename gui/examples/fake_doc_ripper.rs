@@ -1,6 +1,7 @@
 //! doc-ripper finto per i test di gui: viene copiato come `doc-ripper.exe` accanto a `gui.exe`.
 //! Il comportamento dipende da file marcatore nella cartella di origine:
 //! `lento` → righe distanziate di 300 ms, `fallisci` → codice di uscita 1.
+//! Prima del riepilogo scrive le righe di avanzamento per file e per pagina (REQ-043).
 
 use std::io::Write;
 use std::path::PathBuf;
@@ -20,6 +21,10 @@ fn main() {
     let slow = src.join("lento").exists();
     let fail = src.join("fallisci").exists();
     let lines = [
+        "[1/2] report.pdf".to_string(),
+        "[1/2] pagina 1/2".to_string(),
+        "[1/2] pagina 2/2".to_string(),
+        "[2/2] vendite.xlsx".to_string(),
         "Riepilogo".to_string(),
         "  Convertiti: 2".to_string(),
         "    report.pdf -> report_pdf.md".to_string(),
