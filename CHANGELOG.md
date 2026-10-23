@@ -9,6 +9,10 @@
 - REQ-044 richiesto — gui: barra di avanzamento per file e pagina, righe per pagina escluse dall'output
 - REQ-043 implementato — Righe di avanzamento [n/totale] per file e per pagina dei PDF (`doc-ripper/src/convert.rs`, `doc-ripper/src/main.rs`, `doc-ripper/src/pdf.rs`, `doc-ripper/tests/cli.rs`, `doc-ripper/tests/pdf.rs`)
 - REQ-044 implementato — Barra di avanzamento per file e pagina nella gui, righe per pagina escluse dall'output (`gui/examples/fake_doc_ripper.rs`, `gui/tests/progress.rs`, `gui/web/app.js`, `gui/web/style.css`)
+- REQ-014 annullato — sostituito da REQ-045 (link all'originale senza file://)
+- REQ-022 annullato — sostituito da REQ-046 (link all'originale senza file://)
+- REQ-045 richiesto — doc-ripper: riga Origine dei .md con percorso assoluto senza file://
+- REQ-046 richiesto — doc-ripper: index.md con link agli originali come percorso assoluto senza file://
 
 ## 2026-10-22
 - REQ-010 implementato — Conversione PDF in Markdown con PDFium: titoli, paragrafi, elenchi e tabelle ricostruiti dal layout (`doc-ripper/.gitignore`, `doc-ripper/Cargo.lock`, `doc-ripper/Cargo.toml`, `doc-ripper/build.rs`, `doc-ripper/scripts/fetch-pdfium.ps1`, `doc-ripper/src/convert.rs`, `doc-ripper/src/docx.rs`, `doc-ripper/src/main.rs`, `doc-ripper/src/pdf.rs`, `doc-ripper/tests/pdf.rs`)
