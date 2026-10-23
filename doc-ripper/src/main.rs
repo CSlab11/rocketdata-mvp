@@ -43,6 +43,9 @@ fn main() -> ExitCode {
         }
     };
 
+    // L'indice dell'esecuzione precedente non vale più: si riscrive alla fine (REQ-047).
+    let _ = fs::remove_file(dst.join("index.md"));
+
     let tree = walk::scan(&src, &dst);
     let mut failed_dirs = Vec::new();
     for dir in &tree.dirs {
