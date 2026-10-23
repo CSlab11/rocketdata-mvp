@@ -16,6 +16,7 @@
 - REQ-047 richiesto — doc-ripper: cancella index.md all'avvio
 - REQ-048 richiesto — gui: anteprima di index.md a fine conversione, con link cliccabili
 - REQ-049 richiesto — gui: anteprima "Nessun indice disponibile" all'avvio e senza index.md
+- REQ-045 implementato — Riga Origine dei .md con percorso assoluto codificato senza file:// (`doc-ripper/src/link.rs`, `doc-ripper/tests/docx.rs`, `doc-ripper/tests/pdf.rs`)
 
 ## 2026-10-22
 - REQ-010 implementato — Conversione PDF in Markdown con PDFium: titoli, paragrafi, elenchi e tabelle ricostruiti dal layout (`doc-ripper/.gitignore`, `doc-ripper/Cargo.lock`, `doc-ripper/Cargo.toml`, `doc-ripper/build.rs`, `doc-ripper/scripts/fetch-pdfium.ps1`, `doc-ripper/src/convert.rs`, `doc-ripper/src/docx.rs`, `doc-ripper/src/main.rs`, `doc-ripper/src/pdf.rs`, `doc-ripper/tests/pdf.rs`)

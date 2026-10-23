@@ -67,8 +67,8 @@ fn split_origin(md: &str, original: &Path) -> String {
 ").unwrap();
     assert!(first.starts_with("Origine: ["), "{first}");
     let url = first.split_once("](").unwrap().1.strip_suffix(')').unwrap();
-    assert!(url.starts_with("file:///"), "{url}");
-    let path = url::Url::parse(url).unwrap().to_file_path().unwrap();
+    assert!(!url.starts_with("file:"), "{url}");
+    let path = url::Url::parse(&format!("file:///{url}")).unwrap().to_file_path().unwrap();
     assert_eq!(fs::canonicalize(path).unwrap(), fs::canonicalize(original).unwrap());
     rest.to_string()
 }
