@@ -55,6 +55,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/doc-ripper/output", get(doc_ripper_output))
         .route("/api/doc-ripper/events", get(doc_ripper_events))
         .route("/api/doc-ripper/cancel", post(doc_ripper_cancel))
+        .route("/api/doc-ripper/index", get(doc_ripper_index))
         .route("/api/shutdown", post(shutdown))
         .route("/api/pick-folder", post(pick_folder))
         .route("/api/settings", get(get_settings))
@@ -114,11 +115,37 @@ async fn doc_ripper_run(
 enum OpenTarget {
     Destination,
     Index,
+    /// Un link dell'anteprima di `index.md` (REQ-048).
+    Link,
 }
 
 #[derive(Deserialize)]
 struct OpenRequest {
     target: OpenTarget,
+    href: Option<String>,
+}
+
+/// Testo di `index.md` dell'ultima esecuzione terminata, per l'anteprima (REQ-048).
+async fn doc_ripper_index(State(state): State<Arc<AppState>>) -> Result<String, (StatusCode, String)> {
+    let snapshot = state.runner.snapshot();
+    let dst = match (&snapshot.dst, snapshot.running) {
+        (Some(dst), false) => PathBuf::from(dst),
+        _ => return Err((StatusCode::CONFLICT, "nessuna conversione terminata".into())),
+    };
+    std::fs::read_to_string(dst.join("index.md")).map_err(|_| (StatusCode::NOT_FOUND, "nessun indice disponibile".into()))
+}
+
+/// File a cui punta un link di `index.md`: solo i link presenti nell'indice, decodificati
+/// (`%20` → spazio) e risolti rispetto alla destinazione se relativi (REQ-048).
+fn index_link(dst: &std::path::Path, href: &str) -> Result<PathBuf, (StatusCode, String)> {
+    let index = std::fs::read_to_string(dst.join("index.md")).unwrap_or_default();
+    if href.is_empty() || !index.contains(&format!("]({href})")) {
+        return Err((StatusCode::FORBIDDEN, "link non presente in index.md".into()));
+    }
+    let decoded = percent_encoding::percent_decode_str(href)
+        .decode_utf8()
+        .map_err(|_| (StatusCode::UNPROCESSABLE_ENTITY, "link non valido".into()))?;
+    Ok(dst.join(decoded.as_ref()))
 }
 
 /// Apre la cartella di destinazione o `index.md` dell'ultima esecuzione (REQ-033). Il percorso
@@ -135,6 +162,7 @@ async fn open_result(
     let opening = match request.target {
         OpenTarget::Destination => Opening::Folder(dst),
         OpenTarget::Index => Opening::File(dst.join("index.md")),
+        OpenTarget::Link => Opening::File(index_link(&dst, request.href.as_deref().unwrap_or_default())?),
     };
     let exists = match &opening {
         Opening::Folder(path) => path.is_dir(),
@@ -327,6 +355,86 @@ mod tests {
             *opened.lock().unwrap(),
             vec![Opening::Folder(dst.path().to_path_buf()), Opening::File(dst.path().join("index.md"))]
         );
+    }
+
+    #[tokio::test]
+    async fn apre_solo_i_link_dell_indice() {
+        let dst = tempfile::tempdir().unwrap();
+        let original = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dst.path().join("conti 2026")).unwrap();
+        std::fs::write(dst.path().join("conti 2026/a_pdf.md"), "").unwrap();
+        std::fs::write(original.path().join("a b.pdf"), "").unwrap();
+        let original_link = format!("{}/a%20b.pdf", original.path().display().to_string().replace('\\', "/"));
+        std::fs::write(
+            dst.path().join("index.md"),
+            format!("| [a\\_pdf.md](conti%202026/a_pdf.md) | [a b.pdf]({original_link}) |\n| [x](manca.md) | |\n"),
+        )
+        .unwrap();
+        let opened = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let record = Arc::clone(&opened);
+        let app = || {
+            let record = Arc::clone(&record);
+            let mut s = state(Arc::new(|_, _| None));
+            s.runner = Arc::new(Runner::finished(dst.path().to_str().unwrap()));
+            s.opener = Arc::new(move |o| {
+                record.lock().unwrap().push(o);
+                Ok(())
+            });
+            router(s)
+        };
+        let link = |href: &str| {
+            let body = serde_json::json!({ "target": "link", "href": href }).to_string();
+            let app = app();
+            async move {
+                let request = Request::builder()
+                    .method("POST")
+                    .uri("/api/open")
+                    .header(header::HOST, "127.0.0.1:4000")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(body))
+                    .unwrap();
+                app.oneshot(request).await.unwrap().status()
+            }
+        };
+
+        assert_eq!(link("conti%202026/a_pdf.md").await, StatusCode::NO_CONTENT);
+        assert_eq!(link(&original_link).await, StatusCode::NO_CONTENT);
+        assert_eq!(link("manca.md").await, StatusCode::NOT_FOUND, "nell'indice ma inesistente");
+        assert_eq!(link("C:/Windows/notepad.exe").await, StatusCode::FORBIDDEN, "non presente nell'indice");
+        assert_eq!(link("").await, StatusCode::FORBIDDEN);
+
+        assert_eq!(
+            *opened.lock().unwrap(),
+            vec![
+                Opening::File(dst.path().join("conti 2026/a_pdf.md")),
+                Opening::File(PathBuf::from(format!("{}/a b.pdf", original.path().display().to_string().replace('\\', "/")))),
+            ]
+        );
+    }
+
+    #[tokio::test]
+    async fn testo_dell_indice() {
+        let dst = tempfile::tempdir().unwrap();
+        let app = || {
+            let mut s = state(Arc::new(|_, _| None));
+            s.runner = Arc::new(Runner::finished(dst.path().to_str().unwrap()));
+            router(s)
+        };
+        let fetch = |app: Router| async move {
+            let request = Request::builder()
+                .uri("/api/doc-ripper/index")
+                .header(header::HOST, "127.0.0.1:4000")
+                .body(Body::empty())
+                .unwrap();
+            let response = app.oneshot(request).await.unwrap();
+            let status = response.status();
+            let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+            (status, String::from_utf8_lossy(&body).into_owned())
+        };
+        assert_eq!(fetch(app()).await.0, StatusCode::NOT_FOUND);
+        std::fs::write(dst.path().join("index.md"), "# Indice").unwrap();
+        assert_eq!(fetch(app()).await, (StatusCode::OK, "# Indice".to_string()));
+        assert_eq!(fetch(router(state(Arc::new(|_, _| None)))).await.0, StatusCode::CONFLICT);
     }
 
     #[tokio::test]

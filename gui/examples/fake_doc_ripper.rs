@@ -2,6 +2,8 @@
 //! Il comportamento dipende da file marcatore nella cartella di origine:
 //! `lento` → righe distanziate di 300 ms, `fallisci` → codice di uscita 1.
 //! Prima del riepilogo scrive le righe di avanzamento per file e per pagina (REQ-043).
+//! Se la destinazione esiste, cancella `index.md` all'avvio (REQ-047) e, salvo `fallisci`,
+//! ne scrive uno di prova alla fine.
 
 use std::io::Write;
 use std::path::PathBuf;
@@ -20,6 +22,8 @@ fn main() {
 
     let slow = src.join("lento").exists();
     let fail = src.join("fallisci").exists();
+    let index = PathBuf::from(&dst).join("index.md");
+    let _ = std::fs::remove_file(&index);
     let lines = [
         "[1/2] report.pdf".to_string(),
         "[1/2] pagina 1/2".to_string(),
@@ -44,5 +48,10 @@ fn main() {
     if fail {
         println!("    rotto.docx - docx non valido");
         std::process::exit(1);
+    }
+    if PathBuf::from(&dst).is_dir() {
+        let markdown = "# Indice dei file generati\n\n| File generato | Originale |\n|---|---|\n\
+            | [report\\_pdf.md](report_pdf.md) | [report (v1).pdf](C:/dati/report%20(v1).pdf) |\n";
+        std::fs::write(&index, markdown).unwrap();
     }
 }

@@ -133,6 +133,31 @@ h1 { font-size: 22px; margin: 0 0 4px; }
 
 .summary ul { margin: 0; padding-left: 18px; overflow-wrap: anywhere; }
 
+.preview {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+}
+
+.preview > h2 { font-size: 15px; margin: 0 0 8px; }
+
+.preview h3 { font-size: 15px; margin: 4px 0 8px; }
+
+.preview table { border-collapse: collapse; width: 100%; }
+
+.preview th, .preview td {
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.preview a { color: var(--accent); }
+
 .output {
   background: var(--surface);
   border: 1px solid var(--border);

@@ -348,6 +348,7 @@ dependencies = [
  "axum",
  "clap",
  "open",
+ "percent-encoding",
  "raw-window-handle",
  "rfd",
  "serde",
