@@ -13,6 +13,9 @@
 - REQ-022 annullato — sostituito da REQ-046 (link all'originale senza file://)
 - REQ-045 richiesto — doc-ripper: riga Origine dei .md con percorso assoluto senza file://
 - REQ-046 richiesto — doc-ripper: index.md con link agli originali come percorso assoluto senza file://
+- REQ-047 richiesto — doc-ripper: cancella index.md all'avvio
+- REQ-048 richiesto — gui: anteprima di index.md a fine conversione, con link cliccabili
+- REQ-049 richiesto — gui: anteprima "Nessun indice disponibile" all'avvio e senza index.md
 
 ## 2026-10-22
 - REQ-010 implementato — Conversione PDF in Markdown con PDFium: titoli, paragrafi, elenchi e tabelle ricostruiti dal layout (`doc-ripper/.gitignore`, `doc-ripper/Cargo.lock`, `doc-ripper/Cargo.toml`, `doc-ripper/build.rs`, `doc-ripper/scripts/fetch-pdfium.ps1`, `doc-ripper/src/convert.rs`, `doc-ripper/src/docx.rs`, `doc-ripper/src/main.rs`, `doc-ripper/src/pdf.rs`, `doc-ripper/tests/pdf.rs`)
