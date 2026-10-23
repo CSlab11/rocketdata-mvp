@@ -137,7 +137,7 @@ async function renderDocRipper(content) {
     output.hidden = false;
     position = null;
     drawProgress(false);
-    preview.hidden = true;
+    noIndex();
     const events = new EventSource("/api/doc-ripper/events");
     openStreams.add(events);
     events.addEventListener("line", (e) => {
@@ -225,10 +225,15 @@ async function renderDocRipper(content) {
     }
     previewBody.replaceChildren(...blocks);
   };
+  // All'avvio e quando index.md manca l'anteprima lo dice (REQ-049).
+  const noIndex = () => {
+    previewBody.replaceChildren(el("p", { class: "muted" }, "Nessun indice disponibile"));
+    preview.hidden = false;
+  };
   const loadPreview = async () => {
     const response = await fetch("/api/doc-ripper/index");
     if (!response.ok) {
-      preview.hidden = true;
+      noIndex();
       return;
     }
     renderIndex(await response.text());

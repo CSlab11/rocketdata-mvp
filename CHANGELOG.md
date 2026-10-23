@@ -20,6 +20,7 @@
 - REQ-046 implementato — Link agli originali in index.md come percorso assoluto senza file:// (`doc-ripper/src/index.rs`, `doc-ripper/tests/index.rs`)
 - REQ-047 implementato — index.md della destinazione cancellato all'avvio (`doc-ripper/src/main.rs`, `doc-ripper/tests/index.rs`)
 - REQ-048 implementato — Anteprima di index.md a fine conversione con link aperti dal server (`gui/Cargo.lock`, `gui/Cargo.toml`, `gui/examples/fake_doc_ripper.rs`, `gui/src/server.rs`, `gui/tests/index_preview.rs`, `gui/web/app.js`, `gui/web/style.css`)
+- REQ-049 implementato — Anteprima "Nessun indice disponibile" all'avvio e senza index.md (`gui/tests/index_preview.rs`, `gui/web/app.js`, `gui/web/style.css`)
 
 ## 2026-10-22
 - REQ-010 implementato — Conversione PDF in Markdown con PDFium: titoli, paragrafi, elenchi e tabelle ricostruiti dal layout (`doc-ripper/.gitignore`, `doc-ripper/Cargo.lock`, `doc-ripper/Cargo.toml`, `doc-ripper/build.rs`, `doc-ripper/scripts/fetch-pdfium.ps1`, `doc-ripper/src/convert.rs`, `doc-ripper/src/docx.rs`, `doc-ripper/src/main.rs`, `doc-ripper/src/pdf.rs`, `doc-ripper/tests/pdf.rs`)
