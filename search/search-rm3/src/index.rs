@@ -9,6 +9,9 @@ use crate::analyze::Analyzer;
 use crate::section;
 
 const INDEX_FILE: &str = "index.json";
+/// Marcatore con il nome del sotto-tool che ha creato l'indice (REQ-057).
+const MARKER_FILE: &str = "search-tool";
+const TOOL: &str = "search-rm3";
 
 /// Indice BM25 delle sezioni dei `.md` di una cartella.
 #[derive(Serialize, Deserialize)]
@@ -71,12 +74,20 @@ fn add(index: &mut Index, analyzer: &Analyzer, section: IndexedSection) {
 pub fn save(index: &Index, dir: &Path) -> Result<(), String> {
     fs::create_dir_all(dir).map_err(|e| format!("impossibile creare {}: {e}", dir.display()))?;
     let json = serde_json::to_string(index).map_err(|e| e.to_string())?;
-    let path = dir.join(INDEX_FILE);
-    fs::write(&path, json).map_err(|e| format!("impossibile scrivere {}: {e}", path.display()))
+    for (name, content) in [(MARKER_FILE, TOOL), (INDEX_FILE, json.as_str())] {
+        let path = dir.join(name);
+        fs::write(&path, content).map_err(|e| format!("impossibile scrivere {}: {e}", path.display()))?;
+    }
+    Ok(())
 }
 
 /// Legge l'indice dalla cartella.
 pub fn load(dir: &Path) -> Result<Index, String> {
+    let marker = fs::read_to_string(dir.join(MARKER_FILE))
+        .map_err(|_| format!("la cartella non contiene un indice di {TOOL}: {}", dir.display()))?;
+    if marker.trim() != TOOL {
+        return Err(format!("l'indice in {} è stato creato da {}, non da {TOOL}", dir.display(), marker.trim()));
+    }
     let path = dir.join(INDEX_FILE);
     let json = fs::read_to_string(&path).map_err(|e| format!("impossibile leggere l'indice {}: {e}", path.display()))?;
     serde_json::from_str(&json).map_err(|e| format!("indice non valido {}: {e}", path.display()))

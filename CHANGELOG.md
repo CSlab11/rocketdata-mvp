@@ -21,6 +21,7 @@
 - REQ-055 implementato — Suddivisione dei .md in sezioni per intestazione ATX, blocchi di codice esclusi (`search/search-rm3/src/main.rs`, `search/search-rm3/src/section.rs`)
 - REQ-063 implementato — Analisi del testo inglese: minuscole, stopword, Porter2, identificatori interi, destinazioni dei link escluse (`search/search-rm3/Cargo.lock`, `search/search-rm3/Cargo.toml`, `search/search-rm3/src/analyze.rs`, `search/search-rm3/src/main.rs`)
 - REQ-054 implementato — Comando index: sezioni dei .md di --src, escluso index.md della radice, in index.json (`search/search-rm3/Cargo.lock`, `search/search-rm3/Cargo.toml`, `search/search-rm3/src/index.rs`, `search/search-rm3/src/main.rs`, `search/search-rm3/tests/index.rs`)
+- REQ-057 implementato — Marcatore search-tool nell'indice, errore su indice assente o di altro sotto-tool (`search/search-rm3/src/index.rs`, `search/search-rm3/src/main.rs`, `search/search-rm3/tests/marker.rs`)
 
 ## 2026-10-23
 - REQ-041 richiesto — doc-ripper: riga di avanzamento per ciascun file elaborato

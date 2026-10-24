@@ -46,7 +46,7 @@ enum Command {
 fn main() -> ExitCode {
     let result = match Args::parse().command {
         Command::Index { src, index } => run_index(&src, &index),
-        Command::Query { .. } => Ok(()),
+        Command::Query { index, .. } => run_query(&index),
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,
@@ -55,6 +55,11 @@ fn main() -> ExitCode {
             ExitCode::from(2)
         }
     }
+}
+
+fn run_query(dir: &Path) -> Result<(), String> {
+    index::load(dir)?;
+    Ok(())
 }
 
 fn run_index(src: &Path, dir: &Path) -> Result<(), String> {
