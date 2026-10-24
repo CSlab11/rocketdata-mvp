@@ -30,6 +30,7 @@
 - REQ-058 implementato — Codici di uscita, errori su stderr e opzioni RM3 facoltative verificati dai test (`search/search-rm3/tests/errors.rs`)
 - REQ-062 implementato — Test che esclude crate di rete e std::net (`search/search-rm3/tests/offline.rs`)
 - BUG-001 segnalato — search-rm3: gli escape Markdown di doc-ripper spezzano gli identificatori (`search/search-rm3/src/analyze.rs`)
+- BUG-001 risolto — Escape Markdown tolti prima della tokenizzazione, `\]` non apre un link (`search/search-rm3/src/analyze.rs`)
 
 ## 2026-10-23
 - REQ-041 richiesto — doc-ripper: riga di avanzamento per ciascun file elaborato

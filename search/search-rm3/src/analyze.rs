@@ -29,7 +29,7 @@ impl Analyzer {
 
     /// Token del testo: minuscole, senza stopword, stemmati con Porter2 tranne gli identificatori.
     pub fn tokens(&self, text: &str) -> Vec<String> {
-        strip_link_targets(text)
+        unescape(&strip_link_targets(text))
             .split(|c: char| !(c.is_alphanumeric() || c == '_' || c == '-'))
             .map(|word| word.trim_matches(['_', '-']))
             .filter(|word| !word.is_empty())
@@ -53,10 +53,16 @@ fn is_identifier(word: &str) -> bool {
 }
 
 /// Toglie le destinazioni dei link e delle immagini Markdown (`](…)`), lasciando il testo del link.
+/// Una `\]` letterale non chiude il testo di un link.
 fn strip_link_targets(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut rest = text;
     while let Some(start) = rest.find("](") {
+        if rest[..start].ends_with('\\') {
+            out.push_str(&rest[..start + 2]);
+            rest = &rest[start + 2..];
+            continue;
+        }
         out.push_str(&rest[..start]);
         rest = &rest[start + 2..];
         match rest.find(')') {
@@ -66,6 +72,20 @@ fn strip_link_targets(text: &str) -> String {
         out.push(' ');
     }
     out.push_str(rest);
+    out
+}
+
+/// Toglie la `\` degli escape Markdown davanti alla punteggiatura ASCII (es. `RCC\_CR` → `RCC_CR`).
+fn unescape(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut chars = text.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\\' && chars.peek().is_some_and(|n| n.is_ascii_punctuation()) {
+            out.push(chars.next().unwrap());
+        } else {
+            out.push(c);
+        }
+    }
     out
 }
 
@@ -96,6 +116,17 @@ mod tests {
     #[test]
     fn trattini_e_underscore_agli_estremi_non_contano() {
         assert_eq!(tokens("-clocks_ __"), ["clock"]);
+    }
+
+    #[test]
+    fn toglie_gli_escape_markdown() {
+        assert_eq!(tokens(r"(RCC\_APB2ENR) DO\-178C"), ["rcc_apb2enr", "do-178c"]);
+        assert_eq!(tokens(r"timer\\clock"), ["timer", "clock"]);
+    }
+
+    #[test]
+    fn una_parentesi_quadra_con_escape_non_apre_un_link() {
+        assert_eq!(tokens(r"timer\](clock)"), ["timer", "clock"]);
     }
 
     #[test]
