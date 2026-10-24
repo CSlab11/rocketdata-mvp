@@ -16,6 +16,7 @@
 - REQ-064 richiesto — search-rm3: punteggio BM25 con k1 = 1,2 e b = 0,75
 - REQ-065 richiesto — search-rm3: espansione della query con RM3 e termini riportati in terms
 - REQ-066 richiesto — search-rm3: opzioni --fb-docs, --fb-terms e --lambda con i valori predefiniti
+- REQ-059 implementato — Progetto Cargo search-rm3 con i comandi index e query (`search/search-rm3/.gitignore`, `search/search-rm3/Cargo.lock`, `search/search-rm3/Cargo.toml`, `search/search-rm3/src/main.rs`, `search/search-rm3/tests/cli.rs`)
 
 ## 2026-10-23
 - REQ-041 richiesto — doc-ripper: riga di avanzamento per ciascun file elaborato

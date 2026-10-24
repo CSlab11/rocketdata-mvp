@@ -6,7 +6,7 @@ Requisiti del sotto-tool `search-rm3` di `search`: ricerca BM25 con espansione d
 
 | ID | Requisito | Stato | File impattati |
 |----|-----------|-------|----------------|
-| REQ-059 | `search-rm3` deve essere un progetto Cargo autonomo con il proprio `Cargo.toml` in `search/search-rm3/`, che produce l'eseguibile `search-rm3.exe` con i comandi dell'interfaccia comune di `search` (da REQ-001, REQ-003, REQ-053). | aperto | — |
+| REQ-059 | `search-rm3` deve essere un progetto Cargo autonomo con il proprio `Cargo.toml` in `search/search-rm3/`, che produce l'eseguibile `search-rm3.exe` con i comandi dell'interfaccia comune di `search` (da REQ-001, REQ-003, REQ-053). | implementato | `search/search-rm3/.gitignore`, `search/search-rm3/Cargo.lock`, `search/search-rm3/Cargo.toml`, `search/search-rm3/src/main.rs`, `search/search-rm3/tests/cli.rs` |
 | REQ-060 | `search-rm3` non deve dipendere da codice, crate, configurazioni o file di build di altri tool o di altri sotto-tool di `search`: niente workspace Cargo condiviso, niente path dependency verso cartelle esterne a `search/search-rm3/` (da REQ-005). | aperto | — |
 | REQ-061 | `search-rm3` deve funzionare su Windows 10 e Windows 11. | aperto | — |
 | REQ-062 | `search-rm3` deve funzionare offline: né `index` né `query` devono accedere alla rete o usare risorse esterne come modelli o ontologie. | aperto | — |
