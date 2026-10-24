@@ -1,6 +1,7 @@
 mod analyze;
 mod bm25;
 mod index;
+mod query;
 mod section;
 
 use std::collections::HashSet;
@@ -47,7 +48,7 @@ enum Command {
 fn main() -> ExitCode {
     let result = match Args::parse().command {
         Command::Index { src, index } => run_index(&src, &index),
-        Command::Query { index, .. } => run_query(&index),
+        Command::Query { index, q, top } => run_query(&index, &q, top),
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,
@@ -58,8 +59,10 @@ fn main() -> ExitCode {
     }
 }
 
-fn run_query(dir: &Path) -> Result<(), String> {
-    index::load(dir)?;
+fn run_query(dir: &Path, q: &str, top: usize) -> Result<(), String> {
+    let index = index::load(dir)?;
+    let response = query::run(&index, &Analyzer::new(), q, top);
+    println!("{}", serde_json::to_string_pretty(&response).map_err(|e| e.to_string())?);
     Ok(())
 }
 
