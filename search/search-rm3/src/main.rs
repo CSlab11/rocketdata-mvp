@@ -1,4 +1,5 @@
 mod analyze;
+mod bm25;
 mod index;
 mod section;
 
