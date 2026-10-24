@@ -28,6 +28,7 @@
 - REQ-065 implementato — Espansione RM3 della domanda, numeri puri esclusi, termini rm3 riportati in terms (`search/search-rm3/src/main.rs`, `search/search-rm3/src/query.rs`, `search/search-rm3/src/rm3.rs`, `search/search-rm3/tests/rm3.rs`)
 - REQ-066 implementato — Opzioni --fb-docs, --fb-terms e --lambda con i valori predefiniti (`search/search-rm3/src/main.rs`, `search/search-rm3/tests/rm3.rs`)
 - REQ-058 implementato — Codici di uscita, errori su stderr e opzioni RM3 facoltative verificati dai test (`search/search-rm3/tests/errors.rs`)
+- REQ-062 implementato — Test che esclude crate di rete e std::net (`search/search-rm3/tests/offline.rs`)
 
 ## 2026-10-23
 - REQ-041 richiesto — doc-ripper: riga di avanzamento per ciascun file elaborato
