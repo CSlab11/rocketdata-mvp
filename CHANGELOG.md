@@ -19,6 +19,7 @@
 - REQ-059 implementato — Progetto Cargo search-rm3 con i comandi index e query (`search/search-rm3/.gitignore`, `search/search-rm3/Cargo.lock`, `search/search-rm3/Cargo.toml`, `search/search-rm3/src/main.rs`, `search/search-rm3/tests/cli.rs`)
 - REQ-060 implementato — Workspace Cargo proprio, nessuna path dependency (`search/search-rm3/Cargo.toml`)
 - REQ-055 implementato — Suddivisione dei .md in sezioni per intestazione ATX, blocchi di codice esclusi (`search/search-rm3/src/main.rs`, `search/search-rm3/src/section.rs`)
+- REQ-063 implementato — Analisi del testo inglese: minuscole, stopword, Porter2, identificatori interi, destinazioni dei link escluse (`search/search-rm3/Cargo.lock`, `search/search-rm3/Cargo.toml`, `search/search-rm3/src/analyze.rs`, `search/search-rm3/src/main.rs`)
 
 ## 2026-10-23
 - REQ-041 richiesto — doc-ripper: riga di avanzamento per ciascun file elaborato
