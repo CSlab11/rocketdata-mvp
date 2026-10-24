@@ -1,10 +1,14 @@
 mod analyze;
+mod index;
 mod section;
 
-use std::path::PathBuf;
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
+
+use crate::analyze::Analyzer;
 
 /// Cerca nei file Markdown con BM25 ed espansione della query RM3.
 #[derive(Parser)]
@@ -40,8 +44,26 @@ enum Command {
 }
 
 fn main() -> ExitCode {
-    match Args::parse().command {
-        Command::Index { .. } => ExitCode::SUCCESS,
-        Command::Query { .. } => ExitCode::SUCCESS,
+    let result = match Args::parse().command {
+        Command::Index { src, index } => run_index(&src, &index),
+        Command::Query { .. } => Ok(()),
+    };
+    match result {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error) => {
+            eprintln!("Errore: {error}");
+            ExitCode::from(2)
+        }
     }
+}
+
+fn run_index(src: &Path, dir: &Path) -> Result<(), String> {
+    if !src.is_dir() {
+        return Err(format!("la cartella di origine non esiste o non è una cartella: {}", src.display()));
+    }
+    let index = index::build(src, &Analyzer::new())?;
+    index::save(&index, dir)?;
+    let files = index.sections.iter().map(|s| s.file.as_str()).collect::<HashSet<_>>().len();
+    println!("Indicizzati {files} file, {} sezioni", index.sections.len());
+    Ok(())
 }
