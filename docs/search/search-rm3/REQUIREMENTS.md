@@ -1,0 +1,16 @@
+# Requisiti e tracciabilità — search-rm3
+
+Requisiti del sotto-tool `search-rm3` di `search`: ricerca BM25 con espansione della query per pseudo-relevance feedback (RM3). L'interfaccia comune dei sotto-tool è in [`../REQUIREMENTS.md`](../REQUIREMENTS.md); i requisiti di progetto e la tabella dei bug sono in [`../../REQUIREMENTS.md`](../../REQUIREMENTS.md); gli ID `REQ-NNN` sono unici in tutto il repository.
+
+## Requisiti
+
+| ID | Requisito | Stato | File impattati |
+|----|-----------|-------|----------------|
+| REQ-059 | `search-rm3` deve essere un progetto Cargo autonomo con il proprio `Cargo.toml` in `search/search-rm3/`, che produce l'eseguibile `search-rm3.exe` con i comandi dell'interfaccia comune di `search` (da REQ-001, REQ-003, REQ-053). | aperto | — |
+| REQ-060 | `search-rm3` non deve dipendere da codice, crate, configurazioni o file di build di altri tool o di altri sotto-tool di `search`: niente workspace Cargo condiviso, niente path dependency verso cartelle esterne a `search/search-rm3/` (da REQ-005). | aperto | — |
+| REQ-061 | `search-rm3` deve funzionare su Windows 10 e Windows 11. | aperto | — |
+| REQ-062 | `search-rm3` deve funzionare offline: né `index` né `query` devono accedere alla rete o usare risorse esterne come modelli o ontologie. | aperto | — |
+| REQ-063 | `search-rm3` deve analizzare il testo delle sezioni e della domanda come testo inglese, nello stesso modo: conversione in minuscole, rimozione delle stopword inglesi e stemming Porter2, tranne per i token che contengono cifre o i caratteri `_` o `-` interni (es. `GPIOx_CRL`, `DO-178C`, `APB2`), che restano interi e non vengono stemmati; le keyword della domanda sono i token che risultano da questa analisi. | aperto | — |
+| REQ-064 | `search-rm3` deve assegnare il punteggio alle sezioni con BM25, con parametri k1 = 1,2 e b = 0,75. | aperto | — |
+| REQ-065 | `query` di `search-rm3` deve espandere la domanda con RM3: una prima ricerca BM25 con le keyword, la scelta dei termini più rilevanti nelle prime sezioni trovate (escluse stopword e keyword), la combinazione della query originale e dei termini di espansione con peso λ alla prima e 1 − λ ai secondi, e una seconda ricerca BM25 con la query pesata, i cui risultati sono quelli restituiti; in `terms` (REQ-056) le keyword hanno `source` `query` e i termini di espansione `source` `rm3`, ciascuno con il proprio peso nella query finale. | aperto | — |
+| REQ-066 | `query` di `search-rm3` deve accettare le opzioni facoltative `--fb-docs <n>` (sezioni usate per l'espansione, predefinito 10), `--fb-terms <n>` (termini di espansione, predefinito 10) e `--lambda <x>` (peso λ della query originale tra 0 e 1, predefinito 0,5). | aperto | — |

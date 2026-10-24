@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-10-24
+- REQ-052 richiesto — Tool search nella cartella search/, composto da sotto-tool con interfaccia comune
+- REQ-053 richiesto — search: sotto-tool search-<suffisso>.exe intercambiabili con i comandi index e query
+- REQ-054 richiesto — search: comando index che indicizza i .md di --src (escluso index.md) in --index
+- REQ-055 richiesto — search: la sezione Markdown come unità di ricerca
+- REQ-056 richiesto — search: comando query con risultato JSON (query, terms, results con il testo completo della sezione)
+- REQ-057 richiesto — search: marcatore del sotto-tool nell'indice ed errore su indice assente o di altro sotto-tool
+- REQ-058 richiesto — search: codici di uscita, errori su stderr e opzioni dei sotto-tool facoltative
+- REQ-059 richiesto — search-rm3: progetto Cargo autonomo in search/search-rm3/
+- REQ-060 richiesto — search-rm3: nessuna dipendenza da altri tool o sotto-tool
+- REQ-061 richiesto — search-rm3: funzionamento su Windows 10 e 11
+- REQ-062 richiesto — search-rm3: funzionamento offline senza risorse esterne
+- REQ-063 richiesto — search-rm3: analisi del testo inglese con stopword e Porter2, identificatori tecnici interi
+- REQ-064 richiesto — search-rm3: punteggio BM25 con k1 = 1,2 e b = 0,75
+- REQ-065 richiesto — search-rm3: espansione della query con RM3 e termini riportati in terms
+- REQ-066 richiesto — search-rm3: opzioni --fb-docs, --fb-terms e --lambda con i valori predefiniti
+
 ## 2026-10-23
 - REQ-041 richiesto — doc-ripper: riga di avanzamento per ciascun file elaborato
 - REQ-042 richiesto — gui: barra di avanzamento durante l'esecuzione di doc-ripper
