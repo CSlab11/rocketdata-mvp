@@ -43,13 +43,24 @@ enum Command {
         /// Numero massimo di risultati
         #[arg(long, value_name = "N", default_value_t = 10)]
         top: usize,
+        /// Sezioni della prima ricerca usate per l'espansione RM3
+        #[arg(long, value_name = "N", default_value_t = 10)]
+        fb_docs: usize,
+        /// Termini di espansione RM3
+        #[arg(long, value_name = "N", default_value_t = 10)]
+        fb_terms: usize,
+        /// Peso della query originale, tra 0 e 1
+        #[arg(long, value_name = "X", default_value_t = 0.5, value_parser = parse_lambda)]
+        lambda: f64,
     },
 }
 
 fn main() -> ExitCode {
     let result = match Args::parse().command {
         Command::Index { src, index } => run_index(&src, &index),
-        Command::Query { index, q, top } => run_query(&index, &q, top),
+        Command::Query { index, q, top, fb_docs, fb_terms, lambda } => {
+            run_query(&index, &q, top, &rm3::Params { fb_docs, fb_terms, lambda })
+        }
     };
     match result {
         Ok(()) => ExitCode::SUCCESS,
@@ -60,9 +71,16 @@ fn main() -> ExitCode {
     }
 }
 
-fn run_query(dir: &Path, q: &str, top: usize) -> Result<(), String> {
+fn parse_lambda(value: &str) -> Result<f64, String> {
+    match value.parse::<f64>() {
+        Ok(x) if (0.0..=1.0).contains(&x) => Ok(x),
+        _ => Err("deve essere un numero tra 0 e 1".to_string()),
+    }
+}
+
+fn run_query(dir: &Path, q: &str, top: usize, params: &rm3::Params) -> Result<(), String> {
     let index = index::load(dir)?;
-    let response = query::run(&index, &Analyzer::new(), q, top, &rm3::Params::default());
+    let response = query::run(&index, &Analyzer::new(), q, top, params);
     println!("{}", serde_json::to_string_pretty(&response).map_err(|e| e.to_string())?);
     Ok(())
 }
