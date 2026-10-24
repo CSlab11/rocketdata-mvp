@@ -3,6 +3,7 @@ use serde::Serialize;
 use crate::analyze::Analyzer;
 use crate::bm25;
 use crate::index::Index;
+use crate::rm3::{self, Params};
 
 /// Risultato del comando `query` (REQ-056).
 #[derive(Serialize)]
@@ -29,11 +30,12 @@ pub struct Hit<'a> {
     pub text: &'a str,
 }
 
-/// Cerca la domanda nell'indice e restituisce al più `top` sezioni.
-pub fn run<'a>(index: &'a Index, analyzer: &Analyzer, q: &'a str, top: usize) -> Response<'a> {
-    let terms = keywords(analyzer, q);
-    let query: Vec<(String, f64)> = terms.iter().map(|t| (t.term.clone(), t.weight)).collect();
-    let results = bm25::search(index, &query)
+/// Cerca la domanda nell'indice con espansione RM3 e restituisce al più `top` sezioni.
+pub fn run<'a>(index: &'a Index, analyzer: &Analyzer, q: &'a str, top: usize, params: &Params) -> Response<'a> {
+    let keywords = keywords(analyzer, q);
+    let first = bm25::search(index, &weighted(&keywords));
+    let terms = rm3::expand(index, analyzer, keywords, &first, params);
+    let results = bm25::search(index, &weighted(&terms))
         .into_iter()
         .take(top)
         .map(|(id, score)| {
@@ -42,6 +44,10 @@ pub fn run<'a>(index: &'a Index, analyzer: &Analyzer, q: &'a str, top: usize) ->
         })
         .collect();
     Response { query: q, terms, results }
+}
+
+fn weighted(terms: &[Term]) -> Vec<(String, f64)> {
+    terms.iter().map(|t| (t.term.clone(), t.weight)).collect()
 }
 
 /// Keyword della domanda, nell'ordine in cui compaiono, con peso pari alla loro frequenza relativa.

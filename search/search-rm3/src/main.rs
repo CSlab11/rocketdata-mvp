@@ -2,6 +2,7 @@ mod analyze;
 mod bm25;
 mod index;
 mod query;
+mod rm3;
 mod section;
 
 use std::collections::HashSet;
@@ -61,7 +62,7 @@ fn main() -> ExitCode {
 
 fn run_query(dir: &Path, q: &str, top: usize) -> Result<(), String> {
     let index = index::load(dir)?;
-    let response = query::run(&index, &Analyzer::new(), q, top);
+    let response = query::run(&index, &Analyzer::new(), q, top, &rm3::Params::default());
     println!("{}", serde_json::to_string_pretty(&response).map_err(|e| e.to_string())?);
     Ok(())
 }

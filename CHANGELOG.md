@@ -25,6 +25,7 @@
 - REQ-064 implementato — Punteggio BM25 delle sezioni con k1 = 1,2 e b = 0,75 e termini pesati (`search/search-rm3/src/bm25.rs`, `search/search-rm3/src/main.rs`)
 - REQ-056 implementato — Comando query: JSON con query, terms e results con il testo completo della sezione (`search/search-rm3/src/main.rs`, `search/search-rm3/src/query.rs`, `search/search-rm3/tests/query.rs`)
 - REQ-061 implementato — Test su Windows 11 con percorsi con spazi, accenti e sottocartelle (`search/search-rm3/tests/windows.rs`)
+- REQ-065 implementato — Espansione RM3 della domanda, numeri puri esclusi, termini rm3 riportati in terms (`search/search-rm3/src/main.rs`, `search/search-rm3/src/query.rs`, `search/search-rm3/src/rm3.rs`, `search/search-rm3/tests/rm3.rs`)
 
 ## 2026-10-23
 - REQ-041 richiesto — doc-ripper: riga di avanzamento per ciascun file elaborato
