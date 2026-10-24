@@ -1,3 +1,5 @@
+mod section;
+
 use std::path::PathBuf;
 use std::process::ExitCode;
 
