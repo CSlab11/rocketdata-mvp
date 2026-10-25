@@ -307,7 +307,25 @@ mod layout {
     }
 
     fn is_heading(line: &Line, body: f32) -> bool {
-        line.size >= body * 1.15 && line.text().chars().count() <= 200
+        let text = line.text();
+        line.size >= body * 1.15 && text.chars().count() <= 200 && !has_leader_dots(&text)
+    }
+
+    /// Voce di sommario o di indice analitico: almeno tre `.` separati al più da uno spazio,
+    /// seguiti dal numero di pagina (es. `1 Overview . . . . . 40`). Non è un titolo (BUG-002).
+    fn has_leader_dots(text: &str) -> bool {
+        let text = text.trim_end();
+        let digits = text.chars().rev().take_while(char::is_ascii_digit).count();
+        if digits == 0 {
+            return false;
+        }
+        let mut rest = text[..text.len() - digits].trim_end_matches(' ').chars().rev().peekable();
+        let mut dots = 0;
+        while rest.next_if_eq(&'.').is_some() {
+            dots += 1;
+            rest.next_if_eq(&' ');
+        }
+        dots >= 3
     }
 
     /// Dimensioni dei titoli dalla più grande alla più piccola: indice + 1 = livello (max 3).

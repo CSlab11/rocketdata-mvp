@@ -92,6 +92,36 @@ fn converte_pdf_in_markdown_strutturato() {
 }
 
 #[test]
+fn voci_di_sommario_con_puntini_guida_restano_testo() {
+    let src = tempfile::tempdir().unwrap();
+    let dst = tempfile::tempdir().unwrap();
+    sample(
+        &pdfium(),
+        &src.path().join("manuale.pdf"),
+        &[
+            (72.0, 780.0, 16.0, "Contents"),
+            (72.0, 750.0, 16.0, "1 Overview of the manual . . . . . 40"),
+            (72.0, 720.0, 16.0, "ETH_MMCTIR . . . . .1050"),
+            (72.0, 690.0, 11.0, "Testo del corpo del documento."),
+            (72.0, 676.0, 11.0, "Altra riga del corpo."),
+            (72.0, 662.0, 11.0, "Terza riga del corpo."),
+            (72.0, 648.0, 11.0, "Quarta riga del corpo."),
+            (72.0, 620.0, 11.0, "Fine... 2"),
+        ],
+    );
+
+    let out = run(src.path(), dst.path());
+    assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+    let md = fs::read_to_string(dst.path().join("manuale_pdf.md")).unwrap();
+    let md = split_origin(&md, &src.path().join("manuale.pdf"));
+    assert!(md.starts_with("# Contents\n\n"), "{md}");
+    assert!(!md.contains("# 1 Overview"), "{md}");
+    assert!(!md.contains("# ETH"), "{md}");
+    assert!(md.contains("\n1 Overview of the manual . . . . . 40"), "{md}");
+    assert!(md.contains("\nETH\\_MMCTIR . . . . .1050"), "{md}");
+}
+
+#[test]
 fn estrae_le_immagini_dei_pdf() {
     let src = tempfile::tempdir().unwrap();
     let dst = tempfile::tempdir().unwrap();

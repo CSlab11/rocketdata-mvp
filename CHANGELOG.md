@@ -27,6 +27,7 @@
 - REQ-078 richiesto — gui: pulsante Indicizza in rosso anche per le cartelle mai indicizzate (.index assente o vuota)
 - REQ-074 implementato — Indicizza in rosso per le destinazioni convertite finché un'indicizzazione non riesce, stato salvato nelle impostazioni (`gui/src/server.rs`, `gui/src/settings.rs`, `gui/tests/search.rs`, `gui/web/app.js`, `gui/web/style.css`)
 - REQ-078 implementato — Indicizza in rosso anche per le cartelle con .index assente o vuota (`gui/src/search.rs`, `gui/src/server.rs`, `gui/tests/search.rs`, `gui/web/app.js`)
+- BUG-002 risolto — Le righe con puntini guida e numero di pagina restano paragrafi e non diventano intestazioni (`doc-ripper/src/pdf.rs`, `doc-ripper/tests/pdf.rs`)
 
 ## 2026-10-24
 - REQ-052 richiesto — Tool search nella cartella search/, composto da sotto-tool con interfaccia comune
