@@ -52,14 +52,17 @@ enum Command {
         /// Peso della query originale, tra 0 e 1
         #[arg(long, value_name = "X", default_value_t = 0.5, value_parser = parse_lambda)]
         lambda: f64,
+        /// Peso dei termini dell'intestazione nel punteggio, maggiore di 1
+        #[arg(long, value_name = "X", default_value_t = 3.0, value_parser = parse_heading_weight)]
+        heading_weight: f64,
     },
 }
 
 fn main() -> ExitCode {
     let result = match Args::parse().command {
         Command::Index { src, index } => run_index(&src, &index),
-        Command::Query { index, q, top, fb_docs, fb_terms, lambda } => {
-            run_query(&index, &q, top, &rm3::Params { fb_docs, fb_terms, lambda })
+        Command::Query { index, q, top, fb_docs, fb_terms, lambda, heading_weight } => {
+            run_query(&index, &q, top, &rm3::Params { fb_docs, fb_terms, lambda }, heading_weight)
         }
     };
     match result {
@@ -78,9 +81,16 @@ fn parse_lambda(value: &str) -> Result<f64, String> {
     }
 }
 
-fn run_query(dir: &Path, q: &str, top: usize, params: &rm3::Params) -> Result<(), String> {
+fn parse_heading_weight(value: &str) -> Result<f64, String> {
+    match value.parse::<f64>() {
+        Ok(x) if x > 1.0 && x.is_finite() => Ok(x),
+        _ => Err("deve essere un numero maggiore di 1".to_string()),
+    }
+}
+
+fn run_query(dir: &Path, q: &str, top: usize, params: &rm3::Params, heading_weight: f64) -> Result<(), String> {
     let index = index::load(dir)?;
-    let response = query::run(&index, &Analyzer::new(), q, top, params);
+    let response = query::run(&index, &Analyzer::new(), q, top, params, heading_weight);
     println!("{}", serde_json::to_string_pretty(&response).map_err(|e| e.to_string())?);
     Ok(())
 }

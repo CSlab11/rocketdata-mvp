@@ -31,11 +31,18 @@ pub struct Hit<'a> {
 }
 
 /// Cerca la domanda nell'indice con espansione RM3 e restituisce al più `top` sezioni.
-pub fn run<'a>(index: &'a Index, analyzer: &Analyzer, q: &'a str, top: usize, params: &Params) -> Response<'a> {
+pub fn run<'a>(
+    index: &'a Index,
+    analyzer: &Analyzer,
+    q: &'a str,
+    top: usize,
+    params: &Params,
+    heading_weight: f64,
+) -> Response<'a> {
     let keywords = keywords(analyzer, q);
-    let first = bm25::search(index, &weighted(&keywords));
+    let first = bm25::search(index, &weighted(&keywords), heading_weight);
     let terms = rm3::expand(index, analyzer, keywords, &first, params);
-    let results = bm25::search(index, &weighted(&terms))
+    let results = bm25::search(index, &weighted(&terms), heading_weight)
         .into_iter()
         .take(top)
         .map(|(id, score)| {

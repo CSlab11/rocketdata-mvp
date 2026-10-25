@@ -74,3 +74,17 @@ fn la_keyword_nell_intestazione_ottiene_score_maggiore() {
     assert_eq!(results[1]["file"], "a_testo.md");
     assert!(results[0]["score"].as_f64().unwrap() > results[1]["score"].as_f64().unwrap());
 }
+
+#[test]
+fn opzione_heading_weight() {
+    let (_src, dir) = indexed(&[("a_testo.md", "# Timer\nwatchdog\n"), ("b_titolo.md", "# Watchdog\ntimer\n")]);
+    let args = ["--q", "watchdog", "--fb-docs", "0"];
+    assert_eq!(query(dir.path(), &args), query(dir.path(), &[&args[..], &["--heading-weight", "3"]].concat()));
+    let score = |weight: &str| query(dir.path(), &[&args[..], &["--heading-weight", weight]].concat())["results"][0]["score"].as_f64().unwrap();
+    assert!(score("10") > score("1.5"));
+
+    for value in ["1", "0.5", "-2", "x"] {
+        let out = run(&["query", "--index", dir.path().to_str().unwrap(), "--q", "watchdog", "--heading-weight", value]);
+        assert!(!out.status.success(), "--heading-weight {value}");
+    }
+}
