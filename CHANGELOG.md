@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-10-25
+- REQ-068 richiesto — search-rm3: opzione --heading-weight, maggiore di 1, predefinita 3
+
 ## 2026-10-24
 - REQ-052 richiesto — Tool search nella cartella search/, composto da sotto-tool con interfaccia comune
 - REQ-053 richiesto — search: sotto-tool search-<suffisso>.exe intercambiabili con i comandi index e query
