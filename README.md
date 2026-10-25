@@ -116,8 +116,8 @@ Dalla radice del repository, in PowerShell:
 
 Lo script:
 1. scarica PDFium, se manca;
-2. compila in release `doc-ripper` e `gui`;
-3. ricrea `dist\` con `gui.exe`, `doc-ripper.exe`, `pdfium.dll` con la sua licenza, `start.cmd` e `stop.cmd`.
+2. compila in release `doc-ripper`, `gui` e `search-rm3`;
+3. ricrea `dist\` con `gui.exe`, `doc-ripper.exe`, `search-rm3.exe`, `pdfium.dll` con la sua licenza, `start.cmd` e `stop.cmd`.
 
 Se la gui di `dist\` è in esecuzione lo script si ferma: chiudila prima con `dist\stop.cmd`.
 
