@@ -186,7 +186,10 @@ fn indicizza_in_rosso_dopo_una_conversione() {
 
     {
         let gui = Gui::start_with_appdata(&exe, appdata.path());
-        assert_eq!(post_json(&gui, "/api/search/index", &json!({ "src": dst_path })).0, 204);
+        // Entrambe indicizzate: poi la conversione segna solo la destinazione (REQ-078 a parte).
+        for folder in [dst_path, src.path().to_str().unwrap()] {
+            assert_eq!(post_json(&gui, "/api/search/index", &json!({ "src": folder })).0, 204);
+        }
         assert!(!stale(&gui, dst_path));
 
         assert_eq!(common::run(&gui, src.path().to_str().unwrap(), dst_path), 202);
@@ -214,6 +217,32 @@ fn indicizza_in_rosso_dopo_una_conversione() {
     assert!(!stale(&gui, dst_path));
     let dom = dump_dom(&gui.url("/#search"));
     assert!(dom.contains(r#"<button id="search-index" type="button">Indicizza</button>"#), "{dom}");
+}
+
+#[test]
+fn indicizza_in_rosso_per_le_cartelle_mai_indicizzate() {
+    let (_dir, exe) = install_with_fake_search();
+    let appdata = tempfile::tempdir().unwrap();
+    let src = tempfile::tempdir().unwrap();
+    let src_path = src.path().to_str().unwrap();
+    fs::create_dir(appdata.path().join("rocketdata-gui")).unwrap();
+    let settings = json!({ "src": "", "dst": src_path });
+    fs::write(appdata.path().join("rocketdata-gui/settings.json"), settings.to_string()).unwrap();
+    let gui = Gui::start_with_appdata(&exe, appdata.path());
+
+    // .index assente, poi vuota: la cartella non è mai stata indicizzata.
+    assert!(stale(&gui, src_path));
+    let dom = dump_dom(&gui.url("/#search"));
+    assert!(dom.contains(r#"<button id="search-index" type="button" class="stale""#), "{dom}");
+    fs::create_dir(src.path().join(".index")).unwrap();
+    assert!(stale(&gui, src_path));
+
+    assert_eq!(post_json(&gui, "/api/search/index", &json!({ "src": src_path })).0, 204);
+    assert!(!stale(&gui, src_path));
+
+    // Una cartella che non esiste non ha niente da indicizzare: nessun segnale.
+    assert!(!stale(&gui, &format!("{src_path}\\manca")));
+    assert!(!stale(&gui, ""));
 }
 
 #[test]

@@ -226,10 +226,12 @@ struct StaleResponse {
     stale: bool,
 }
 
-/// Se l'indice della cartella va rifatto, per mostrare "Indicizza" in rosso (REQ-074).
+/// Se l'indice della cartella va rifatto (REQ-074) o non è mai stato creato (REQ-078), per
+/// mostrare "Indicizza" in rosso.
 async fn search_stale(State(state): State<Arc<AppState>>, Query(request): Query<StaleRequest>) -> Json<StaleResponse> {
     let settings = state.settings_path.as_deref().map(settings::load).unwrap_or_default();
-    Json(StaleResponse { stale: settings.is_stale(&request.src) })
+    let stale = settings.is_stale(&request.src) || search::never_indexed(std::path::Path::new(request.src.trim()));
+    Json(StaleResponse { stale })
 }
 
 /// Cerca nell'indice della cartella con `search-rm3 query`: il JSON del sotto-tool (REQ-069).

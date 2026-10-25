@@ -34,6 +34,11 @@ pub fn index_dir(src: &Path) -> Result<PathBuf, String> {
     Ok(dir)
 }
 
+/// La cartella esiste ma non è mai stata indicizzata: `.index` manca o è vuota (REQ-078).
+pub fn never_indexed(src: &Path) -> bool {
+    src.is_dir() && fs::read_dir(src.join(".index")).map_or(true, |mut entries| entries.next().is_none())
+}
+
 /// `search-rm3 index --src <src> --index <src>\.index` (REQ-069, REQ-075).
 pub async fn index(exe: &Path, src: &Path) -> Result<(), String> {
     let dir = index_dir(src)?;

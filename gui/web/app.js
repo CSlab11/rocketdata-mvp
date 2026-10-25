@@ -434,7 +434,8 @@ async function renderSearch(content) {
     }),
   );
 
-  // "Indicizza" in rosso se l'indice della cartella scritta nel campo va rifatto (REQ-074).
+  // "Indicizza" in rosso se l'indice della cartella scritta nel campo va rifatto (REQ-074) o
+  // non è mai stato creato (REQ-078).
   const refreshStale = async () => {
     const src = folder.value;
     const { stale } = await fetch(`/api/search/stale?src=${encodeURIComponent(src)}`).then((r) => r.json());
