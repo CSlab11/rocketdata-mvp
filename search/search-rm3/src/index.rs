@@ -32,10 +32,11 @@ pub struct IndexedSection {
     pub text: String,
 }
 
-/// Indicizza ricorsivamente i `.md` di `src`, escluso `index.md` nella radice (REQ-054).
+/// Indicizza ricorsivamente i `.md` di `src`, esclusi `index.md` e la cartella `.index` nella radice (REQ-076).
 pub fn build(src: &Path, analyzer: &Analyzer) -> Result<Index, String> {
     let mut index = Index { sections: Vec::new(), postings: HashMap::new(), lengths: Vec::new() };
-    let entries = WalkDir::new(src).sort_by_file_name().into_iter();
+    let index_dir = src.join(".index");
+    let entries = WalkDir::new(src).sort_by_file_name().into_iter().filter_entry(|e| e.path() != index_dir);
     for entry in entries {
         let entry = entry.map_err(|e| format!("impossibile leggere {}: {e}", src.display()))?;
         let path = entry.path();

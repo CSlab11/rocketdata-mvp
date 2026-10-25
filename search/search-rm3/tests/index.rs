@@ -35,6 +35,21 @@ fn indicizza_ricorsivamente_i_md_escluso_index_md() {
 }
 
 #[test]
+fn esclude_la_cartella_index_nella_radice() {
+    let src = tempfile::tempdir().unwrap();
+    let dir = src.path().join(".index");
+    fs::create_dir_all(&dir).unwrap();
+    fs::create_dir_all(src.path().join("sub/.index")).unwrap();
+    fs::write(dir.join("vecchio.md"), "# Vecchio\n").unwrap();
+    fs::write(src.path().join("a.md"), "# A\n").unwrap();
+    fs::write(src.path().join("sub/.index/c.md"), "# C\n").unwrap();
+
+    let out = index(src.path(), &dir);
+    assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+    assert_eq!(indexed_files(&dir), ["a.md", "sub/.index/c.md"]);
+}
+
+#[test]
 fn ricrea_l_indice_da_zero() {
     let src = tempfile::tempdir().unwrap();
     let dir = tempfile::tempdir().unwrap();

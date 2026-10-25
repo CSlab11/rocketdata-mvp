@@ -15,6 +15,7 @@
 - REQ-075 richiesto — gui: search-rm3 con --src la cartella scelta e --index la sua sottocartella .index
 - REQ-076 richiesto — search: index esclude la cartella .index nella radice di --src
 - REQ-054 annullato — sostituito da REQ-076 (esclusione di .index)
+- REQ-076 implementato — index salta la cartella .index nella radice di --src (`search/search-rm3/src/index.rs`, `search/search-rm3/tests/index.rs`)
 
 ## 2026-10-24
 - REQ-052 richiesto — Tool search nella cartella search/, composto da sotto-tool con interfaccia comune
