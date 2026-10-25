@@ -5,6 +5,15 @@
 - REQ-067 implementato — BM25F: frequenze e lunghezze con i token dell'intestazione pesati 3 volte (`search/search-rm3/src/bm25.rs`, `search/search-rm3/src/index.rs`, `search/search-rm3/src/rm3.rs`, `search/search-rm3/src/section.rs`, `search/search-rm3/tests/query.rs`)
 - REQ-068 implementato — Opzione --heading-weight, maggiore di 1, predefinita 3 (`search/search-rm3/src/bm25.rs`, `search/search-rm3/src/main.rs`, `search/search-rm3/src/query.rs`, `search/search-rm3/tests/query.rs`)
 - BUG-002 segnalato — doc-ripper: voci di sommario dei PDF con puntini guida trasformate in intestazioni (`doc-ripper/src/pdf.rs`)
+- REQ-069 richiesto — gui: schermata di ricerca che esegue search-rm3.exe con index e query
+- REQ-070 richiesto — gui: ricerca di search-rm3.exe nella cartella dell'eseguibile, errore e funzioni disabilitate se manca
+- REQ-071 richiesto — gui: cartella da indicizzare proposta dall'ultima destinazione di doc-ripper, con Sfoglia
+- REQ-072 richiesto — gui: Indicizza, domanda, numero di risultati ricordato e Cerca, con i risultati resi
+- REQ-073 richiesto — package.ps1 che include anche search-rm3.exe in dist- REQ-040 annullato — sostituito da REQ-073 (search-rm3 in dist\)
+- REQ-074 richiesto — gui: pulsante Indicizza in rosso dopo una conversione finché l'indice non è rifatto
+- REQ-075 richiesto — gui: search-rm3 con --src la cartella scelta e --index la sua sottocartella .index
+- REQ-076 richiesto — search: index esclude la cartella .index nella radice di --src
+- REQ-054 annullato — sostituito da REQ-076 (esclusione di .index)
 
 ## 2026-10-24
 - REQ-052 richiesto — Tool search nella cartella search/, composto da sotto-tool con interfaccia comune
