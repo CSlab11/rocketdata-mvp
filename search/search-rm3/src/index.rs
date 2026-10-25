@@ -17,11 +17,10 @@ const TOOL: &str = "search-rm3";
 #[derive(Serialize, Deserialize)]
 pub struct Index {
     pub sections: Vec<IndexedSection>,
-    /// Termine → (sezione, frequenza del termine nella sezione).
-    pub postings: HashMap<String, Vec<(u32, u32)>>,
-    /// Numero di token di ogni sezione.
-    pub lengths: Vec<u32>,
-    pub avg_length: f64,
+    /// Termine → (sezione, frequenza nel resto della sezione, frequenza nell'intestazione).
+    pub postings: HashMap<String, Vec<(u32, u32, u32)>>,
+    /// Numero di token del resto e dell'intestazione di ogni sezione.
+    pub lengths: Vec<(u32, u32)>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -35,7 +34,7 @@ pub struct IndexedSection {
 
 /// Indicizza ricorsivamente i `.md` di `src`, escluso `index.md` nella radice (REQ-054).
 pub fn build(src: &Path, analyzer: &Analyzer) -> Result<Index, String> {
-    let mut index = Index { sections: Vec::new(), postings: HashMap::new(), lengths: Vec::new(), avg_length: 0.0 };
+    let mut index = Index { sections: Vec::new(), postings: HashMap::new(), lengths: Vec::new() };
     let entries = WalkDir::new(src).sort_by_file_name().into_iter();
     for entry in entries {
         let entry = entry.map_err(|e| format!("impossibile leggere {}: {e}", src.display()))?;
@@ -51,22 +50,28 @@ pub fn build(src: &Path, analyzer: &Analyzer) -> Result<Index, String> {
             add(&mut index, analyzer, IndexedSection { file: file.clone(), heading: section.heading, line: section.line, text: section.text });
         }
     }
-    let total: u64 = index.lengths.iter().map(|&l| l as u64).sum();
-    index.avg_length = if index.lengths.is_empty() { 0.0 } else { total as f64 / index.lengths.len() as f64 };
     Ok(index)
 }
 
+/// Aggiunge la sezione contando a parte i token dell'intestazione e quelli del resto (REQ-067).
 fn add(index: &mut Index, analyzer: &Analyzer, section: IndexedSection) {
     let id = index.sections.len() as u32;
-    let tokens = analyzer.tokens(&section.text);
-    let mut counts: HashMap<String, u32> = HashMap::new();
-    for token in &tokens {
-        *counts.entry(token.clone()).or_default() += 1;
+    let (first, rest) = section.text.split_once('\n').unwrap_or((&section.text, ""));
+    let (heading, body) = match section::heading(first) {
+        Some(_) => (analyzer.tokens(&section.heading), analyzer.tokens(rest)),
+        None => (Vec::new(), analyzer.tokens(&section.text)),
+    };
+    let mut counts: HashMap<String, (u32, u32)> = HashMap::new();
+    for token in &body {
+        counts.entry(token.clone()).or_default().0 += 1;
     }
-    for (term, tf) in counts {
-        index.postings.entry(term).or_default().push((id, tf));
+    for token in &heading {
+        counts.entry(token.clone()).or_default().1 += 1;
     }
-    index.lengths.push(tokens.len() as u32);
+    for (term, (tf_body, tf_heading)) in counts {
+        index.postings.entry(term).or_default().push((id, tf_body, tf_heading));
+    }
+    index.lengths.push((body.len() as u32, heading.len() as u32));
     index.sections.push(section);
 }
 
@@ -90,5 +95,6 @@ pub fn load(dir: &Path) -> Result<Index, String> {
     }
     let path = dir.join(INDEX_FILE);
     let json = fs::read_to_string(&path).map_err(|e| format!("impossibile leggere l'indice {}: {e}", path.display()))?;
-    serde_json::from_str(&json).map_err(|e| format!("indice non valido {}: {e}", path.display()))
+    serde_json::from_str(&json)
+        .map_err(|e| format!("indice non valido {}: {e}; ricrearlo con il comando index", path.display()))
 }

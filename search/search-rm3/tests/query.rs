@@ -59,3 +59,18 @@ fn al_piu_top_risultati() {
     assert_eq!(query(dir.path(), &["--q", "clock"])["results"].as_array().unwrap().len(), 10);
     assert_eq!(query(dir.path(), &["--q", "clock", "--top", "3"])["results"].as_array().unwrap().len(), 3);
 }
+
+/// REQ-067: stessa frequenza e stessa lunghezza, keyword nell'intestazione o solo nel testo.
+#[test]
+fn la_keyword_nell_intestazione_ottiene_score_maggiore() {
+    let (_src, dir) = indexed(&[
+        ("a_testo.md", "# Timer\nwatchdog\n"),
+        ("b_titolo.md", "# Watchdog\ntimer\n"),
+        ("c_altro.md", "# Bus\nregister\n"),
+    ]);
+    let json = query(dir.path(), &["--q", "watchdog", "--fb-docs", "0"]);
+    let results = json["results"].as_array().unwrap();
+    assert_eq!(results[0]["file"], "b_titolo.md");
+    assert_eq!(results[1]["file"], "a_testo.md");
+    assert!(results[0]["score"].as_f64().unwrap() > results[1]["score"].as_f64().unwrap());
+}

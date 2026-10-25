@@ -66,7 +66,7 @@ mod tests {
             .iter()
             .map(|t| IndexedSection { file: String::new(), heading: String::new(), line: 1, text: t.to_string() })
             .collect();
-        Index { sections, postings: HashMap::new(), lengths: Vec::new(), avg_length: 0.0 }
+        Index { sections, postings: HashMap::new(), lengths: Vec::new() }
     }
 
     fn keyword(term: &str, weight: f64) -> Term {

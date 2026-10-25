@@ -5,19 +5,27 @@ use crate::index::Index;
 /// Parametri BM25 (REQ-064).
 const K1: f64 = 1.2;
 const B: f64 = 0.75;
+/// Peso dei token dell'intestazione rispetto a quelli del resto della sezione (REQ-067).
+const HEADING_WEIGHT: f64 = 3.0;
 
-/// Punteggio BM25 delle sezioni per una query di termini pesati: ogni termine contribuisce
+/// Punteggio BM25F delle sezioni per una query di termini pesati: frequenze e lunghezze
+/// contano i token dell'intestazione `HEADING_WEIGHT` volte, e ogni termine contribuisce
 /// con il proprio peso. Restituisce le sezioni con punteggio positivo, dalla più alta.
 pub fn search(index: &Index, query: &[(String, f64)]) -> Vec<(u32, f64)> {
     let n = index.lengths.len() as f64;
+    let length = |id: u32| {
+        let (body, heading) = index.lengths[id as usize];
+        body as f64 + HEADING_WEIGHT * heading as f64
+    };
+    let avg_length = (0..index.lengths.len() as u32).map(length).sum::<f64>() / n;
     let mut scores: HashMap<u32, f64> = HashMap::new();
     for (term, weight) in query {
         let Some(postings) = index.postings.get(term) else { continue };
         let df = postings.len() as f64;
         let idf = (1.0 + (n - df + 0.5) / (df + 0.5)).ln();
-        for &(id, tf) in postings {
-            let tf = tf as f64;
-            let norm = 1.0 - B + B * index.lengths[id as usize] as f64 / index.avg_length;
+        for &(id, tf_body, tf_heading) in postings {
+            let tf = tf_body as f64 + HEADING_WEIGHT * tf_heading as f64;
+            let norm = 1.0 - B + B * length(id) / avg_length;
             *scores.entry(id).or_default() += weight * idf * tf * (K1 + 1.0) / (tf + K1 * norm);
         }
     }
@@ -33,11 +41,11 @@ mod tests {
     /// Tre sezioni: [clock clock bus], [clock], [register bus bus bus].
     fn corpus() -> Index {
         let postings = HashMap::from([
-            ("clock".to_string(), vec![(0, 2), (1, 1)]),
-            ("bus".to_string(), vec![(0, 1), (2, 3)]),
-            ("register".to_string(), vec![(2, 1)]),
+            ("clock".to_string(), vec![(0, 2, 0), (1, 1, 0)]),
+            ("bus".to_string(), vec![(0, 1, 0), (2, 3, 0)]),
+            ("register".to_string(), vec![(2, 1, 0)]),
         ]);
-        Index { sections: Vec::new(), postings, lengths: vec![3, 1, 4], avg_length: 8.0 / 3.0 }
+        Index { sections: Vec::new(), postings, lengths: vec![(3, 0), (1, 0), (4, 0)] }
     }
 
     fn term(t: &str, w: f64) -> (String, f64) {
@@ -54,6 +62,20 @@ mod tests {
         assert_eq!(ranked.iter().map(|r| r.0).collect::<Vec<_>>(), [1, 0]);
         assert!((ranked[0].1 - s1).abs() < 1e-12);
         assert!((ranked[1].1 - s0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn la_keyword_nell_intestazione_conta_di_piu() {
+        // Stessa tf e stessa lunghezza: in 0 "clock" è nell'intestazione, in 1 nel resto.
+        let postings = HashMap::from([
+            ("clock".to_string(), vec![(0, 0, 1), (1, 1, 0)]),
+            ("timer".to_string(), vec![(0, 1, 0), (1, 0, 1)]),
+            ("bus".to_string(), vec![(2, 2, 0)]),
+        ]);
+        let index = Index { sections: Vec::new(), postings, lengths: vec![(1, 1), (1, 1), (2, 0)] };
+        let ranked = search(&index, &[term("clock", 1.0)]);
+        assert_eq!(ranked.iter().map(|r| r.0).collect::<Vec<_>>(), [0, 1]);
+        assert!(ranked[0].1 > ranked[1].1);
     }
 
     #[test]

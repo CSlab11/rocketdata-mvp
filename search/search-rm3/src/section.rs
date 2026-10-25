@@ -40,7 +40,7 @@ fn push(sections: &mut Vec<Section>, section: Section) {
 }
 
 /// Testo dell'intestazione ATX (da `#` a `######`), se la riga lo è.
-fn heading(line: &str) -> Option<String> {
+pub fn heading(line: &str) -> Option<String> {
     let line = line.trim_start_matches(' ');
     let level = line.bytes().take_while(|&b| b == b'#').count();
     if !(1..=6).contains(&level) {
