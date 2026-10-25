@@ -62,6 +62,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/search/status", get(search_status))
         .route("/api/search/index", post(search_index))
         .route("/api/search/query", post(search_query))
+        .route("/api/search/open", post(search_open))
         .route("/api/shutdown", post(shutdown))
         .route("/api/pick-folder", post(pick_folder))
         .route("/api/settings", get(get_settings))
@@ -110,7 +111,7 @@ async fn doc_ripper_run(
     state.runner.start(exe, src, dst).map_err(|e| (StatusCode::CONFLICT, e))?;
     // Ultime cartelle usate, riproposte ai prossimi avvii (REQ-035).
     if let Some(path) = &state.settings_path {
-        if let Err(error) = settings::save(path, &Settings { src: src.into(), dst: dst.into() }) {
+        if let Err(error) = settings::update(path, |s| (s.src, s.dst) = (src.into(), dst.into())) {
             eprintln!("Impossibile salvare le impostazioni in {}: {error}", path.display());
         }
     }
@@ -137,6 +138,30 @@ struct SearchIndexRequest {
 struct SearchQueryRequest {
     src: String,
     q: String,
+    /// Numero di risultati; letto come valore JSON per rifiutare con un messaggio chiaro
+    /// decimali, negativi e testo (REQ-072).
+    top: Option<serde_json::Value>,
+}
+
+#[derive(Deserialize)]
+struct SearchOpenRequest {
+    src: String,
+    file: String,
+}
+
+/// Numero di risultati predefinito al primo avvio (REQ-072).
+const DEFAULT_TOP: u32 = 10;
+
+/// `top` della richiesta: un intero maggiore o uguale a 1, 10 se manca (REQ-072).
+fn search_top(top: Option<&serde_json::Value>) -> Result<u32, (StatusCode, String)> {
+    match top {
+        None | Some(serde_json::Value::Null) => Ok(DEFAULT_TOP),
+        Some(value) => value
+            .as_u64()
+            .and_then(|n| u32::try_from(n).ok())
+            .filter(|&n| n >= 1)
+            .ok_or_else(|| (StatusCode::BAD_REQUEST, "il numero di risultati deve essere un intero maggiore o uguale a 1".into())),
+    }
 }
 
 fn search_rm3(state: &AppState) -> Result<&std::path::Path, (StatusCode, String)> {
@@ -171,8 +196,37 @@ async fn search_query(
     if request.q.trim().is_empty() {
         return Err((StatusCode::BAD_REQUEST, "scrivere una domanda".into()));
     }
-    let response = search::query(exe, src, request.q.trim()).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
+    let top = search_top(request.top.as_ref())?;
+    let response =
+        search::query(exe, src, request.q.trim(), top).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
+    // Ultimo numero di risultati usato, riproposto ai prossimi avvii (REQ-072).
+    if let Some(path) = &state.settings_path {
+        if let Err(error) = settings::update(path, |s| s.top = Some(top)) {
+            eprintln!("Impossibile salvare le impostazioni in {}: {error}", path.display());
+        }
+    }
     Ok(Json(response))
+}
+
+/// Apre con il programma predefinito il file di un risultato (REQ-072): solo un `.md` dentro
+/// la cartella indicizzata, indicato con un percorso relativo senza `..`.
+async fn search_open(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<SearchOpenRequest>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    let src = search_src(&request.src)?;
+    let file = std::path::Path::new(&request.file);
+    let inside = file.components().all(|c| matches!(c, std::path::Component::Normal(_)));
+    let is_md = file.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("md"));
+    if request.file.is_empty() || !inside || !is_md {
+        return Err((StatusCode::FORBIDDEN, "si possono aprire solo i file .md della cartella indicizzata".into()));
+    }
+    let path = src.join(file);
+    if !path.is_file() {
+        return Err((StatusCode::NOT_FOUND, format!("il file non esiste più: {}", path.display())));
+    }
+    (state.opener)(Opening::File(path)).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 #[derive(Deserialize)]
@@ -476,6 +530,59 @@ mod tests {
                 Opening::File(PathBuf::from(format!("{}/a b.pdf", original.path().display().to_string().replace('\\', "/")))),
             ]
         );
+    }
+
+    #[tokio::test]
+    async fn apre_solo_i_md_della_cartella_indicizzata() {
+        let src = tempfile::tempdir().unwrap();
+        std::fs::create_dir(src.path().join("manuali")).unwrap();
+        std::fs::write(src.path().join("manuali/rm0008.md"), "").unwrap();
+        std::fs::write(src.path().join("dati.csv"), "").unwrap();
+        let opened = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let record = Arc::clone(&opened);
+        let mut s = state(Arc::new(|_, _| None));
+        s.opener = Arc::new(move |o| {
+            record.lock().unwrap().push(o);
+            Ok(())
+        });
+        let app = router(s);
+        let src_path = src.path().to_str().unwrap().to_string();
+        let open = |file: &str| {
+            let body = serde_json::json!({ "src": src_path, "file": file }).to_string();
+            let app = app.clone();
+            async move {
+                let request = Request::builder()
+                    .method("POST")
+                    .uri("/api/search/open")
+                    .header(header::HOST, "127.0.0.1:4000")
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(body))
+                    .unwrap();
+                app.oneshot(request).await.unwrap().status()
+            }
+        };
+
+        assert_eq!(open("manuali/rm0008.md").await, StatusCode::NO_CONTENT);
+        assert_eq!(open("manuali/manca.md").await, StatusCode::NOT_FOUND);
+        assert_eq!(open("dati.csv").await, StatusCode::FORBIDDEN);
+        assert_eq!(open("../fuori.md").await, StatusCode::FORBIDDEN);
+        assert_eq!(open("manuali/../../fuori.md").await, StatusCode::FORBIDDEN);
+        assert_eq!(open("C:/Windows/fuori.md").await, StatusCode::FORBIDDEN);
+        assert_eq!(open("").await, StatusCode::FORBIDDEN);
+
+        assert_eq!(*opened.lock().unwrap(), vec![Opening::File(src.path().join("manuali/rm0008.md"))]);
+    }
+
+    #[test]
+    fn numero_di_risultati() {
+        use serde_json::json;
+        assert_eq!(search_top(None), Ok(10));
+        assert_eq!(search_top(Some(&json!(null))), Ok(10));
+        assert_eq!(search_top(Some(&json!(1))), Ok(1));
+        assert_eq!(search_top(Some(&json!(25))), Ok(25));
+        for invalid in [json!(0), json!(-1), json!(2.5), json!("3"), json!(u64::MAX)] {
+            assert_eq!(search_top(Some(&invalid)).unwrap_err().0, StatusCode::BAD_REQUEST, "{invalid}");
+        }
     }
 
     #[tokio::test]

@@ -41,10 +41,13 @@ pub async fn index(exe: &Path, src: &Path) -> Result<(), String> {
     Ok(())
 }
 
-/// `search-rm3 query --index <src>\.index --q <q>`: il JSON scritto su stdout (REQ-069, REQ-075).
-pub async fn query(exe: &Path, src: &Path, q: &str) -> Result<serde_json::Value, String> {
+/// `search-rm3 query --index <src>\.index --q <q> --top <top>`: il JSON scritto su stdout
+/// (REQ-069, REQ-072, REQ-075).
+pub async fn query(exe: &Path, src: &Path, q: &str, top: u32) -> Result<serde_json::Value, String> {
     let dir = index_dir(src)?;
-    let stdout = run(exe, &["query".as_ref(), "--index".as_ref(), dir.as_os_str(), "--q".as_ref(), q.as_ref()]).await?;
+    let top = top.to_string();
+    let args = ["query".as_ref(), "--index".as_ref(), dir.as_os_str(), "--q".as_ref(), q.as_ref(), "--top".as_ref(), top.as_ref()];
+    let stdout = run(exe, &args).await?;
     serde_json::from_str(&stdout).map_err(|e| format!("risposta di search-rm3 non valida: {e}"))
 }
 

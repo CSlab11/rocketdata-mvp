@@ -47,6 +47,131 @@ function show() {
   fn.render(content);
 }
 
+// Markdown reso come nodi DOM, per l'anteprima di index.md (REQ-048) e per il testo dei
+// risultati della ricerca (REQ-072): titoli, paragrafi, tabelle, elenchi, blocchi di codice,
+// link, `codice`, **grassetto** e *corsivo*. I nodi si creano con textContent, così il testo dei
+// file non può iniettare HTML; `link(etichetta, href)` decide come mostrare i link.
+function renderMarkdown(markdown, link) {
+  const splitCells = (row) => {
+    const cells = [];
+    let cell = "";
+    for (let i = 0; i < row.length; i++) {
+      if (row[i] === "\\") cell += row[i] + (row[++i] ?? "");
+      else if (row[i] === "|") cells.push(cell), (cell = "");
+      else cell += row[i];
+    }
+    cells.push(cell);
+    return cells.slice(1, -1).map((c) => c.trim());
+  };
+  const unescape = (text) => text.replace(/\\(.)/g, "$1");
+  // Posizione del delimitatore di chiusura, saltando i caratteri preceduti da `\`.
+  const closing = (text, marker, from) => {
+    for (let i = from; i < text.length; i++) {
+      if (text[i] === "\\") i++;
+      else if (text.startsWith(marker, i)) return i;
+    }
+    return -1;
+  };
+  // Codice ed enfasi in un tratto di testo senza link; `\x` è il carattere x.
+  const emphasis = (text) => {
+    const nodes = [];
+    let plain = "";
+    const flush = () => {
+      if (plain) nodes.push(plain);
+      plain = "";
+    };
+    for (let i = 0; i < text.length; ) {
+      if (text[i] === "\\" && i + 1 < text.length) {
+        plain += text[i + 1];
+        i += 2;
+        continue;
+      }
+      if (text[i] === "`") {
+        const end = text.indexOf("`", i + 1);
+        if (end > i + 1) {
+          flush();
+          nodes.push(el("code", {}, text.slice(i + 1, end)));
+          i = end + 1;
+          continue;
+        }
+      }
+      if (text[i] === "*") {
+        const marker = text.startsWith("**", i) ? "**" : "*";
+        const end = closing(text, marker, i + marker.length);
+        if (end > i + marker.length) {
+          flush();
+          nodes.push(el(marker === "**" ? "strong" : "em", {}, ...emphasis(text.slice(i + marker.length, end))));
+          i = end + marker.length;
+          continue;
+        }
+      }
+      plain += text[i++];
+    }
+    flush();
+    return nodes;
+  };
+  // Testo con link `[testo](href)`; l'href può contenere parentesi bilanciate.
+  const inline = (text) => {
+    const nodes = [];
+    let rest = text;
+    for (let start; (start = rest.search(/\[(?:\\.|[^\]\\])*\]\(/)) !== -1; ) {
+      const close = rest.indexOf("](", start);
+      let end = close + 2;
+      for (let depth = 0; end < rest.length && !(rest[end] === ")" && depth === 0); end++) {
+        if (rest[end] === "(") depth++;
+        else if (rest[end] === ")") depth--;
+      }
+      nodes.push(...emphasis(rest.slice(0, start)));
+      nodes.push(link(unescape(rest.slice(start + 1, close)), rest.slice(close + 2, end)));
+      rest = rest.slice(end + 1);
+    }
+    nodes.push(...emphasis(rest));
+    return nodes;
+  };
+  const LIST_ITEM = /^\s*([-*+]|\d+[.)]) +(.*)$/;
+  const blocks = [];
+  const lines = markdown.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const heading = /^(#{1,6}) +(.*)$/.exec(line);
+    if (heading) {
+      blocks.push(el(`h${Math.min(heading[1].length + 2, 6)}`, {}, ...inline(heading[2])));
+    } else if (line.startsWith("```")) {
+      const code = [];
+      for (i++; i < lines.length && !lines[i].startsWith("```"); i++) code.push(lines[i]);
+      blocks.push(el("pre", {}, el("code", {}, code.join("\n"))));
+    } else if (line.startsWith("|")) {
+      const rows = [];
+      for (; i < lines.length && lines[i].startsWith("|"); i++) rows.push(splitCells(lines[i]));
+      i--;
+      const [head, , ...body] = rows;
+      blocks.push(
+        el(
+          "table",
+          {},
+          el("thead", {}, el("tr", {}, ...head.map((c) => el("th", {}, ...inline(c))))),
+          el("tbody", {}, ...body.map((r) => el("tr", {}, ...r.map((c) => el("td", {}, ...inline(c)))))),
+        ),
+      );
+    } else if (LIST_ITEM.test(line)) {
+      const ordered = /\d/.test(LIST_ITEM.exec(line)[1]);
+      const items = [];
+      for (; i < lines.length && LIST_ITEM.test(lines[i]); i++) items.push(el("li", {}, ...inline(LIST_ITEM.exec(lines[i])[2])));
+      i--;
+      blocks.push(el(ordered ? "ol" : "ul", {}, ...items));
+    } else if (line.trim()) {
+      // Righe consecutive di testo formano un solo paragrafo.
+      const text = [line.trim()];
+      for (i++; i < lines.length && lines[i].trim() && !/^(#|\||```)/.test(lines[i]) && !LIST_ITEM.test(lines[i]); i++) {
+        text.push(lines[i].trim());
+      }
+      i--;
+      blocks.push(el("p", {}, ...inline(text.join(" "))));
+    }
+  }
+  return blocks;
+}
+
 // Campo cartella con "Sfoglia…": il selettore di Windows lo apre il server (REQ-030).
 function folderField(id, label) {
   const input = el("input", { id, type: "text", spellcheck: "false", autocomplete: "off" });
@@ -169,67 +294,11 @@ async function renderDocRipper(content) {
     if (!response.ok) showError(await response.text());
   });
 
-  // Anteprima di index.md (REQ-048): titoli, tabella e link nel formato scritto da doc-ripper.
-  // I nodi si creano con textContent, così i nomi dei file non possono iniettare HTML; i link
-  // li apre il server, che accetta solo quelli presenti nell'indice.
-  const splitCells = (row) => {
-    const cells = [];
-    let cell = "";
-    for (let i = 0; i < row.length; i++) {
-      if (row[i] === "\\") cell += row[i] + (row[++i] ?? "");
-      else if (row[i] === "|") cells.push(cell), (cell = "");
-      else cell += row[i];
-    }
-    cells.push(cell);
-    return cells.slice(1, -1).map((c) => c.trim());
-  };
-  const unescape = (text) => text.replace(/\\(.)/g, "$1");
-  // Testo con link `[testo](href)`; l'href può contenere parentesi bilanciate.
-  const inline = (text) => {
-    const nodes = [];
-    let rest = text;
-    for (let start; (start = rest.search(/\[(?:\\.|[^\]\\])*\]\(/)) !== -1; ) {
-      const close = rest.indexOf("](", start);
-      let end = close + 2;
-      for (let depth = 0; end < rest.length && !(rest[end] === ")" && depth === 0); end++) {
-        if (rest[end] === "(") depth++;
-        else if (rest[end] === ")") depth--;
-      }
-      const label = unescape(rest.slice(start + 1, close));
-      const href = rest.slice(close + 2, end);
-      nodes.push(unescape(rest.slice(0, start)));
-      nodes.push(el("a", { href, onclick: (e) => (e.preventDefault(), openResult("link", href)) }, label));
-      rest = rest.slice(end + 1);
-    }
-    nodes.push(unescape(rest));
-    return nodes;
-  };
+  // Anteprima di index.md (REQ-048): i link li apre il server, che accetta solo quelli presenti
+  // nell'indice.
   const renderIndex = (markdown) => {
-    const blocks = [];
-    const lines = markdown.split(/\r?\n/);
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const heading = /^(#{1,5}) (.*)$/.exec(line);
-      if (heading) {
-        blocks.push(el(`h${heading[1].length + 2}`, {}, ...inline(heading[2])));
-      } else if (line.startsWith("|")) {
-        const rows = [];
-        for (; i < lines.length && lines[i].startsWith("|"); i++) rows.push(splitCells(lines[i]));
-        i--;
-        const [head, , ...body] = rows;
-        blocks.push(
-          el(
-            "table",
-            {},
-            el("thead", {}, el("tr", {}, ...head.map((c) => el("th", {}, ...inline(c))))),
-            el("tbody", {}, ...body.map((r) => el("tr", {}, ...r.map((c) => el("td", {}, ...inline(c)))))),
-          ),
-        );
-      } else if (line.trim()) {
-        blocks.push(el("p", {}, ...inline(line)));
-      }
-    }
-    previewBody.replaceChildren(...blocks);
+    const link = (label, href) => el("a", { href, onclick: (e) => (e.preventDefault(), openResult("link", href)) }, label);
+    previewBody.replaceChildren(...renderMarkdown(markdown, link));
   };
   // All'avvio e quando index.md manca l'anteprima lo dice (REQ-049).
   const noIndex = () => {
@@ -321,7 +390,14 @@ async function renderSearch(content) {
   folderRow.querySelector(".field-row").append(indexButton);
   const question = el("input", { id: "search-q", type: "search", autocomplete: "off" });
   const searchButton = el("button", { id: "search-run", class: "primary", type: "submit", disabled: "" }, "Cerca");
-  const form = el("form", { class: "field" }, el("label", { for: "search-q" }, "Domanda"), el("div", { class: "field-row" }, question, searchButton));
+  // Numero di risultati: solo interi >= 1, passato a search-rm3 come --top (REQ-072).
+  const top = el("input", { id: "search-top", class: "top", type: "number", min: "1", step: "1", required: "" });
+  const form = el(
+    "form",
+    {},
+    el("div", { class: "field" }, el("label", { for: "search-q" }, "Domanda"), el("div", { class: "field-row" }, question)),
+    el("div", { class: "field" }, el("label", { for: "search-top" }, "Numero di risultati"), el("div", { class: "field-row" }, top, searchButton)),
+  );
   const result = el("div", { id: "search-result", class: "alert", hidden: "" });
   const list = el("ol", { id: "search-results", class: "search-results" });
   content.append(alert, folderRow, form, result, list);
@@ -357,19 +433,44 @@ async function renderSearch(content) {
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     busy(async () => {
-      const response = await post("/api/search/query", { src: folder.value, q: question.value });
+      const src = folder.value;
+      const response = await post("/api/search/query", { src, q: question.value, top: Number(top.value) });
       if (!response.ok) return showError(await response.text());
-      const { results } = await response.json();
-      list.replaceChildren(
-        ...results.map((r) => el("li", {}, `${r.file} — ${r.heading || "(senza intestazione)"} (${r.score.toFixed(2)})`)),
-      );
-      if (!results.length) list.replaceChildren(el("li", { class: "muted" }, "Nessun risultato"));
+      showResults(src, (await response.json()).results);
     });
   });
 
-  // Proposta: l'ultima cartella di destinazione usata da doc-ripper (REQ-071, REQ-035).
+  // Per ogni risultato: file cliccabile, intestazione, riga, punteggio e testo della sezione
+  // con il Markdown reso (REQ-072). L'intestazione è già sopra: dal testo si toglie la sua riga.
+  const showResults = (src, results) => {
+    const open = async (file) => {
+      const response = await post("/api/search/open", { src, file });
+      if (!response.ok) showError(await response.text());
+    };
+    const hit = (r) => {
+      const body = /^#{1,6} /.test(r.text) ? r.text.slice(r.text.indexOf("\n") + 1 || r.text.length) : r.text;
+      return el(
+        "li",
+        { class: "hit" },
+        el(
+          "div",
+          { class: "hit-meta" },
+          el("a", { href: "#", class: "hit-file", onclick: (e) => (e.preventDefault(), open(r.file)) }, r.file),
+          el("span", {}, `riga ${r.line}`),
+          el("span", {}, `punteggio ${r.score.toFixed(3)}`),
+        ),
+        el("h2", { class: "hit-heading" }, r.heading || "(senza intestazione)"),
+        el("div", { class: "hit-text" }, ...renderMarkdown(body, (label) => label)),
+      );
+    };
+    list.replaceChildren(...(results.length ? results.map(hit) : [el("li", { class: "muted" }, "Nessun risultato")]));
+  };
+
+  // Proposta: l'ultima cartella di destinazione usata da doc-ripper (REQ-071, REQ-035) e
+  // l'ultimo numero di risultati, 10 al primo avvio (REQ-072).
   const saved = await fetch("/api/settings").then((r) => r.json());
   if (!folder.value) folder.defaultValue = saved.dst;
+  if (!top.value) top.defaultValue = saved.top ?? 10;
 
   // search-rm3.exe deve trovarsi accanto a gui.exe (REQ-070).
   const status = await fetch("/api/search/status").then((r) => r.json());

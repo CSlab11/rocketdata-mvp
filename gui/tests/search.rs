@@ -25,7 +25,47 @@ fn indicizza_e_cerca_con_search_rm3() {
     assert_eq!(response["query"], "clock RCC");
     assert_eq!(response["results"][0]["heading"], "7.3.7 Clock control");
     let args = fs::read_to_string(index.join("argomenti-query.txt")).unwrap();
-    assert_eq!(args, format!("query\n--index\n{}\n--q\nclock RCC", index.display()));
+    assert_eq!(args, format!("query\n--index\n{}\n--q\nclock RCC\n--top\n10", index.display()));
+}
+
+#[test]
+fn numero_di_risultati_passato_come_top_e_ricordato() {
+    let (dir, exe) = install_with_fake_search();
+    let fake = common::gui_exe().parent().unwrap().join("examples").join("fake_doc_ripper.exe");
+    fs::copy(&fake, dir.path().join("doc-ripper.exe")).unwrap();
+    let appdata = tempfile::tempdir().unwrap();
+    let src = tempfile::tempdir().unwrap();
+    let src_path = src.path().to_str().unwrap();
+    let query = |gui: &Gui, top: serde_json::Value| {
+        post_json(gui, "/api/search/query", &json!({ "src": src_path, "q": "clock", "top": top }))
+    };
+
+    {
+        let gui = Gui::start_with_appdata(&exe, appdata.path());
+        let dom = dump_dom(&gui.url("/#search"));
+        assert!(dom.contains(r#"id="search-top" class="top" type="number" min="1" step="1" required="" value="10""#), "{dom}");
+
+        assert_eq!(post_json(&gui, "/api/search/index", &json!({ "src": src_path })).0, 204);
+        for invalid in [json!(0), json!(-2), json!(2.5), json!("tre")] {
+            assert_eq!(query(&gui, invalid.clone()).0, 400, "{invalid}");
+        }
+        let (status, body) = query(&gui, json!(3));
+        assert_eq!(status, 200, "{body}");
+        let args = fs::read_to_string(src.path().join(".index/argomenti-query.txt")).unwrap();
+        assert!(args.ends_with("--top\n3"), "{args}");
+
+        // Una conversione salva le cartelle senza perdere il numero di risultati.
+        assert_eq!(common::run(&gui, src_path, r"C:\Uscita"), 202);
+        common::wait_output(&gui);
+    }
+
+    // Dopo il riavvio del server viene proposto l'ultimo valore usato.
+    let gui = Gui::start_with_appdata(&exe, appdata.path());
+    let body = ureq::get(&gui.url("/api/settings")).call().unwrap().into_body().read_to_string().unwrap();
+    let settings: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!((settings["top"].as_u64(), settings["dst"].as_str()), (Some(3), Some(r"C:\Uscita")));
+    let dom = dump_dom(&gui.url("/#search"));
+    assert!(dom.contains(r#"id="search-top" class="top" type="number" min="1" step="1" required="" value="3""#), "{dom}");
 }
 
 #[test]

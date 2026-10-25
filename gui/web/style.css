@@ -160,6 +160,41 @@ h1 { font-size: 22px; margin: 0 0 4px; }
 
 .preview .muted { color: var(--muted); margin: 0; }
 
+.field input.top { flex: 0 0 110px; }
+
+.search-results { list-style: none; margin: 0; padding: 0; }
+
+.search-results .muted { color: var(--muted); }
+
+.hit {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+}
+
+.hit-meta { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--muted); font-size: 13px; }
+
+.hit-meta a { color: var(--accent); overflow-wrap: anywhere; }
+
+.hit-meta span { font-variant-numeric: tabular-nums; }
+
+.hit-heading { font-size: 16px; margin: 4px 0 8px; }
+
+.hit-text h3, .hit-text h4, .hit-text h5, .hit-text h6 { font-size: 15px; margin: 8px 0 4px; }
+
+.hit-text p { margin: 0 0 8px; }
+
+.hit-text table { border-collapse: collapse; margin-bottom: 8px; }
+
+.hit-text th, .hit-text td { border: 1px solid var(--border); padding: 4px 8px; text-align: left; vertical-align: top; }
+
+.hit-text code { font: 13px Consolas, "Cascadia Mono", monospace; }
+
+.hit-text pre { background: var(--bg); padding: 8px; border-radius: 4px; overflow-x: auto; }
+
 .output {
   background: var(--surface);
   border: 1px solid var(--border);
