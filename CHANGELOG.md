@@ -4,6 +4,7 @@
 - REQ-068 richiesto — search-rm3: opzione --heading-weight, maggiore di 1, predefinita 3
 - REQ-067 implementato — BM25F: frequenze e lunghezze con i token dell'intestazione pesati 3 volte (`search/search-rm3/src/bm25.rs`, `search/search-rm3/src/index.rs`, `search/search-rm3/src/rm3.rs`, `search/search-rm3/src/section.rs`, `search/search-rm3/tests/query.rs`)
 - REQ-068 implementato — Opzione --heading-weight, maggiore di 1, predefinita 3 (`search/search-rm3/src/bm25.rs`, `search/search-rm3/src/main.rs`, `search/search-rm3/src/query.rs`, `search/search-rm3/tests/query.rs`)
+- BUG-002 segnalato — doc-ripper: voci di sommario dei PDF con puntini guida trasformate in intestazioni (`doc-ripper/src/pdf.rs`)
 
 ## 2026-10-24
 - REQ-052 richiesto — Tool search nella cartella search/, composto da sotto-tool con interfaccia comune
