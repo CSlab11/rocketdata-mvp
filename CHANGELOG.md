@@ -20,6 +20,7 @@
 - REQ-069 implementato — Schermata Ricerca che esegue search-rm3 index e query come processo separato (`gui/examples/fake_search_rm3.rs`, `gui/src/main.rs`, `gui/src/search.rs`, `gui/src/server.rs`, `gui/tests/common/mod.rs`, `gui/tests/search.rs`, `gui/web/app.js`)
 - REQ-070 implementato — search-rm3.exe cercato accanto a gui.exe, errore e pulsanti disabilitati se manca (`gui/src/main.rs`, `gui/src/server.rs`, `gui/tests/search_lookup.rs`, `gui/web/app.js`)
 - REQ-075 implementato — search-rm3 con --src la cartella e --index la sua .index, creata se manca e resa visibile (`gui/Cargo.toml`, `gui/src/search.rs`, `gui/tests/search.rs`)
+- REQ-071 implementato — Cartella da indicizzare proposta dall'ultima destinazione di doc-ripper, con Sfoglia (`gui/tests/search.rs`, `gui/web/app.js`)
 
 ## 2026-10-24
 - REQ-052 richiesto — Tool search nella cartella search/, composto da sotto-tool con interfaccia comune

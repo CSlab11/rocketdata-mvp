@@ -315,20 +315,16 @@ async function renderDocRipper(content) {
 // Ricerca con search-rm3, eseguito dal server come processo separato (REQ-069).
 async function renderSearch(content) {
   const alert = el("div", { class: "alert error", role: "alert", hidden: "" });
-  const folder = el("input", { id: "search-src", type: "text", spellcheck: "false", autocomplete: "off" });
+  // Cartella da indicizzare con "Sfoglia…" (REQ-071); "Indicizza" sulla stessa riga.
+  const { input: folder, row: folderRow } = folderField("search-src", "Cartella da indicizzare");
   const indexButton = el("button", { id: "search-index", type: "button", disabled: "" }, "Indicizza");
+  folderRow.querySelector(".field-row").append(indexButton);
   const question = el("input", { id: "search-q", type: "search", autocomplete: "off" });
   const searchButton = el("button", { id: "search-run", class: "primary", type: "submit", disabled: "" }, "Cerca");
   const form = el("form", { class: "field" }, el("label", { for: "search-q" }, "Domanda"), el("div", { class: "field-row" }, question, searchButton));
   const result = el("div", { id: "search-result", class: "alert", hidden: "" });
   const list = el("ol", { id: "search-results", class: "search-results" });
-  content.append(
-    alert,
-    el("div", { class: "field" }, el("label", { for: "search-src" }, "Cartella da indicizzare"), el("div", { class: "field-row" }, folder, indexButton)),
-    form,
-    result,
-    list,
-  );
+  content.append(alert, folderRow, form, result, list);
 
   const showError = (message) => {
     alert.textContent = message;
@@ -370,6 +366,10 @@ async function renderSearch(content) {
       if (!results.length) list.replaceChildren(el("li", { class: "muted" }, "Nessun risultato"));
     });
   });
+
+  // Proposta: l'ultima cartella di destinazione usata da doc-ripper (REQ-071, REQ-035).
+  const saved = await fetch("/api/settings").then((r) => r.json());
+  if (!folder.value) folder.defaultValue = saved.dst;
 
   // search-rm3.exe deve trovarsi accanto a gui.exe (REQ-070).
   const status = await fetch("/api/search/status").then((r) => r.json());

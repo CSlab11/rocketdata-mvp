@@ -79,6 +79,20 @@ fn cartella_index_creata_se_manca_e_non_nascosta() {
 }
 
 #[test]
+fn propone_l_ultima_destinazione_di_doc_ripper() {
+    let (_dir, exe) = install_with_fake_search();
+    let appdata = tempfile::tempdir().unwrap();
+    fs::create_dir(appdata.path().join("rocketdata-gui")).unwrap();
+    let settings = json!({ "src": r"C:\Origine", "dst": r"C:\Uscita conversioni" });
+    fs::write(appdata.path().join("rocketdata-gui/settings.json"), settings.to_string()).unwrap();
+    let gui = Gui::start_with_appdata(&exe, appdata.path());
+
+    let dom = dump_dom(&gui.url("/#search"));
+    assert!(dom.contains(r#"<input id="search-src" type="text" spellcheck="false" autocomplete="off" value="C:\Uscita conversioni">"#), "{dom}");
+    assert!(dom.contains(r#"<button id="search-src-browse" type="button">Sfoglia…</button>"#), "{dom}");
+}
+
+#[test]
 fn schermata_di_ricerca() {
     let (_dir, exe) = install_with_fake_search();
     let gui = Gui::start(&exe);
