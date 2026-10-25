@@ -9,7 +9,8 @@
 - REQ-070 richiesto — gui: ricerca di search-rm3.exe nella cartella dell'eseguibile, errore e funzioni disabilitate se manca
 - REQ-071 richiesto — gui: cartella da indicizzare proposta dall'ultima destinazione di doc-ripper, con Sfoglia
 - REQ-072 richiesto — gui: Indicizza, domanda, numero di risultati ricordato e Cerca, con i risultati resi
-- REQ-073 richiesto — package.ps1 che include anche search-rm3.exe in dist\n- REQ-040 annullato — sostituito da REQ-073 (search-rm3 in dist\)
+- REQ-073 richiesto — package.ps1 che include anche search-rm3.exe in dist\
+- REQ-040 annullato — sostituito da REQ-073 (search-rm3 in dist\)
 - REQ-074 richiesto — gui: pulsante Indicizza in rosso dopo una conversione finché l'indice non è rifatto
 - REQ-075 richiesto — gui: search-rm3 con --src la cartella scelta e --index la sua sottocartella .index
 - REQ-076 richiesto — search: index esclude la cartella .index nella radice di --src
