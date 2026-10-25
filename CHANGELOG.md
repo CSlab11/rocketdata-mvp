@@ -23,6 +23,7 @@
 - REQ-071 implementato — Cartella da indicizzare proposta dall'ultima destinazione di doc-ripper, con Sfoglia (`gui/tests/search.rs`, `gui/web/app.js`)
 - REQ-077 richiesto — gui: l'ultima ricerca riuscita ricompare ricaricando la pagina, fino al riavvio del server
 - REQ-072 implementato — Numero di risultati ricordato e passato come --top, risultati con file apribile, riga, punteggio e Markdown reso (`gui/src/search.rs`, `gui/src/server.rs`, `gui/src/settings.rs`, `gui/tests/search.rs`, `gui/web/app.js`, `gui/web/style.css`)
+- REQ-077 implementato — Ultima ricerca riuscita tenuta in memoria dal server e mostrata ricaricando la pagina (`gui/src/main.rs`, `gui/src/server.rs`, `gui/tests/search.rs`, `gui/web/app.js`)
 
 ## 2026-10-24
 - REQ-052 richiesto — Tool search nella cartella search/, composto da sotto-tool con interfaccia comune

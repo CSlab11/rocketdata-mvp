@@ -53,6 +53,7 @@ async fn main() {
         port,
         doc_ripper: find_doc_ripper(),
         search_rm3: find_search_rm3(),
+        last_search: Default::default(),
         runner: Default::default(),
         shutdown: Arc::clone(&shutdown),
         folder_picker: dialogs::system_folder_picker(),

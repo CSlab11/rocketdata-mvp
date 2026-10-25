@@ -133,6 +133,41 @@ fn propone_l_ultima_destinazione_di_doc_ripper() {
 }
 
 #[test]
+fn ricaricando_la_pagina_torna_l_ultima_ricerca() {
+    let (_dir, exe) = install_with_fake_search();
+    let appdata = tempfile::tempdir().unwrap();
+    let src = tempfile::tempdir().unwrap();
+    let src_path = src.path().to_str().unwrap();
+
+    {
+        let gui = Gui::start_with_appdata(&exe, appdata.path());
+        let dom = dump_dom(&gui.url("/#search"));
+        assert!(!dom.contains(r#"class="hit""#), "nessuna ricerca ancora: {dom}");
+        assert_eq!(ureq::get(&gui.url("/api/search/last")).call().unwrap().into_body().read_to_string().unwrap(), "null");
+
+        assert_eq!(post_json(&gui, "/api/search/index", &json!({ "src": src_path })).0, 204);
+        let (status, body) = post_json(&gui, "/api/search/query", &json!({ "src": src_path, "q": "clock RCC", "top": 2 }));
+        assert_eq!(status, 200, "{body}");
+
+        // Risultato reso (REQ-072) e ricerca ripristinata dopo il ricaricamento (REQ-077).
+        let dom = dump_dom(&gui.url("/#search"));
+        assert!(dom.contains(&format!(r#"value="{src_path}""#)), "{dom}");
+        assert!(dom.contains(r#"<input id="search-q" type="search" autocomplete="off" value="clock RCC">"#), "{dom}");
+        assert!(dom.contains(r#"required="" value="2""#), "{dom}");
+        assert!(dom.contains(r##"<a href="#" class="hit-file">manuali/rm0008.md</a>"##), "{dom}");
+        assert!(dom.contains("<span>riga 12</span><span>punteggio 4.250</span>"), "{dom}");
+        assert!(dom.contains(r#"<h2 class="hit-heading">7.3.7 Clock control</h2>"#), "{dom}");
+        assert!(dom.contains("<p>Il registro <strong>RCC_APB2ENR</strong> abilita i clock.</p>"), "{dom}");
+    }
+
+    // Dopo il riavvio del server la schermata riparte senza risultati.
+    let gui = Gui::start_with_appdata(&exe, appdata.path());
+    assert_eq!(ureq::get(&gui.url("/api/search/last")).call().unwrap().into_body().read_to_string().unwrap(), "null");
+    let dom = dump_dom(&gui.url("/#search"));
+    assert!(!dom.contains(r#"class="hit""#), "{dom}");
+}
+
+#[test]
 fn schermata_di_ricerca() {
     let (_dir, exe) = install_with_fake_search();
     let gui = Gui::start(&exe);

@@ -472,6 +472,15 @@ async function renderSearch(content) {
   if (!folder.value) folder.defaultValue = saved.dst;
   if (!top.value) top.defaultValue = saved.top ?? 10;
 
+  // Pagina ricaricata: torna l'ultima ricerca riuscita dall'avvio del server (REQ-077).
+  const last = await fetch("/api/search/last").then((r) => r.json());
+  if (last) {
+    folder.defaultValue = last.src;
+    question.defaultValue = last.q;
+    top.defaultValue = last.top;
+    showResults(last.src, last.response.results);
+  }
+
   // search-rm3.exe deve trovarsi accanto a gui.exe (REQ-070).
   const status = await fetch("/api/search/status").then((r) => r.json());
   if (!status.available) {

@@ -33,6 +33,8 @@ pub struct AppState {
     pub doc_ripper: Option<PathBuf>,
     /// `search-rm3.exe` accanto a `gui.exe`, se presente (REQ-069).
     pub search_rm3: Option<PathBuf>,
+    /// Ultima ricerca riuscita dall'avvio del server (REQ-077).
+    pub last_search: std::sync::Mutex<Option<LastSearch>>,
     pub runner: Arc<Runner>,
     /// Segnala al server di spegnersi (REQ-039).
     pub shutdown: Arc<tokio::sync::Notify>,
@@ -63,6 +65,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/search/index", post(search_index))
         .route("/api/search/query", post(search_query))
         .route("/api/search/open", post(search_open))
+        .route("/api/search/last", get(search_last))
         .route("/api/shutdown", post(shutdown))
         .route("/api/pick-folder", post(pick_folder))
         .route("/api/settings", get(get_settings))
@@ -149,6 +152,21 @@ struct SearchOpenRequest {
     file: String,
 }
 
+/// Ricerca riuscita, mostrata di nuovo quando la pagina viene ricaricata (REQ-077).
+#[derive(Clone, Serialize)]
+pub struct LastSearch {
+    src: String,
+    q: String,
+    top: u32,
+    /// JSON restituito da search-rm3.
+    response: serde_json::Value,
+}
+
+/// Ultima ricerca riuscita dall'avvio del server, `null` se non ce n'è (REQ-077).
+async fn search_last(State(state): State<Arc<AppState>>) -> Json<Option<LastSearch>> {
+    Json(state.last_search.lock().unwrap().clone())
+}
+
 /// Numero di risultati predefinito al primo avvio (REQ-072).
 const DEFAULT_TOP: u32 = 10;
 
@@ -205,6 +223,8 @@ async fn search_query(
             eprintln!("Impossibile salvare le impostazioni in {}: {error}", path.display());
         }
     }
+    *state.last_search.lock().unwrap() =
+        Some(LastSearch { src: request.src.trim().into(), q: request.q.trim().into(), top, response: response.clone() });
     Ok(Json(response))
 }
 
@@ -409,6 +429,7 @@ mod tests {
             port: 4000,
             doc_ripper: None,
             search_rm3: None,
+            last_search: Default::default(),
             runner: Arc::default(),
             shutdown: Arc::default(),
             folder_picker,
