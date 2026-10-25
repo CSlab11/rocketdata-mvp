@@ -167,6 +167,55 @@ fn ricaricando_la_pagina_torna_l_ultima_ricerca() {
     assert!(!dom.contains(r#"class="hit""#), "{dom}");
 }
 
+fn stale(gui: &Gui, src: &str) -> bool {
+    let src = percent_encoding::utf8_percent_encode(src, percent_encoding::NON_ALPHANUMERIC);
+    let body = ureq::get(&gui.url(&format!("/api/search/stale?src={src}"))).call().unwrap().into_body().read_to_string().unwrap();
+    serde_json::from_str::<serde_json::Value>(&body).unwrap()["stale"].as_bool().unwrap()
+}
+
+#[test]
+fn indicizza_in_rosso_dopo_una_conversione() {
+    let (dir, exe) = install_with_fake_search();
+    let fake = common::gui_exe().parent().unwrap().join("examples").join("fake_doc_ripper.exe");
+    fs::copy(&fake, dir.path().join("doc-ripper.exe")).unwrap();
+    let appdata = tempfile::tempdir().unwrap();
+    let src = tempfile::tempdir().unwrap();
+    let dst = tempfile::tempdir().unwrap();
+    let dst_path = dst.path().to_str().unwrap();
+    let stale_button = r#"<button id="search-index" type="button" class="stale" title="L'indice di questa cartella va rifatto">"#;
+
+    {
+        let gui = Gui::start_with_appdata(&exe, appdata.path());
+        assert_eq!(post_json(&gui, "/api/search/index", &json!({ "src": dst_path })).0, 204);
+        assert!(!stale(&gui, dst_path));
+
+        assert_eq!(common::run(&gui, src.path().to_str().unwrap(), dst_path), 202);
+        common::wait_output(&gui);
+        assert!(stale(&gui, dst_path));
+        assert!(stale(&gui, &format!("{}\\", dst_path.to_uppercase())), "stessa cartella scritta in modo diverso");
+        assert!(stale(&gui, &dst_path.replace('\\', "/")));
+        assert!(!stale(&gui, src.path().to_str().unwrap()));
+
+        // La cartella proposta è la destinazione della conversione: pulsante rosso.
+        let dom = dump_dom(&gui.url("/#search"));
+        assert!(dom.contains(stale_button), "{dom}");
+    }
+
+    // Lo stato resta dopo il riavvio del server e dopo un'indicizzazione fallita.
+    let gui = Gui::start_with_appdata(&exe, appdata.path());
+    assert!(stale(&gui, dst_path));
+    fs::write(dst.path().join("fallisci"), "").unwrap();
+    assert_eq!(post_json(&gui, "/api/search/index", &json!({ "src": dst_path })).0, 500);
+    assert!(stale(&gui, dst_path));
+
+    // Torna normale solo dopo un'indicizzazione riuscita.
+    fs::remove_file(dst.path().join("fallisci")).unwrap();
+    assert_eq!(post_json(&gui, "/api/search/index", &json!({ "src": dst_path })).0, 204);
+    assert!(!stale(&gui, dst_path));
+    let dom = dump_dom(&gui.url("/#search"));
+    assert!(dom.contains(r#"<button id="search-index" type="button">Indicizza</button>"#), "{dom}");
+}
+
 #[test]
 fn schermata_di_ricerca() {
     let (_dir, exe) = install_with_fake_search();

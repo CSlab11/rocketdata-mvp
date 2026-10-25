@@ -12,6 +12,31 @@ pub struct Settings {
     /// Assente nei file salvati prima di REQ-072.
     #[serde(default)]
     pub top: Option<u32>,
+    /// Cartelle convertite da doc-ripper il cui indice va rifatto (REQ-074).
+    #[serde(default)]
+    pub stale: Vec<String>,
+}
+
+/// Chiave di confronto di una cartella: senza distinzione tra maiuscole e minuscole, con `/`
+/// uguale a `\` e senza barra finale.
+fn folder_key(folder: &str) -> String {
+    folder.trim().replace('/', "\\").trim_end_matches('\\').to_lowercase()
+}
+
+impl Settings {
+    /// Segna o toglie la cartella tra quelle il cui indice va rifatto (REQ-074).
+    pub fn set_stale(&mut self, folder: &str, stale: bool) {
+        let key = folder_key(folder);
+        self.stale.retain(|f| folder_key(f) != key);
+        if stale {
+            self.stale.push(folder.trim().to_string());
+        }
+    }
+
+    pub fn is_stale(&self, folder: &str) -> bool {
+        let key = folder_key(folder);
+        self.stale.iter().any(|f| folder_key(f) == key)
+    }
 }
 
 /// `%APPDATA%\rocketdata-gui\settings.json`.
@@ -49,7 +74,8 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("rocketdata-gui/settings.json");
         assert_eq!(load(&path), Settings::default());
-        let settings = Settings { src: r"C:\Dati\Città".into(), dst: r"D:\Uscita".into(), top: Some(25) };
+        let settings =
+            Settings { src: r"C:\Dati\Città".into(), dst: r"D:\Uscita".into(), top: Some(25), stale: vec![r"D:\Uscita".into()] };
         save(&path, &settings).unwrap();
         assert_eq!(load(&path), settings);
         fs::write(&path, "non json").unwrap();
@@ -63,8 +89,21 @@ mod tests {
         // File scritto prima di REQ-072: senza `top`.
         fs::write(&path, r#"{"src":"C:\\A","dst":"C:\\B"}"#).unwrap();
         update(&path, |s| s.top = Some(3)).unwrap();
-        assert_eq!(load(&path), Settings { src: r"C:\A".into(), dst: r"C:\B".into(), top: Some(3) });
+        assert_eq!(load(&path), Settings { src: r"C:\A".into(), dst: r"C:\B".into(), top: Some(3), stale: vec![] });
         update(&path, |s| s.dst = r"C:\C".into()).unwrap();
         assert_eq!(load(&path).top, Some(3));
+    }
+
+    #[test]
+    fn cartelle_con_indice_da_rifare() {
+        let mut settings = Settings::default();
+        settings.set_stale(r"C:\Uscita conversioni", true);
+        settings.set_stale(r"c:/uscita CONVERSIONI\", true);
+        assert_eq!(settings.stale.len(), 1, "stessa cartella scritta in modo diverso");
+        assert!(settings.is_stale(r"C:\Uscita conversioni\"));
+        assert!(settings.is_stale("c:/uscita conversioni"));
+        assert!(!settings.is_stale(r"C:\Uscita"));
+        settings.set_stale("C:/USCITA CONVERSIONI", false);
+        assert!(!settings.is_stale(r"C:\Uscita conversioni"));
     }
 }

@@ -186,7 +186,10 @@ function folderField(id, label) {
       });
       if (response.ok) {
         const { path } = await response.json();
-        if (path) input.value = path;
+        if (path) {
+          input.value = path;
+          input.dispatchEvent(new Event("input"));
+        }
       }
     } finally {
       browse.disabled = false;
@@ -427,8 +430,24 @@ async function renderSearch(content) {
       result.className = "alert ok";
       result.textContent = "Indicizzazione completata.";
       result.hidden = false;
+      refreshStale();
     }),
   );
+
+  // "Indicizza" in rosso se l'indice della cartella scritta nel campo va rifatto (REQ-074).
+  const refreshStale = async () => {
+    const src = folder.value;
+    const { stale } = await fetch(`/api/search/stale?src=${encodeURIComponent(src)}`).then((r) => r.json());
+    if (folder.value !== src) return;
+    if (stale) {
+      indexButton.classList.add("stale");
+      indexButton.title = "L'indice di questa cartella va rifatto";
+    } else {
+      indexButton.classList.remove("stale");
+      indexButton.removeAttribute("title");
+    }
+  };
+  folder.addEventListener("input", refreshStale);
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -480,6 +499,7 @@ async function renderSearch(content) {
     top.defaultValue = last.top;
     showResults(last.src, last.response.results);
   }
+  await refreshStale();
 
   // search-rm3.exe deve trovarsi accanto a gui.exe (REQ-070).
   const status = await fetch("/api/search/status").then((r) => r.json());

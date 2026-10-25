@@ -25,6 +25,7 @@
 - REQ-072 implementato — Numero di risultati ricordato e passato come --top, risultati con file apribile, riga, punteggio e Markdown reso (`gui/src/search.rs`, `gui/src/server.rs`, `gui/src/settings.rs`, `gui/tests/search.rs`, `gui/web/app.js`, `gui/web/style.css`)
 - REQ-077 implementato — Ultima ricerca riuscita tenuta in memoria dal server e mostrata ricaricando la pagina (`gui/src/main.rs`, `gui/src/server.rs`, `gui/tests/search.rs`, `gui/web/app.js`)
 - REQ-078 richiesto — gui: pulsante Indicizza in rosso anche per le cartelle mai indicizzate (.index assente o vuota)
+- REQ-074 implementato — Indicizza in rosso per le destinazioni convertite finché un'indicizzazione non riesce, stato salvato nelle impostazioni (`gui/src/server.rs`, `gui/src/settings.rs`, `gui/tests/search.rs`, `gui/web/app.js`, `gui/web/style.css`)
 
 ## 2026-10-24
 - REQ-052 richiesto — Tool search nella cartella search/, composto da sotto-tool con interfaccia comune

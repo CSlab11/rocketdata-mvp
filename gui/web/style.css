@@ -230,6 +230,12 @@ button.primary {
   color: var(--accent-text);
 }
 
+button.stale {
+  background: var(--error);
+  border-color: var(--error);
+  color: var(--surface);
+}
+
 button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 @media (max-width: 640px) {

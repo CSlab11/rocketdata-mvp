@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use axum::extract::{Request, State};
+use axum::extract::{Query, Request, State};
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::middleware::{self, Next};
 use std::convert::Infallible;
@@ -66,6 +66,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/search/query", post(search_query))
         .route("/api/search/open", post(search_open))
         .route("/api/search/last", get(search_last))
+        .route("/api/search/stale", get(search_stale))
         .route("/api/shutdown", post(shutdown))
         .route("/api/pick-folder", post(pick_folder))
         .route("/api/settings", get(get_settings))
@@ -114,7 +115,12 @@ async fn doc_ripper_run(
     state.runner.start(exe, src, dst).map_err(|e| (StatusCode::CONFLICT, e))?;
     // Ultime cartelle usate, riproposte ai prossimi avvii (REQ-035).
     if let Some(path) = &state.settings_path {
-        if let Err(error) = settings::update(path, |s| (s.src, s.dst) = (src.into(), dst.into())) {
+        let change = |s: &mut Settings| {
+            (s.src, s.dst) = (src.into(), dst.into());
+            // L'indice della destinazione va rifatto (REQ-074).
+            s.set_stale(dst, true);
+        };
+        if let Err(error) = settings::update(path, change) {
             eprintln!("Impossibile salvare le impostazioni in {}: {error}", path.display());
         }
     }
@@ -201,7 +207,29 @@ async fn search_index(
     let exe = search_rm3(&state)?;
     let src = search_src(&request.src)?;
     search::index(exe, src).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
+    // Indicizzazione riuscita: l'indice della cartella è di nuovo aggiornato (REQ-074).
+    if let Some(path) = &state.settings_path {
+        if let Err(error) = settings::update(path, |s| s.set_stale(request.src.trim(), false)) {
+            eprintln!("Impossibile salvare le impostazioni in {}: {error}", path.display());
+        }
+    }
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[derive(Deserialize)]
+struct StaleRequest {
+    src: String,
+}
+
+#[derive(Serialize)]
+struct StaleResponse {
+    stale: bool,
+}
+
+/// Se l'indice della cartella va rifatto, per mostrare "Indicizza" in rosso (REQ-074).
+async fn search_stale(State(state): State<Arc<AppState>>, Query(request): Query<StaleRequest>) -> Json<StaleResponse> {
+    let settings = state.settings_path.as_deref().map(settings::load).unwrap_or_default();
+    Json(StaleResponse { stale: settings.is_stale(&request.src) })
 }
 
 /// Cerca nell'indice della cartella con `search-rm3 query`: il JSON del sotto-tool (REQ-069).
