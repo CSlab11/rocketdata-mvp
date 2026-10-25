@@ -47,6 +47,37 @@ fn riporta_gli_errori_di_search_rm3() {
     assert_eq!(post_json(&gui, "/api/search/query", &json!({ "src": src_path, "q": "" })).0, 400);
 }
 
+fn hidden(path: &std::path::Path) -> bool {
+    use std::os::windows::fs::MetadataExt;
+    fs::metadata(path).unwrap().file_attributes() & 0x2 != 0
+}
+
+#[test]
+fn cartella_index_creata_se_manca_e_non_nascosta() {
+    let (_dir, exe) = install_with_fake_search();
+    let gui = Gui::start(&exe);
+    let src = tempfile::tempdir().unwrap();
+    let src_path = src.path().to_str().unwrap();
+    let index = src.path().join(".index");
+
+    // La crea gui, anche per una query: il search-rm3 finto non crea nulla se l'indice manca.
+    assert_eq!(post_json(&gui, "/api/search/query", &json!({ "src": src_path, "q": "clock" })).0, 500);
+    assert!(index.is_dir());
+    assert!(!hidden(&index));
+
+    let status = std::process::Command::new("attrib").arg("+h").arg(&index).status().unwrap();
+    assert!(status.success() && hidden(&index));
+    assert_eq!(post_json(&gui, "/api/search/index", &json!({ "src": src_path })).0, 204);
+    assert!(!hidden(&index), "la cartella .index non deve restare nascosta");
+
+    // Una cartella di origine inesistente non viene creata.
+    let missing = src.path().join("manca");
+    let (status, body) = post_json(&gui, "/api/search/index", &json!({ "src": missing }));
+    assert_eq!(status, 500);
+    assert!(body.contains("non esiste"), "{body}");
+    assert!(!missing.exists());
+}
+
 #[test]
 fn schermata_di_ricerca() {
     let (_dir, exe) = install_with_fake_search();
