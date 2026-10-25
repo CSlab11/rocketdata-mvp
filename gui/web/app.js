@@ -316,9 +316,9 @@ async function renderDocRipper(content) {
 async function renderSearch(content) {
   const alert = el("div", { class: "alert error", role: "alert", hidden: "" });
   const folder = el("input", { id: "search-src", type: "text", spellcheck: "false", autocomplete: "off" });
-  const indexButton = el("button", { id: "search-index", type: "button" }, "Indicizza");
+  const indexButton = el("button", { id: "search-index", type: "button", disabled: "" }, "Indicizza");
   const question = el("input", { id: "search-q", type: "search", autocomplete: "off" });
-  const searchButton = el("button", { id: "search-run", class: "primary", type: "submit" }, "Cerca");
+  const searchButton = el("button", { id: "search-run", class: "primary", type: "submit", disabled: "" }, "Cerca");
   const form = el("form", { class: "field" }, el("label", { for: "search-q" }, "Domanda"), el("div", { class: "field-row" }, question, searchButton));
   const result = el("div", { id: "search-result", class: "alert", hidden: "" });
   const list = el("ol", { id: "search-results", class: "search-results" });
@@ -370,6 +370,14 @@ async function renderSearch(content) {
       if (!results.length) list.replaceChildren(el("li", { class: "muted" }, "Nessun risultato"));
     });
   });
+
+  // search-rm3.exe deve trovarsi accanto a gui.exe (REQ-070).
+  const status = await fetch("/api/search/status").then((r) => r.json());
+  if (!status.available) {
+    showError(status.message);
+    return;
+  }
+  indexButton.disabled = searchButton.disabled = false;
 }
 
 // Connessioni in tempo reale aperte: vanno chiuse prima di spegnere il server.

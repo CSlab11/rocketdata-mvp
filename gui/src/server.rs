@@ -59,6 +59,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/doc-ripper/events", get(doc_ripper_events))
         .route("/api/doc-ripper/cancel", post(doc_ripper_cancel))
         .route("/api/doc-ripper/index", get(doc_ripper_index))
+        .route("/api/search/status", get(search_status))
         .route("/api/search/index", post(search_index))
         .route("/api/search/query", post(search_query))
         .route("/api/shutdown", post(shutdown))
@@ -73,6 +74,7 @@ fn asset(content_type: &'static str, body: &'static str) -> impl IntoResponse {
     ([(header::CONTENT_TYPE, content_type)], body)
 }
 
+/// Disponibilità di un tool accanto a `gui.exe` (REQ-029, REQ-070).
 #[derive(Serialize)]
 struct DocRipperStatus {
     available: bool,
@@ -113,6 +115,17 @@ async fn doc_ripper_run(
         }
     }
     Ok(StatusCode::ACCEPTED)
+}
+
+/// Disponibilità di `search-rm3.exe` accanto a `gui.exe` (REQ-070).
+async fn search_status(State(state): State<Arc<AppState>>) -> Json<DocRipperStatus> {
+    Json(match &state.search_rm3 {
+        Some(_) => DocRipperStatus { available: true, message: None },
+        None => DocRipperStatus {
+            available: false,
+            message: Some("search-rm3.exe non trovato nella cartella di gui.exe: copiarlo lì e riavviare la gui.".into()),
+        },
+    })
 }
 
 #[derive(Deserialize)]

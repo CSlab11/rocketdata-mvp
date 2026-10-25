@@ -18,6 +18,7 @@
 - REQ-076 implementato — index salta la cartella .index nella radice di --src (`search/search-rm3/src/index.rs`, `search/search-rm3/tests/index.rs`)
 - REQ-073 implementato — package.ps1 compila search-rm3 e lo copia in dist (`README.md`, `package.ps1`)
 - REQ-069 implementato — Schermata Ricerca che esegue search-rm3 index e query come processo separato (`gui/examples/fake_search_rm3.rs`, `gui/src/main.rs`, `gui/src/search.rs`, `gui/src/server.rs`, `gui/tests/common/mod.rs`, `gui/tests/search.rs`, `gui/web/app.js`)
+- REQ-070 implementato — search-rm3.exe cercato accanto a gui.exe, errore e pulsanti disabilitati se manca (`gui/src/main.rs`, `gui/src/server.rs`, `gui/tests/search_lookup.rs`, `gui/web/app.js`)
 
 ## 2026-10-24
 - REQ-052 richiesto — Tool search nella cartella search/, composto da sotto-tool con interfaccia comune

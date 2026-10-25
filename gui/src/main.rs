@@ -82,7 +82,7 @@ fn find_doc_ripper() -> Option<PathBuf> {
     path.is_file().then_some(path)
 }
 
-/// `search-rm3.exe` nella cartella di `gui.exe`, se presente.
+/// `search-rm3.exe` nella cartella di `gui.exe`, se presente (REQ-070).
 fn find_search_rm3() -> Option<PathBuf> {
     let path = std::env::current_exe().ok()?.parent()?.join("search-rm3.exe");
     path.is_file().then_some(path)
