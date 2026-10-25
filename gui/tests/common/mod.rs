@@ -68,6 +68,30 @@ pub fn install_with_fake() -> (tempfile::TempDir, std::path::PathBuf) {
     (dir, exe)
 }
 
+/// gui.exe in una cartella temporanea con il search-rm3 finto (examples/fake_search_rm3.rs)
+/// copiato accanto come search-rm3.exe.
+#[allow(dead_code)]
+pub fn install_with_fake_search() -> (tempfile::TempDir, std::path::PathBuf) {
+    let dir = tempfile::tempdir().unwrap();
+    let exe = dir.path().join("gui.exe");
+    std::fs::copy(gui_exe(), &exe).unwrap();
+    let fake = gui_exe().parent().unwrap().join("examples").join("fake_search_rm3.exe");
+    std::fs::copy(&fake, dir.path().join("search-rm3.exe")).unwrap();
+    (dir, exe)
+}
+
+/// POST con corpo JSON; restituisce stato HTTP e corpo della risposta.
+#[allow(dead_code)]
+pub fn post_json(gui: &Gui, path: &str, body: &serde_json::Value) -> (u16, String) {
+    let agent = ureq::Agent::config_builder().http_status_as_error(false).build().new_agent();
+    let mut response = agent
+        .post(&gui.url(path))
+        .header("Content-Type", "application/json")
+        .send(body.to_string().as_str())
+        .unwrap();
+    (response.status().as_u16(), response.body_mut().read_to_string().unwrap())
+}
+
 /// Avvia doc-ripper dalla gui; restituisce lo stato HTTP della risposta.
 #[allow(dead_code)]
 pub fn run(gui: &Gui, src: &str, dst: &str) -> u16 {

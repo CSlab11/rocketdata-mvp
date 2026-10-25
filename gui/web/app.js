@@ -8,6 +8,12 @@ const FUNCTIONS = [
     description: "Converte PDF, DOCX e fogli di calcolo di una cartella in Markdown e CSV.",
     render: renderDocRipper,
   },
+  {
+    id: "search",
+    title: "Ricerca",
+    description: "Cerca nei file Markdown di una cartella con search-rm3.",
+    render: renderSearch,
+  },
 ];
 
 function el(tag, attrs = {}, ...children) {
@@ -304,6 +310,66 @@ async function renderDocRipper(content) {
     if (snapshot.lines.length > 0) showResult(snapshot);
     start.disabled = false;
   }
+}
+
+// Ricerca con search-rm3, eseguito dal server come processo separato (REQ-069).
+async function renderSearch(content) {
+  const alert = el("div", { class: "alert error", role: "alert", hidden: "" });
+  const folder = el("input", { id: "search-src", type: "text", spellcheck: "false", autocomplete: "off" });
+  const indexButton = el("button", { id: "search-index", type: "button" }, "Indicizza");
+  const question = el("input", { id: "search-q", type: "search", autocomplete: "off" });
+  const searchButton = el("button", { id: "search-run", class: "primary", type: "submit" }, "Cerca");
+  const form = el("form", { class: "field" }, el("label", { for: "search-q" }, "Domanda"), el("div", { class: "field-row" }, question, searchButton));
+  const result = el("div", { id: "search-result", class: "alert", hidden: "" });
+  const list = el("ol", { id: "search-results", class: "search-results" });
+  content.append(
+    alert,
+    el("div", { class: "field" }, el("label", { for: "search-src" }, "Cartella da indicizzare"), el("div", { class: "field-row" }, folder, indexButton)),
+    form,
+    result,
+    list,
+  );
+
+  const showError = (message) => {
+    alert.textContent = message;
+    alert.hidden = false;
+  };
+  const post = (url, body) =>
+    fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  // Una richiesta alla volta: durante l'esecuzione di search-rm3 i pulsanti restano disabilitati.
+  const busy = async (action) => {
+    alert.hidden = true;
+    result.hidden = true;
+    indexButton.disabled = searchButton.disabled = true;
+    try {
+      await action();
+    } finally {
+      indexButton.disabled = searchButton.disabled = false;
+    }
+  };
+
+  indexButton.addEventListener("click", () =>
+    busy(async () => {
+      const response = await post("/api/search/index", { src: folder.value });
+      if (!response.ok) return showError(await response.text());
+      result.className = "alert ok";
+      result.textContent = "Indicizzazione completata.";
+      result.hidden = false;
+    }),
+  );
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    busy(async () => {
+      const response = await post("/api/search/query", { src: folder.value, q: question.value });
+      if (!response.ok) return showError(await response.text());
+      const { results } = await response.json();
+      list.replaceChildren(
+        ...results.map((r) => el("li", {}, `${r.file} — ${r.heading || "(senza intestazione)"} (${r.score.toFixed(2)})`)),
+      );
+      if (!results.length) list.replaceChildren(el("li", { class: "muted" }, "Nessun risultato"));
+    });
+  });
 }
 
 // Connessioni in tempo reale aperte: vanno chiuse prima di spegnere il server.

@@ -17,6 +17,7 @@ use tokio_stream::{Stream, StreamExt};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::dialogs::{FolderPicker, Opener, Opening};
+use crate::search;
 use crate::settings::{self, Settings};
 use crate::runner::{self, Event, Runner, Snapshot};
 
@@ -30,6 +31,8 @@ pub struct AppState {
     pub port: u16,
     /// `doc-ripper.exe` accanto a `gui.exe`, se presente (REQ-029).
     pub doc_ripper: Option<PathBuf>,
+    /// `search-rm3.exe` accanto a `gui.exe`, se presente (REQ-069).
+    pub search_rm3: Option<PathBuf>,
     pub runner: Arc<Runner>,
     /// Segnala al server di spegnersi (REQ-039).
     pub shutdown: Arc<tokio::sync::Notify>,
@@ -56,6 +59,8 @@ pub fn router(state: AppState) -> Router {
         .route("/api/doc-ripper/events", get(doc_ripper_events))
         .route("/api/doc-ripper/cancel", post(doc_ripper_cancel))
         .route("/api/doc-ripper/index", get(doc_ripper_index))
+        .route("/api/search/index", post(search_index))
+        .route("/api/search/query", post(search_query))
         .route("/api/shutdown", post(shutdown))
         .route("/api/pick-folder", post(pick_folder))
         .route("/api/settings", get(get_settings))
@@ -108,6 +113,53 @@ async fn doc_ripper_run(
         }
     }
     Ok(StatusCode::ACCEPTED)
+}
+
+#[derive(Deserialize)]
+struct SearchIndexRequest {
+    src: String,
+}
+
+#[derive(Deserialize)]
+struct SearchQueryRequest {
+    src: String,
+    q: String,
+}
+
+fn search_rm3(state: &AppState) -> Result<&std::path::Path, (StatusCode, String)> {
+    state.search_rm3.as_deref().ok_or_else(|| (StatusCode::SERVICE_UNAVAILABLE, "search-rm3.exe non disponibile".into()))
+}
+
+fn search_src(src: &str) -> Result<&std::path::Path, (StatusCode, String)> {
+    match src.trim() {
+        "" => Err((StatusCode::BAD_REQUEST, "indicare la cartella da indicizzare".into())),
+        src => Ok(std::path::Path::new(src)),
+    }
+}
+
+/// Indicizza la cartella con `search-rm3 index` (REQ-069).
+async fn search_index(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<SearchIndexRequest>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    let exe = search_rm3(&state)?;
+    let src = search_src(&request.src)?;
+    search::index(exe, src).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Cerca nell'indice della cartella con `search-rm3 query`: il JSON del sotto-tool (REQ-069).
+async fn search_query(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<SearchQueryRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let exe = search_rm3(&state)?;
+    let src = search_src(&request.src)?;
+    if request.q.trim().is_empty() {
+        return Err((StatusCode::BAD_REQUEST, "scrivere una domanda".into()));
+    }
+    let response = search::query(exe, src, request.q.trim()).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
+    Ok(Json(response))
 }
 
 #[derive(Deserialize)]
@@ -289,6 +341,7 @@ mod tests {
         AppState {
             port: 4000,
             doc_ripper: None,
+            search_rm3: None,
             runner: Arc::default(),
             shutdown: Arc::default(),
             folder_picker,

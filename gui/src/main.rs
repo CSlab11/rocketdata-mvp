@@ -4,6 +4,7 @@ compile_error!("gui supporta solo Windows 10 e Windows 11");
 
 mod dialogs;
 mod runner;
+mod search;
 mod server;
 mod settings;
 mod summary;
@@ -51,6 +52,7 @@ async fn main() {
     let state = server::AppState {
         port,
         doc_ripper: find_doc_ripper(),
+        search_rm3: find_search_rm3(),
         runner: Default::default(),
         shutdown: Arc::clone(&shutdown),
         folder_picker: dialogs::system_folder_picker(),
@@ -77,5 +79,11 @@ async fn main() {
 /// `doc-ripper.exe` nella cartella di `gui.exe`, se presente (REQ-029).
 fn find_doc_ripper() -> Option<PathBuf> {
     let path = std::env::current_exe().ok()?.parent()?.join("doc-ripper.exe");
+    path.is_file().then_some(path)
+}
+
+/// `search-rm3.exe` nella cartella di `gui.exe`, se presente.
+fn find_search_rm3() -> Option<PathBuf> {
+    let path = std::env::current_exe().ok()?.parent()?.join("search-rm3.exe");
     path.is_file().then_some(path)
 }
