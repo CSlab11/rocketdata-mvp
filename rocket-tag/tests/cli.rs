@@ -206,6 +206,29 @@ fn classify_one_vuole_un_solo_classificatore() {
     assert!(!both.status.success());
 }
 
+/// Codice di uscita diverso da 0 e messaggio su stderr, per ogni comando (REQ-130).
+#[test]
+fn errori_con_codice_di_uscita_e_stderr() {
+    let dir = tempfile::tempdir().unwrap();
+    let missing = dir.path().join("manca");
+    let out = dir.path().join("o.json");
+    let schema = ["--schema", "config/label_schema.json"];
+    let rules = ["--rules", "config/rules.yaml"];
+    let runs = [
+        rocket_tag().args(["classify", "rules"]).arg(&missing).arg("-o").arg(&out).args(schema).args(rules).output().unwrap(),
+        rocket_tag().args(["classify", "rules", "x.md", "-o", "o.json", "--schema"]).arg(&missing).args(rules).output().unwrap(),
+        rocket_tag().args(["rules", "check", "--schema"]).arg(&missing).args(rules).output().unwrap(),
+        rocket_tag().args(["rules", "check"]).args(schema).arg("--rules").arg(&missing).output().unwrap(),
+        rocket_tag().args(["classify", "one", "--text", "x"]).args(schema).arg("--rules").arg(&missing).output().unwrap(),
+        rocket_tag().args(["comando-inesistente"]).output().unwrap(),
+    ];
+    for run in runs {
+        assert!(!run.status.success());
+        assert!(!run.stderr.is_empty());
+        assert!(run.stdout.is_empty(), "{}", String::from_utf8_lossy(&run.stdout));
+    }
+}
+
 /// Il crate si compila e si esegue da solo, senza gli altri tool (REQ-079).
 #[test]
 fn si_esegue_da_solo() {
