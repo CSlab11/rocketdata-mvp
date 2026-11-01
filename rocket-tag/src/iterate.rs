@@ -19,6 +19,9 @@ pub struct Document {
 pub struct Job {
     pub document: String,
     pub unit: Unit,
+    /// Testo dell'unità precedente e successiva dello stesso file (REQ-088).
+    pub prev: Option<String>,
+    pub next: Option<String>,
 }
 
 /// Il file indicato, o i file `*.md` della cartella e delle sottocartelle (REQ-085).
@@ -54,7 +57,15 @@ pub fn jobs(documents: &[Document]) -> Result<Vec<Job>, String> {
     for document in documents {
         let text = fs::read_to_string(&document.path)
             .map_err(|e| format!("impossibile leggere {}: {e}", document.path.display()))?;
-        jobs.extend(markdown::parse(&text).into_iter().map(|unit| Job { document: document.name.clone(), unit }));
+        let units = markdown::parse(&text);
+        for (i, unit) in units.iter().enumerate() {
+            jobs.push(Job {
+                document: document.name.clone(),
+                unit: unit.clone(),
+                prev: i.checked_sub(1).map(|p| units[p].text.clone()),
+                next: units.get(i + 1).map(|n| n.text.clone()),
+            });
+        }
     }
     Ok(jobs)
 }
@@ -86,6 +97,17 @@ mod tests {
     fn accetta_un_singolo_file() {
         let dir = folder(&[("a.md", "uno\n")]);
         assert_eq!(documents(&dir.path().join("a.md")).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn unita_vicine_dello_stesso_file() {
+        let dir = folder(&[("a.md", "uno\n\ntitolo\n\n- due\n"), ("b.md", "tre\n")]);
+        let found = jobs(&documents(dir.path()).unwrap()).unwrap();
+        let near: Vec<_> = found.iter().map(|j| (j.prev.as_deref(), j.next.as_deref())).collect();
+        assert_eq!(near[0], (None, Some("titolo")));
+        assert_eq!(near[1], (Some("uno"), Some("due")));
+        assert_eq!(near[2], (Some("titolo"), None), "le vicine non passano da un file all'altro");
+        assert_eq!(near[3], (None, None));
     }
 
     #[test]
