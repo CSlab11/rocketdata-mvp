@@ -1,0 +1,327 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://criticalspace.local/schemas/info-labelling/label_schema.json",
+  "title": "Info Labelling – RFQ/RFP document and paragraph labels",
+  "description": "MVP facet schema v0.1. One record per document (level=document) or per extracted paragraph/table row (level=paragraph, keyed by anchor_id from extract_paragraphs.py). Use $defs/ParagraphFacets alone for LLM constrained generation.",
+  "version": "0.1.0",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/DocumentLabel"
+    },
+    {
+      "$ref": "#/$defs/ParagraphLabel"
+    }
+  ],
+  "$defs": {
+    "Side": {
+      "type": "string",
+      "enum": [
+        "prime",
+        "supplier"
+      ],
+      "x-enumDescriptions": {
+        "prime": "Issued by the customer/Prime: RFQ/RFP package, requirements, contract drafts.",
+        "supplier": "Issued by the bidder/supplier: offer, proposal, plans, product documentation."
+      }
+    },
+    "DocType": {
+      "type": "string",
+      "enum": [
+        "invitation_to_tender",
+        "statement_of_work",
+        "technical_specification",
+        "pa_requirements",
+        "management_requirements",
+        "document_requirements_list",
+        "interface_control_document",
+        "draft_contract",
+        "price_form",
+        "cover_letter",
+        "technical_proposal",
+        "technical_description",
+        "pa_plan",
+        "development_plan",
+        "compliance_matrix",
+        "financial_proposal",
+        "terms_of_sale",
+        "other"
+      ],
+      "x-enumDescriptions": {
+        "invitation_to_tender": "[prime] ITT/RFQ/RFP letter: scope, deadlines, response format.",
+        "statement_of_work": "[prime] SoW: tasks, phases, deliverables, reviews.",
+        "technical_specification": "[prime] Technical requirements specification.",
+        "pa_requirements": "[prime] Product assurance / quality / safety requirements.",
+        "management_requirements": "[prime] Project management, configuration, reporting requirements.",
+        "document_requirements_list": "[prime] DRL/DRD: documents to deliver and their content.",
+        "interface_control_document": "[prime] ICD: interfaces to comply with.",
+        "draft_contract": "[prime] Draft contract, special or general conditions of purchase.",
+        "price_form": "[prime] Price breakdown template to fill in.",
+        "cover_letter": "[supplier] Offer/cover letter summarising the proposal and its conditions.",
+        "technical_proposal": "[supplier] Technical proposal specific to this bid.",
+        "technical_description": "[supplier] Generic product technical description/datasheet.",
+        "pa_plan": "[supplier] Product assurance and safety plan.",
+        "development_plan": "[supplier] Design, development and verification plan, management plan.",
+        "compliance_matrix": "[supplier] Compliance matrix / statement of compliance.",
+        "financial_proposal": "[supplier] Price offer, cost breakdown, payment plan.",
+        "terms_of_sale": "[supplier] General terms and conditions of sale.",
+        "other": "Anything not covered above; explain in note."
+      }
+    },
+    "Nature": {
+      "type": "string",
+      "enum": [
+        "requirement",
+        "recommendation",
+        "option",
+        "commitment",
+        "compliance_statement",
+        "description",
+        "definition",
+        "reference",
+        "bidder_instruction",
+        "context"
+      ],
+      "x-enumDescriptions": {
+        "requirement": "Binding obligation on the recipient (shall, must, is required to).",
+        "recommendation": "Non-binding preference (should, is recommended).",
+        "option": "Permission or selectable option (may, optional, can be offered).",
+        "commitment": "The author commits to an action, process or deliverable (will, we perform, is performed for the project).",
+        "compliance_statement": "States compliance, partial compliance, deviation or non-compliance to a requirement or standard.",
+        "description": "Factual property of a product, system or facility: what it is, has or does.",
+        "definition": "Acronym, glossary entry or definition of a term.",
+        "reference": "Content is delegated to another document (see AD-3, as documented in [EEE]).",
+        "bidder_instruction": "Instruction on how to prepare or submit the bid (format, deadline, contacts).",
+        "context": "Purpose, scope, introduction, background; no obligation, commitment or product fact."
+      }
+    },
+    "Domain": {
+      "type": "string",
+      "enum": [
+        "technical",
+        "verification",
+        "product_assurance",
+        "management",
+        "schedule",
+        "deliverables",
+        "commercial",
+        "legal"
+      ],
+      "x-enumDescriptions": {
+        "technical": "Design, performance, interfaces, environment, functions.",
+        "verification": "Tests, analyses, inspections, reviews of design, qualification, acceptance.",
+        "product_assurance": "Quality, dependability, safety, EEE parts, materials and processes, NCR.",
+        "management": "Organisation, configuration, risk, reporting, meetings, subcontractors.",
+        "schedule": "Milestones, durations, dates, phases, delivery times.",
+        "deliverables": "Documents, hardware, software or data to be delivered.",
+        "commercial": "Prices, payment, validity, warranty terms with a price impact.",
+        "legal": "Liability, IPR, confidentiality, export control, governing law."
+      }
+    },
+    "Destination": {
+      "type": "string",
+      "enum": [
+        "P",
+        "Q",
+        "PQ",
+        "none"
+      ],
+      "x-enumDescriptions": {
+        "P": "Relevant to the proposal/qualification: technical and compliance answer.",
+        "Q": "Relevant to the quotation: price, cost, payment.",
+        "PQ": "Relevant to both.",
+        "none": "Not relevant to either (context, definitions, boilerplate)."
+      }
+    },
+    "RequiredAction": {
+      "type": "string",
+      "enum": [
+        "declare_compliance",
+        "produce_deliverable",
+        "quote",
+        "provide_information",
+        "none"
+      ],
+      "x-enumDescriptions": {
+        "declare_compliance": "[prime docs] Supplier must state C/PC/NC for this paragraph.",
+        "produce_deliverable": "[prime docs] Supplier must deliver a document, item or data.",
+        "quote": "[prime docs] Supplier must price this item.",
+        "provide_information": "[prime docs] Supplier must provide information in the proposal.",
+        "none": "No action, or the document is on the supplier side."
+      }
+    },
+    "ExtractionQuality": {
+      "type": "string",
+      "enum": [
+        "ok",
+        "fragment",
+        "noise",
+        "bad_merge"
+      ],
+      "x-enumDescriptions": {
+        "ok": "Record is one complete, meaningful unit.",
+        "fragment": "Incomplete: split sentence, cut table row, diagram label.",
+        "noise": "Should not exist: header, footer, page number, letterhead.",
+        "bad_merge": "Two or more unrelated units merged into one record."
+      }
+    },
+    "Flag": {
+      "type": "string",
+      "enum": [
+        "multiple_requirements"
+      ],
+      "x-enumDescriptions": {
+        "multiple_requirements": "The record contains more than one separately verifiable requirement."
+      }
+    },
+    "ParagraphFacets": {
+      "type": "object",
+      "description": "Facets only. Use this object as the LLM output schema.",
+      "properties": {
+        "nature": {
+          "$ref": "#/$defs/Nature"
+        },
+        "domain": {
+          "$ref": "#/$defs/Domain"
+        },
+        "destination": {
+          "$ref": "#/$defs/Destination"
+        },
+        "required_action": {
+          "$ref": "#/$defs/RequiredAction",
+          "x-fixedWhen": {
+            "side": "supplier",
+            "value": "none"
+          }
+        },
+        "extraction_quality": {
+          "$ref": "#/$defs/ExtractionQuality",
+          "x-default": "ok"
+        },
+        "flags": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Flag"
+          },
+          "uniqueItems": true,
+          "x-default": []
+        }
+      },
+      "required": [
+        "nature",
+        "domain",
+        "destination",
+        "required_action",
+        "extraction_quality",
+        "flags"
+      ],
+      "additionalProperties": false
+    },
+    "Provenance": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": [
+            "human",
+            "rules",
+            "llm",
+            "encoder"
+          ]
+        },
+        "annotator": {
+          "type": "string",
+          "description": "Person or model id."
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "schema_version": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "annotator",
+        "timestamp",
+        "schema_version"
+      ],
+      "additionalProperties": false
+    },
+    "DocumentLabel": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "const": "document"
+        },
+        "doc": {
+          "type": "string",
+          "description": "Source file name."
+        },
+        "doc_hash": {
+          "type": "string"
+        },
+        "side": {
+          "$ref": "#/$defs/Side"
+        },
+        "doc_type": {
+          "$ref": "#/$defs/DocType"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        }
+      },
+      "required": [
+        "level",
+        "doc",
+        "doc_hash",
+        "side",
+        "doc_type",
+        "provenance"
+      ],
+      "additionalProperties": false
+    },
+    "ParagraphLabel": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "const": "paragraph"
+        },
+        "anchor_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{16}$"
+        },
+        "doc_hash": {
+          "type": "string"
+        },
+        "text_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{16}$"
+        },
+        "facets": {
+          "$ref": "#/$defs/ParagraphFacets"
+        },
+        "provenance": {
+          "$ref": "#/$defs/Provenance"
+        }
+      },
+      "required": [
+        "level",
+        "anchor_id",
+        "doc_hash",
+        "text_hash",
+        "facets",
+        "provenance"
+      ],
+      "additionalProperties": false
+    }
+  }
+}
