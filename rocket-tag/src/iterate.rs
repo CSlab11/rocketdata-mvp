@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 
 use walkdir::WalkDir;
 
+use crate::classifier::Context;
 use crate::markdown::{self, Unit};
 
 /// File Markdown da classificare.
@@ -22,6 +23,19 @@ pub struct Job {
     /// Testo dell'unità precedente e successiva dello stesso file (REQ-088).
     pub prev: Option<String>,
     pub next: Option<String>,
+}
+
+impl Job {
+    pub fn context(&self) -> Context {
+        Context {
+            kind: Some(self.unit.kind),
+            heading_path: self.unit.heading_path.clone(),
+            clause: self.unit.clause.clone(),
+            prev: self.prev.clone(),
+            next: self.next.clone(),
+            ..Context::default()
+        }
+    }
 }
 
 /// Il file indicato, o i file `*.md` della cartella e delle sottocartelle (REQ-085).

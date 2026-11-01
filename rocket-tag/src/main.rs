@@ -97,8 +97,9 @@ fn run_classify_rules(input: &Path, output: &Path, schema: &Path, rules: &Path) 
     let rules = checked_rules(&schema, rules)?;
     let jobs = iterate::jobs(&iterate::documents(input)?)?;
     let mut result = Output::new(&schema.version, format!("rules-v{}", rules.version));
-    for job in jobs {
-        result.items.push(Item { document: job.document, line_start: job.unit.line_start, line_end: job.unit.line_end });
+    for job in &jobs {
+        let decision = rules.classify(&schema, &job.unit.text, &job.context());
+        result.items.push(Item::new(job, decision));
     }
     result.write(output)
 }

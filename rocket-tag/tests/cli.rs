@@ -41,10 +41,7 @@ fn classify_rules(input: &std::path::Path, output: &std::path::Path) -> std::pro
 #[test]
 fn classify_rules_scrive_il_file_di_uscita() {
     let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("a.md"), "Uno.
-
-Due.
-").unwrap();
+    std::fs::write(dir.path().join("a.md"), "Uno.\n\nDue.\n").unwrap();
     let out = dir.path().join("uscita/rules.json");
     let run = classify_rules(dir.path(), &out);
     assert!(run.status.success(), "{}", String::from_utf8_lossy(&run.stderr));
@@ -53,6 +50,22 @@ Due.
     assert_eq!(saved["classifier"], "rules-v0.1.0");
     assert_eq!(saved["items"].as_array().unwrap().len(), 2);
     assert_eq!(saved["skipped"], serde_json::json!([]));
+}
+
+/// Ogni elemento riporta documento, righe e un'etichetta per faccetta (REQ-115).
+#[test]
+fn elementi_con_documento_righe_ed_etichette() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir(dir.path().join("sotto")).unwrap();
+    std::fs::write(dir.path().join("sotto/a.md"), "# 1 Titolo\n\nThe unit shall operate\nat 30 °C.\n").unwrap();
+    let out = dir.path().join("rules.json");
+    assert!(classify_rules(dir.path(), &out).status.success());
+    let saved: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&out).unwrap()).unwrap();
+    let item = &saved["items"][0];
+    assert_eq!(item["document"], "sotto/a.md");
+    assert_eq!((item["line_start"].as_u64(), item["line_end"].as_u64()), (Some(3), Some(4)));
+    assert_eq!(item["labels"]["nature"], "requirement");
+    assert_eq!(item["labels"]["flags"], serde_json::json!([]));
 }
 
 /// Il crate si compila e si esegue da solo, senza gli altri tool (REQ-079).

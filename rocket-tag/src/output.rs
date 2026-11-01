@@ -5,6 +5,10 @@ use std::path::Path;
 use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
+
+use crate::classifier::Decision;
+use crate::iterate::Job;
 
 /// Etichette di un'unità.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -12,6 +16,19 @@ pub struct Item {
     pub document: String,
     pub line_start: usize,
     pub line_end: usize,
+    /// Un valore per faccetta (REQ-115).
+    pub labels: Map<String, Value>,
+}
+
+impl Item {
+    pub fn new(job: &Job, decision: Decision) -> Item {
+        Item {
+            document: job.document.clone(),
+            line_start: job.unit.line_start,
+            line_end: job.unit.line_end,
+            labels: decision.labels,
+        }
+    }
 }
 
 /// Unità scartata, con il motivo.
@@ -69,7 +86,7 @@ mod tests {
     use super::*;
 
     fn item(document: &str, line_start: usize) -> Item {
-        Item { document: document.into(), line_start, line_end: line_start }
+        Item { document: document.into(), line_start, line_end: line_start, labels: Map::new() }
     }
 
     #[test]

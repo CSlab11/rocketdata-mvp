@@ -84,7 +84,7 @@ Provengono da [`classifier-handoff/requirements.md`](../../classifier-handoff/re
 | ID | Requisito | Stato | File impattati |
 | --- | --- | --- | --- |
 | REQ-114 | Ogni esecuzione di un classificatore deve scrivere un file JSON nel formato dell'appendice E. | implementato | `rocket-tag/Cargo.lock`, `rocket-tag/Cargo.toml`, `rocket-tag/src/lib.rs`, `rocket-tag/src/main.rs`, `rocket-tag/src/output.rs`, `rocket-tag/tests/cli.rs` |
-| REQ-115 | Ogni elemento dell'uscita deve contenere il nome del documento, la riga iniziale e la riga finale dell'unità nel file Markdown e le etichette assegnate, un valore per faccetta. | aperto | — |
+| REQ-115 | Ogni elemento dell'uscita deve contenere il nome del documento, la riga iniziale e la riga finale dell'unità nel file Markdown e le etichette assegnate, un valore per faccetta. | implementato | `rocket-tag/src/iterate.rs`, `rocket-tag/src/main.rs`, `rocket-tag/src/output.rs`, `rocket-tag/tests/cli.rs` |
 | REQ-116 | Ogni elemento dell'uscita deve contenere anche tipo di unità, `text_hash`, confidenza per faccetta e confidenza dell'unità, pari al minimo delle confidenze per faccetta; il file deve riportare classificatore e versione dello schema. | aperto | — |
 | REQ-117 | Il file di uscita deve restare un JSON valido anche se l'esecuzione si interrompe (scrittura su file temporaneo e rinomina). | aperto | — |
 | REQ-129 | I comandi che classificano un file o una cartella devono scrivere su stdout una riga `[<unità elaborate>/<unità totali>] <documento>` per ogni unità elaborata, così che chi li esegue possa seguirne l'avanzamento. | aperto | — |
