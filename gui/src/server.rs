@@ -75,6 +75,8 @@ pub fn router(state: AppState) -> Router {
         .route("/api/classify/status", get(classify_status))
         .route("/api/classify/run", post(classify_run))
         .route("/api/classify/output", get(classify_output))
+        .route("/api/classify/events", get(classify_events))
+        .route("/api/classify/cancel", post(classify_cancel))
         .route("/api/shutdown", post(shutdown))
         .route("/api/pick-folder", post(pick_folder))
         .route("/api/settings", get(get_settings))
@@ -200,6 +202,17 @@ fn llm_server(request: &ClassifyRequest) -> Result<Server, (StatusCode, String)>
 
 async fn classify_output(State(state): State<Arc<AppState>>) -> Json<Snapshot> {
     Json(state.classifier.snapshot())
+}
+
+/// Interrompe la classificazione in corso (REQ-137).
+async fn classify_cancel(State(state): State<Arc<AppState>>) -> Result<StatusCode, (StatusCode, String)> {
+    state.classifier.cancel().map_err(|e| (StatusCode::CONFLICT, e))?;
+    Ok(StatusCode::ACCEPTED)
+}
+
+/// Output della classificazione in tempo reale, per la barra di avanzamento (REQ-137).
+async fn classify_events(State(state): State<Arc<AppState>>) -> Sse<impl Stream<Item = Result<sse::Event, Infallible>>> {
+    events_of(&state.classifier)
 }
 
 #[derive(Deserialize)]
@@ -468,7 +481,11 @@ async fn doc_ripper_output(State(state): State<Arc<AppState>>) -> Json<Snapshot>
 /// Output dell'esecuzione in tempo reale (REQ-031): prima le righe già prodotte, poi le nuove.
 /// Eventi `line` (una riga di output) e `end` (codice di uscita).
 async fn doc_ripper_events(State(state): State<Arc<AppState>>) -> Sse<impl Stream<Item = Result<sse::Event, Infallible>>> {
-    let (snapshot, receiver) = state.runner.subscribe();
+    events_of(&state.runner)
+}
+
+fn events_of(runner: &Runner) -> Sse<impl Stream<Item = Result<sse::Event, Infallible>> + use<>> {
+    let (snapshot, receiver) = runner.subscribe();
     let mut past: Vec<Event> = snapshot.lines.into_iter().map(Event::Line).collect();
     if !snapshot.running && (snapshot.exit_code.is_some() || !past.is_empty()) {
         past.push(Event::End(snapshot.exit_code));

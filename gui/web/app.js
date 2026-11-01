@@ -528,19 +528,82 @@ async function renderClassify(content) {
     el("option", { value: "llm" }, "LLM"),
   );
   const start = el("button", { id: "classify-start", class: "primary", type: "button", disabled: "" }, "Classifica");
+  const cancel = el("button", { id: "classify-cancel", type: "button", hidden: "" }, "Annulla");
+  const progressBar = el("progress", { max: "100", value: "0" });
+  const progressText = el("span");
+  const progress = el("div", { id: "classify-progress", class: "progress", hidden: "" }, progressBar, progressText);
   const result = el("div", { id: "classify-result", class: "alert", hidden: "" });
+  const output = el("pre", { id: "classify-output", class: "output", hidden: "" });
   content.append(
     alert,
     folderRow,
     el("div", { class: "field" }, el("label", { for: "classify-kind" }, "Classificatore"), el("div", { class: "field-row" }, kind)),
-    el("div", { class: "actions" }, start),
+    el("div", { class: "actions" }, start, cancel),
+    progress,
     result,
+    output,
   );
 
   const showError = (message) => {
     alert.textContent = message;
     alert.hidden = false;
   };
+
+  // Barra di avanzamento dalle righe `[n/totale] <documento>` (REQ-137); le altre righe, come gli
+  // errori su stderr, restano visibili.
+  const UNIT_LINE = /^\[(\d+)\/(\d+)\] /;
+  const track = (line) => {
+    const unit = UNIT_LINE.exec(line);
+    if (!unit) return false;
+    const [done, total] = [+unit[1], +unit[2]];
+    const percent = Math.floor((done / total) * 100);
+    progressBar.setAttribute("value", percent);
+    progressText.textContent = `Unità ${done} di ${total} (${percent}%)`;
+    progress.hidden = false;
+    return true;
+  };
+
+  // Esito in base al codice di uscita (REQ-137).
+  const showResult = (snapshot) => {
+    const code = snapshot.exit_code;
+    if (snapshot.cancelled) {
+      result.className = "alert warn";
+      result.textContent = "Classificazione annullata.";
+    } else {
+      result.className = code === 0 ? "alert ok" : "alert error";
+      result.textContent =
+        code === 0 ? "Classificazione completata." : `Classificazione terminata con errori (codice di uscita ${code ?? "sconosciuto"}).`;
+    }
+    result.hidden = false;
+    snapshot.lines.forEach(track);
+    output.textContent = snapshot.lines.filter((l) => !UNIT_LINE.test(l)).join("\n");
+    output.hidden = !output.textContent;
+  };
+
+  // Esecuzione in background: la pagina resta utilizzabile e si può annullare (REQ-137).
+  const follow = () => {
+    start.disabled = true;
+    cancel.hidden = false;
+    cancel.disabled = false;
+    result.hidden = true;
+    output.hidden = true;
+    const events = new EventSource("/api/classify/events");
+    openStreams.add(events);
+    events.addEventListener("line", (e) => track(e.data));
+    events.addEventListener("end", async () => {
+      events.close();
+      openStreams.delete(events);
+      showResult(await fetch("/api/classify/output").then((r) => r.json()));
+      start.disabled = false;
+      cancel.hidden = true;
+    });
+  };
+
+  cancel.addEventListener("click", async () => {
+    cancel.disabled = true;
+    const response = await fetch("/api/classify/cancel", { method: "POST" });
+    if (!response.ok) showError(await response.text());
+  });
 
   start.addEventListener("click", async () => {
     alert.hidden = true;
@@ -550,7 +613,11 @@ async function renderClassify(content) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (!response.ok) showError(await response.text());
+    if (!response.ok) {
+      showError(await response.text());
+      return;
+    }
+    follow();
   });
 
   // Proposta: l'ultima cartella di destinazione usata da doc-ripper (REQ-135, REQ-035).
@@ -563,7 +630,15 @@ async function renderClassify(content) {
     showError(status.message);
     return;
   }
-  start.disabled = false;
+
+  // Pagina ricaricata: si ricollega all'esecuzione in corso o mostra l'esito dell'ultima.
+  const snapshot = await fetch("/api/classify/output").then((r) => r.json());
+  if (snapshot.running) {
+    follow();
+  } else {
+    if (snapshot.lines.length > 0) showResult(snapshot);
+    start.disabled = false;
+  }
 }
 
 // Connessioni in tempo reale aperte: vanno chiuse prima di spegnere il server.

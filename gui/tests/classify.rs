@@ -110,6 +110,71 @@ fn la_schermata_e_nel_menu() {
     assert!(dom.contains(r#"id="classify-kind""#), "{dom}");
 }
 
+/// La richiesta di avvio non attende la fine; l'avanzamento arriva in tempo reale (REQ-137).
+#[test]
+fn esecuzione_in_background_con_avanzamento() {
+    let (_dir, exe) = install_with_fake_tag();
+    let gui = Gui::start(&exe);
+    let folder = markdown_folder();
+    fs::write(folder.path().join("lento"), "").unwrap();
+    let request = json!({"src": folder.path().to_str().unwrap(), "classifier": "rules"});
+    let started = Instant::now();
+    assert_eq!(post_json(&gui, "/api/classify/run", &request).0, 202);
+    assert!(started.elapsed() < Duration::from_millis(600), "la richiesta di avvio non deve attendere");
+    assert_eq!(output(&gui)["running"], true);
+    let (status, message) = post_json(&gui, "/api/classify/run", &request);
+    assert_eq!(status, 409, "uno alla volta");
+    assert!(message.contains("rocket-tag è già in esecuzione"), "{message}");
+
+    let body = ureq::get(&gui.url("/api/classify/events")).call().unwrap().into_body().into_reader();
+    let mut lines = Vec::new();
+    for line in std::io::BufRead::lines(std::io::BufReader::new(body)) {
+        let line = line.unwrap();
+        let finished = line == "event: end";
+        lines.push(line);
+        if finished {
+            break;
+        }
+    }
+    assert!(lines.contains(&"data: [3/3] sotto/b.md".to_string()), "{lines:?}");
+}
+
+#[test]
+fn annulla_interrompe_il_processo() {
+    let (_dir, exe) = install_with_fake_tag();
+    let gui = Gui::start(&exe);
+    let folder = markdown_folder();
+    fs::write(folder.path().join("lento"), "").unwrap();
+    let request = json!({"src": folder.path().to_str().unwrap(), "classifier": "rules"});
+    assert_eq!(post_json(&gui, "/api/classify/run", &request).0, 202);
+    assert_eq!(post_json(&gui, "/api/classify/cancel", &json!({})).0, 202);
+    assert_eq!(wait_end(&gui)["cancelled"], true);
+    assert!(!folder.path().join(".classify/rules.json").exists());
+    assert_eq!(post_json(&gui, "/api/classify/cancel", &json!({})).0, 409, "nessuna esecuzione in corso");
+}
+
+/// Al termine: esito dal codice di uscita, barra piena e messaggio di stderr (REQ-137).
+#[test]
+fn esito_nella_pagina() {
+    let (_dir, exe) = install_with_fake_tag();
+    let gui = Gui::start(&exe);
+    let folder = markdown_folder();
+    let request = json!({"src": folder.path().to_str().unwrap(), "classifier": "rules"});
+    assert_eq!(post_json(&gui, "/api/classify/run", &request).0, 202);
+    wait_end(&gui);
+    let dom = dump_dom(&gui.url("/#classify"));
+    assert!(dom.contains("Classificazione completata."), "{dom}");
+    assert!(dom.contains("Unità 3 di 3 (100%)"), "{dom}");
+
+    fs::write(folder.path().join("fallisci"), "").unwrap();
+    assert_eq!(post_json(&gui, "/api/classify/run", &request).0, 202);
+    assert_eq!(wait_end(&gui)["exit_code"], 3);
+    let dom = dump_dom(&gui.url("/#classify"));
+    assert!(dom.contains("Classificazione terminata con errori (codice di uscita 3)."), "{dom}");
+    assert!(dom.contains("il server LLM non risponde"), "{dom}");
+    assert!(!dom.contains("[3/3] sotto/b.md"), "le righe di avanzamento non compaiono nell'output");
+}
+
 /// La schermata propone l'ultima destinazione di doc-ripper, modificabile con "Sfoglia" (REQ-135).
 #[test]
 fn propone_l_ultima_destinazione_di_doc_ripper() {
