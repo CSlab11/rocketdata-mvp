@@ -1,0 +1,18 @@
+[package]
+name = "rocket-tag"
+version = "0.1.0"
+edition = "2024"
+
+# Workspace a sé: rocket-tag non entra in workspace di altre cartelle (REQ-079).
+[workspace]
+
+[lib]
+name = "rocket_tag"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rocket-tag"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.6.7", features = ["derive"] }
