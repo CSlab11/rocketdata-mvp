@@ -24,7 +24,8 @@ pub struct Job {
 /// Il file indicato, o i file `*.md` della cartella e delle sottocartelle (REQ-085).
 pub fn documents(input: &Path) -> Result<Vec<Document>, String> {
     if input.is_file() {
-        return Ok(vec![Document { name: input.display().to_string(), path: input.to_path_buf() }]);
+        let name = input.file_name().map_or_else(|| input.display().to_string(), |n| n.to_string_lossy().into_owned());
+        return Ok(vec![Document { name, path: input.to_path_buf() }]);
     }
     if !input.is_dir() {
         return Err(format!("ingresso non trovato: {}", input.display()));
@@ -34,10 +35,16 @@ pub fn documents(input: &Path) -> Result<Vec<Document>, String> {
         let entry = entry.map_err(|e| format!("impossibile leggere {}: {e}", input.display()))?;
         let is_md = entry.path().extension().is_some_and(|ext| ext.eq_ignore_ascii_case("md"));
         if entry.file_type().is_file() && is_md {
-            documents.push(Document { name: entry.path().display().to_string(), path: entry.into_path() });
+            documents.push(Document { name: relative_name(input, entry.path()), path: entry.into_path() });
         }
     }
     Ok(documents)
+}
+
+/// Percorso relativo alla cartella di ingresso con separatore `/` (REQ-090).
+fn relative_name(root: &Path, path: &Path) -> String {
+    let relative = path.strip_prefix(root).unwrap_or(path);
+    relative.components().map(|c| c.as_os_str().to_string_lossy()).collect::<Vec<_>>().join("/")
 }
 
 /// Unità di tutti i documenti, nell'ordine dei file, per chiamare il classificatore su ciascuna
@@ -79,6 +86,14 @@ mod tests {
     fn accetta_un_singolo_file() {
         let dir = folder(&[("a.md", "uno\n")]);
         assert_eq!(documents(&dir.path().join("a.md")).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn nome_del_documento_relativo_con_barra() {
+        let dir = folder(&[("a.md", "uno\n"), ("sotto/piano/b.md", "due\n")]);
+        let names: Vec<_> = documents(dir.path()).unwrap().into_iter().map(|d| d.name).collect();
+        assert_eq!(names, ["a.md", "sotto/piano/b.md"]);
+        assert_eq!(documents(&dir.path().join("sotto/piano/b.md")).unwrap()[0].name, "b.md");
     }
 
     #[test]

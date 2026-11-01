@@ -32,7 +32,7 @@ Provengono da [`classifier-handoff/requirements.md`](../../classifier-handoff/re
 | REQ-087 | Per ogni unità l'iteratore deve determinare la riga iniziale e la riga finale nel file Markdown, numerate da 1 e incluse. | implementato | `rocket-tag/src/markdown.rs` |
 | REQ-088 | Per ogni unità l'iteratore deve passare al classificatore testo, testo dell'unità precedente e successiva dello stesso file, percorso dei titoli, clausola, tipo di unità, lato e tipo del documento. | aperto | — |
 | REQ-089 | L'iteratore deve ricavare lato e tipo del documento dalle etichette documento del file di etichette umane (appendice F), se fornito, abbinandole per nome del documento; altrimenti dalla sezione `documents` di `rules.yaml` applicata al nome del documento; altrimenti deve lasciarli sconosciuti. | aperto | — |
-| REQ-090 | Il nome del documento deve essere il percorso del file Markdown relativo alla cartella di ingresso, con separatore `/`, oppure il nome del file quando l'ingresso è un singolo file. | aperto | — |
+| REQ-090 | Il nome del documento deve essere il percorso del file Markdown relativo alla cartella di ingresso, con separatore `/`, oppure il nome del file quando l'ingresso è un singolo file. | implementato | `rocket-tag/src/iterate.rs` |
 | REQ-128 | I comandi che classificano un file o una cartella devono accettare un'opzione `--exclude <percorso>`, ripetibile, con un percorso relativo alla cartella di ingresso: il file indicato, o la cartella indicata con tutto il suo contenuto, non viene letto dall'iteratore. Il pacchetto non deve contenere nomi di esclusioni predefiniti legati ad altri tool. | aperto | — |
 
 ## Ingresso dei classificatori
