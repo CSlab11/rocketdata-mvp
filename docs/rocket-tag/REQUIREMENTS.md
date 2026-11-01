@@ -33,6 +33,7 @@ Provengono da [`classifier-handoff/requirements.md`](../../classifier-handoff/re
 | REQ-088 | Per ogni unità l'iteratore deve passare al classificatore testo, testo dell'unità precedente e successiva dello stesso file, percorso dei titoli, clausola, tipo di unità, lato e tipo del documento. | aperto | — |
 | REQ-089 | L'iteratore deve ricavare lato e tipo del documento dalle etichette documento del file di etichette umane (appendice F), se fornito, abbinandole per nome del documento; altrimenti dalla sezione `documents` di `rules.yaml` applicata al nome del documento; altrimenti deve lasciarli sconosciuti. | aperto | — |
 | REQ-090 | Il nome del documento deve essere il percorso del file Markdown relativo alla cartella di ingresso, con separatore `/`, oppure il nome del file quando l'ingresso è un singolo file. | aperto | — |
+| REQ-128 | I comandi che classificano un file o una cartella devono accettare un'opzione `--exclude <percorso>`, ripetibile, con un percorso relativo alla cartella di ingresso: il file indicato, o la cartella indicata con tutto il suo contenuto, non viene letto dall'iteratore. Il pacchetto non deve contenere nomi di esclusioni predefiniti legati ad altri tool. | aperto | — |
 
 ## Ingresso dei classificatori
 
@@ -76,6 +77,7 @@ Provengono da [`classifier-handoff/requirements.md`](../../classifier-handoff/re
 | REQ-111 | Il classificatore LLM deve fermarsi con un messaggio chiaro quando il server non risponde (5 errori di connessione senza alcun successo). | aperto | — |
 | REQ-112 | L'esecuzione con il classificatore LLM deve supportare un numero configurabile di richieste parallele e un limite al numero di unità. | aperto | — |
 | REQ-113 | Se riceve il file di uscita del classificatore a regole, il classificatore LLM deve assegnare a ogni faccetta confidenza 0,9 se concorda con le regole sulla stessa unità e 0,5 se non concorda; senza quel file, 0,7. | aperto | — |
+| REQ-132 | Il classificatore LLM deve leggere la chiave facoltativa del server (REQ-106) dalla variabile d'ambiente `ROCKET_TAG_API_KEY` e non deve richiederla come argomento da riga di comando. | aperto | — |
 
 ## Uscita
 
@@ -85,6 +87,9 @@ Provengono da [`classifier-handoff/requirements.md`](../../classifier-handoff/re
 | REQ-115 | Ogni elemento dell'uscita deve contenere il nome del documento, la riga iniziale e la riga finale dell'unità nel file Markdown e le etichette assegnate, un valore per faccetta. | aperto | — |
 | REQ-116 | Ogni elemento dell'uscita deve contenere anche tipo di unità, `text_hash`, confidenza per faccetta e confidenza dell'unità, pari al minimo delle confidenze per faccetta; il file deve riportare classificatore e versione dello schema. | aperto | — |
 | REQ-117 | Il file di uscita deve restare un JSON valido anche se l'esecuzione si interrompe (scrittura su file temporaneo e rinomina). | aperto | — |
+| REQ-129 | I comandi che classificano un file o una cartella devono scrivere su stdout una riga `[<unità elaborate>/<unità totali>] <documento>` per ogni unità elaborata, così che chi li esegue possa seguirne l'avanzamento. | aperto | — |
+| REQ-130 | Ogni comando del pacchetto deve terminare con codice di uscita 0 se riesce e diverso da 0 in caso di errore, con il messaggio di errore su stderr; le unità scartate (REQ-109) non sono un errore del comando. | aperto | — |
+| REQ-131 | Durante l'esecuzione il classificatore LLM deve aggiornare il file di uscita almeno ogni 20 unità elaborate, con la scrittura di REQ-117, così che dopo un'interruzione forzata del processo la ripresa (REQ-110) trovi le unità già classificate. | aperto | — |
 
 ## Valutazione
 

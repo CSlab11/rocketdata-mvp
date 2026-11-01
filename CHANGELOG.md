@@ -51,6 +51,33 @@
 - REQ-073 annullato — sostituito da REQ-125 (rocket-tag in dist\)
 - REQ-126 richiesto — rocket-tag: classifier-handoff/ sul branch di lavoro e rimossa prima del merge in main
 - REQ-124 annullato — sostituito da REQ-126 (classifier-handoff/ non si conserva)
+- REQ-127 richiesto — package.ps1 con rocket-tag disponibile per la gui e rocket-tag-config\ in dist\
+- REQ-125 annullato — sostituito da REQ-127 (rocket-tag collegato alla gui, file di configurazione in dist\)
+- REQ-128 richiesto — rocket-tag: opzione --exclude ripetibile, senza esclusioni predefinite legate ad altri tool
+- REQ-129 richiesto — rocket-tag: righe di avanzamento su stdout per ogni unità elaborata
+- REQ-130 richiesto — rocket-tag: codice di uscita 0 o diverso da 0, con il messaggio di errore su stderr
+- REQ-131 richiesto — rocket-tag: file di uscita dell'LLM aggiornato almeno ogni 20 unità
+- REQ-132 richiesto — rocket-tag: chiave del server LLM dalla variabile d'ambiente ROCKET_TAG_API_KEY
+- REQ-133 richiesto — gui: schermata di classificazione che esegue rocket-tag come processo separato
+- REQ-134 richiesto — gui: ricerca di rocket-tag.exe accanto a gui.exe
+- REQ-135 richiesto — gui: ultima destinazione di doc-ripper proposta come cartella da classificare
+- REQ-136 richiesto — gui: file di uscita in .classify ed esclusione di index.md e .index
+- REQ-137 richiesto — gui: classificazione su cartella in background, con avanzamento e Annulla
+- REQ-138 richiesto — gui: comandi brevi di rocket-tag e lettura dei risultati in attesa della fine
+- REQ-139 richiesto — gui: rules.json passato a classify llm quando esiste
+- REQ-140 richiesto — gui: percorsi dei file di configurazione di rocket-tag nelle impostazioni
+- REQ-141 richiesto — gui: URL e modello LLM nelle impostazioni, chiave solo come variabile d'ambiente
+- REQ-142 richiesto — gui: risultati per documento e unità, con testo letto dal Markdown e senza faccette nel codice
+- REQ-143 richiesto — gui: filtri per valore di faccetta e soglia di confidenza
+- REQ-144 richiesto — gui: unità scartate con documento, righe e motivo
+- REQ-145 richiesto — gui: segnalazione dei Markdown modificati dopo il file di uscita
+- REQ-146 richiesto — gui: percorsi di document fuori dalla cartella rifiutati
+- REQ-147 richiesto — gui: conversione e classificazione mutuamente esclusive sulla stessa cartella
+- REQ-148 richiesto — gui: test con fake_rocket_tag
+- REQ-149 richiesto — gui: script di arresto che termina anche rocket-tag
+- REQ-037 annullato — sostituito da REQ-149 (arresto anche di rocket-tag)
+- REQ-150 richiesto — gui: pulsante Esci che termina anche rocket-tag
+- REQ-039 annullato — sostituito da REQ-150 (arresto anche di rocket-tag)
 
 ## 2026-10-25
 - REQ-068 richiesto — search-rm3: opzione --heading-weight, maggiore di 1, predefinita 3
