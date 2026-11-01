@@ -142,6 +142,7 @@
 - REQ-149 implementato — Script di arresto che termina anche rocket-tag (`gui/stop.cmd`, `gui/tests/scripts.rs`)
 - REQ-138 implementato — Lettura dei risultati completata nella richiesta, senza avviare processi (`gui/src/server.rs`, `gui/tests/classify.rs`)
 - REQ-146 implementato — Percorsi di document che escono dalla cartella rifiutati (`gui/src/classify.rs`, `gui/src/search.rs`, `gui/src/server.rs`, `gui/tests/classify.rs`)
+- REQ-142 implementato — Risultati per documento e unità, con testo letto dal Markdown e senza faccette nel codice (`gui/tests/classify.rs`, `gui/web/app.js`, `gui/web/style.css`)
 
 ## 2026-10-25
 - REQ-068 richiesto — search-rm3: opzione --heading-weight, maggiore di 1, predefinita 3

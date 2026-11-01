@@ -266,6 +266,38 @@ fn percorsi_fuori_dalla_cartella_rifiutati() {
     assert!(!body.contains("Segreto."));
 }
 
+/// Documenti con i conteggi, unità con righe, confidenza, testo ed etichette; le faccette non sono
+/// scritte nel codice e l'astensione compare come "—" (REQ-142).
+#[test]
+fn risultati_nella_pagina() {
+    let (_dir, exe) = install_with_fake_tag();
+    let gui = Gui::start(&exe);
+    let _folder = classified_folder(&gui);
+    let page = |dom: &str, text: &str| assert!(dom.contains(text), "{text}: {dom}");
+    let dom = dump_dom(&gui.url("/#classify"));
+    page(&dom, "a.md — 2 unità (1 a bassa confidenza)");
+    page(&dom, "sotto/b.md — 1 unità (1 a bassa confidenza)");
+    page(&dom, "righe 1–1");
+    page(&dom, "confidenza 0,60");
+    page(&dom, "Primo testo.");
+    page(&dom, "Secondo testo su due righe.");
+    page(&dom, "tono: formale");
+    page(&dom, "temi: spazio, mare");
+    page(&dom, "tono: —");
+    page(&dom, "temi: nessuno");
+    assert!(!dom.contains("Terzo testo."), "solo il documento scelto");
+}
+
+/// Niente nomi di faccette o valori nel codice di gui (REQ-142).
+#[test]
+fn nessuna_faccetta_nel_codice() {
+    for source in [include_str!("../web/app.js"), include_str!("../src/server.rs"), include_str!("../src/classify.rs")] {
+        for name in ["nature", "extraction_quality", "required_action", "requirement"] {
+            assert!(!source.contains(name), "{name}");
+        }
+    }
+}
+
 #[test]
 fn richieste_non_valide() {
     let (_dir, exe) = install_with_fake_tag();

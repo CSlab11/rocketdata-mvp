@@ -553,6 +553,9 @@ async function renderClassify(content) {
   const progress = el("div", { id: "classify-progress", class: "progress", hidden: "" }, progressBar, progressText);
   const result = el("div", { id: "classify-result", class: "alert", hidden: "" });
   const output = el("pre", { id: "classify-output", class: "output", hidden: "" });
+  const documents = el("ul", { id: "classify-documents", class: "documents" });
+  const units = el("div", { id: "classify-units", class: "units" });
+  const results = el("section", { id: "classify-results", class: "results", hidden: "" }, documents, units);
   content.append(
     alert,
     folderRow,
@@ -563,12 +566,76 @@ async function renderClassify(content) {
     progress,
     result,
     output,
+    results,
   );
 
   const showError = (message) => {
     alert.textContent = message;
     alert.hidden = false;
   };
+
+  // Risultati di un classificatore alla volta (REQ-142): tutto viene dal file di uscita, gui non
+  // conosce le faccette.
+  const THRESHOLD = 0.7;
+  let shown = null;
+  let selected = null;
+  let texts = new Map();
+  const percent = (value) => value.toFixed(2).replace(".", ",");
+  const facetValue = (value) => {
+    if (Array.isArray(value)) return value.length ? value.join(", ") : "nessuno";
+    return value ?? "—";
+  };
+  const documentText = (name) => {
+    if (!texts.has(name)) {
+      const query = `src=${encodeURIComponent(folder.value)}&document=${encodeURIComponent(name)}`;
+      texts.set(name, fetch(`/api/classify/text?${query}`).then(async (r) => ({ ok: r.ok, text: await r.text() })));
+    }
+    return texts.get(name);
+  };
+  const unitCard = async (item, facets) => {
+    const file = await documentText(item.document);
+    // Un percorso rifiutato o un file sparito si segnala sull'unità (REQ-146).
+    const lines = file.text.split(/\r?\n/).slice(item.line_start - 1, item.line_end);
+    const text = file.ok ? lines.map((l) => l.trim()).join(" ") : file.text;
+    return el(
+      "article",
+      { class: "unit" },
+      el("div", { class: "hit-meta" }, el("span", {}, `righe ${item.line_start}–${item.line_end}`), el("span", {}, `confidenza ${percent(item.unit_confidence)}`)),
+      el("p", { class: file.ok ? "unit-text" : "unit-text error" }, text),
+      el("ul", { class: "labels" }, ...facets.map((name) => el("li", {}, `${name}: ${facetValue(item.labels[name])}`))),
+    );
+  };
+  const drawResults = async () => {
+    const items = shown.items;
+    const facets = [...new Set(items.flatMap((item) => Object.keys(item.labels)))];
+    const names = [...new Set(items.map((item) => item.document))];
+    if (!names.includes(selected)) selected = names[0] ?? null;
+    documents.replaceChildren(
+      ...names.map((name) => {
+        const own = items.filter((item) => item.document === name);
+        const low = own.filter((item) => item.unit_confidence <= THRESHOLD).length;
+        const button = el("button", { type: "button", onclick: () => ((selected = name), drawResults()) }, `${name} — ${own.length} unità (${low} a bassa confidenza)`);
+        if (name === selected) button.setAttribute("aria-current", "true");
+        return el("li", {}, button);
+      }),
+    );
+    const cards = items.filter((item) => item.document === selected).map((item) => unitCard(item, facets));
+    units.replaceChildren(...(await Promise.all(cards)));
+    results.hidden = false;
+  };
+  const loadResults = async () => {
+    const response = await fetch(`/api/classify/results?src=${encodeURIComponent(folder.value)}&classifier=${kind.value}`);
+    if (!response.ok) {
+      shown = null;
+      results.hidden = true;
+      return;
+    }
+    shown = await response.json();
+    texts = new Map();
+    await drawResults();
+  };
+  kind.addEventListener("change", loadResults);
+  folder.addEventListener("input", loadResults);
 
   // Barra di avanzamento dalle righe `[n/totale] <documento>` (REQ-137); le altre righe, come gli
   // errori su stderr, restano visibili.
@@ -617,6 +684,7 @@ async function renderClassify(content) {
       showResult(await fetch("/api/classify/output").then((r) => r.json()));
       start.disabled = false;
       cancel.hidden = true;
+      await loadResults();
     });
   };
 
@@ -659,17 +727,20 @@ async function renderClassify(content) {
   const status = await fetch("/api/classify/status").then((r) => r.json());
   if (!status.available) {
     showError(status.message);
+    await loadResults();
     return;
   }
   Object.entries(configFields).forEach(([name, f]) => f.input.setAttribute("placeholder", status.config[name]));
 
   // Pagina ricaricata: si ricollega all'esecuzione in corso o mostra l'esito dell'ultima.
   const snapshot = await fetch("/api/classify/output").then((r) => r.json());
+  if (snapshot.dst) folder.defaultValue = snapshot.dst;
   if (snapshot.running) {
     follow();
   } else {
     if (snapshot.lines.length > 0) showResult(snapshot);
     start.disabled = false;
+    await loadResults();
   }
 }
 
