@@ -676,9 +676,9 @@ async function renderClassify(content) {
 // Connessioni in tempo reale aperte: vanno chiuse prima di spegnere il server.
 const openStreams = new Set();
 
-// Pulsante "Esci" (REQ-039): spegne il server, interrompendo un doc-ripper in corso.
+// Pulsante "Esci" (REQ-150): spegne il server, interrompendo un doc-ripper o un rocket-tag in corso.
 document.getElementById("quit").addEventListener("click", async () => {
-  if (!confirm("Chiudere RocketData? Un'eventuale conversione in corso verrà interrotta.")) return;
+  if (!confirm("Chiudere RocketData? Un'eventuale conversione o classificazione in corso verrà interrotta.")) return;
   openStreams.forEach((s) => s.close());
   await fetch("/api/shutdown", { method: "POST" }).catch(() => {});
   document.body.replaceChildren(

@@ -1,6 +1,6 @@
 //! rocket-tag finto per i test di gui: viene copiato come `rocket-tag.exe` accanto a `gui.exe`.
 //! Il comportamento dipende da file marcatore nella cartella di ingresso:
-//! `lento` → righe distanziate di 300 ms, `fallisci` → messaggio su stderr e codice di uscita 3.
+//! `lento` → righe distanziate di 1 s, `fallisci` → messaggio su stderr e codice di uscita 3.
 //! Accanto al file di uscita scrive `<uscita>.args.json` con gli argomenti e la chiave ricevuti.
 //! Le faccette sono inventate: gui non deve conoscerle.
 
@@ -32,7 +32,7 @@ fn main() {
     for line in ["[1/3] a.md", "[2/3] a.md", "[3/3] sotto/b.md"] {
         println!("{line}");
         if slow {
-            sleep(Duration::from_millis(300));
+            sleep(Duration::from_secs(1));
         }
     }
     if input.join("fallisci").exists() {

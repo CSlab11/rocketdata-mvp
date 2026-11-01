@@ -43,7 +43,7 @@ pub struct AppState {
     pub classifier: Arc<Runner>,
     /// Controllo e avvio di conversione e classificazione sono un passo unico (REQ-147).
     pub starting: std::sync::Mutex<()>,
-    /// Segnala al server di spegnersi (REQ-039).
+    /// Segnala al server di spegnersi (REQ-150).
     pub shutdown: Arc<tokio::sync::Notify>,
     /// Selettore di cartelle (REQ-030); sostituibile nei test.
     pub folder_picker: FolderPicker,
@@ -511,11 +511,13 @@ async fn pick_folder(
     Ok(Json(PickResponse { path: chosen.map(|p| p.display().to_string()) }))
 }
 
-/// Pulsante "Esci" (REQ-039): termina un eventuale doc-ripper in corso, poi spegne il server.
+/// Pulsante "Esci" (REQ-150): termina un eventuale doc-ripper o rocket-tag in corso, poi spegne
+/// il server.
 async fn shutdown(State(state): State<Arc<AppState>>) -> StatusCode {
-    if state.runner.cancel().is_ok() {
+    let (conversion, classification) = (state.runner.cancel().is_ok(), state.classifier.cancel().is_ok());
+    if conversion || classification {
         for _ in 0..50 {
-            if !state.runner.snapshot().running {
+            if !state.runner.snapshot().running && !state.classifier.snapshot().running {
                 break;
             }
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
