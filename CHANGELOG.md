@@ -92,6 +92,7 @@
 - REQ-101 implementato — Condizioni delle regole sul testo, sul contesto e sulle faccette già decise (`rocket-tag/src/rules.rs`)
 - REQ-104 implementato — Astensione quando nessuna regola si applica e non c'è un valore predefinito (`rocket-tag/src/rules.rs`)
 - REQ-105 implementato — Regola che ha deciso e confidenza registrate per ogni faccetta (`rocket-tag/src/rules.rs`)
+- REQ-096 implementato — Vincoli x-fixedWhen dello schema applicati a ogni uscita (`rocket-tag/config/guide_examples.json`, `rocket-tag/src/classifier.rs`, `rocket-tag/src/rules.rs`, `rocket-tag/tests/reference.rs`)
 
 ## 2026-10-25
 - REQ-068 richiesto — search-rm3: opzione --heading-weight, maggiore di 1, predefinita 3

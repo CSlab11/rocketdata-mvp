@@ -10,6 +10,7 @@ use serde_yaml::{Mapping, Value as Yaml};
 
 use crate::classifier::{Context, Decision};
 use crate::markdown::Kind;
+use crate::schema::Schema;
 
 #[derive(Deserialize)]
 struct RawFile {
@@ -152,8 +153,13 @@ impl RuleSet {
         Ok(RuleSet { version: yaml_string(&raw.version).unwrap_or_else(|| "0".to_string()), documents, facets })
     }
 
+    /// Etichette di un'unità, con i vincoli dello schema applicati (REQ-096).
+    pub fn classify(&self, schema: &Schema, text: &str, context: &Context) -> Decision {
+        self.apply(text, context).finish(schema, context.side.as_deref())
+    }
+
     /// Valuta le faccette nell'ordine del file: ciascuna vede quelle già decise (REQ-100).
-    pub fn classify(&self, text: &str, context: &Context) -> Decision {
+    fn apply(&self, text: &str, context: &Context) -> Decision {
         let mut decision = Decision::default();
         for facet in &self.facets {
             if let Some((value, confidence, why)) = facet.decide(text, context, &decision.labels) {
@@ -370,7 +376,7 @@ mod tests {
     }
 
     fn labels(yaml: &str, text: &str) -> Map<String, Value> {
-        RuleSet::parse(yaml).unwrap().classify(text, &Context::default()).labels
+        RuleSet::parse(yaml).unwrap().apply(text, &Context::default()).labels
     }
 
     #[test]
@@ -450,7 +456,7 @@ facets:
     }
 
     fn matches(rule: &str, text: &str, context: &Context) -> bool {
-        one_rule(rule).classify(text, context).labels.contains_key("a")
+        one_rule(rule).apply(text, context).labels.contains_key("a")
     }
 
     #[test]
@@ -519,7 +525,7 @@ facets:
             "version: \"1\"\nfacets:\n  a:\n    rules:\n      - {value: x, any: ['k']}\n    default: null\n  b:\n    rules:\n      - {value: y, any: ['k']}\n",
         )
         .unwrap();
-        let decision = rules.classify("niente", &Context::default());
+        let decision = rules.apply("niente", &Context::default());
         assert_eq!(decision, Decision::default(), "faccette assenti da etichette, confidenza e regole");
     }
 
@@ -561,7 +567,7 @@ facets:
       - {value: u, any: ['mai']}
     default_confidence: 0.2
 "#;
-        let decision = RuleSet::parse(yaml).unwrap().classify("k p q", &Context::default());
+        let decision = RuleSet::parse(yaml).unwrap().apply("k p q", &Context::default());
         let (confidence, why) = (&decision.confidence, &decision.rule_ids);
         assert_eq!((&confidence["regola"], &why["regola"]), (&json!(0.8), &json!("mia")));
         assert_eq!((&confidence["predefinito"], &why["predefinito"]), (&json!(0.4), &json!("default")));
@@ -573,7 +579,7 @@ facets:
         assert_eq!((&confidence["multipla"], &why["multipla"]), (&json!(0.6), &json!(["m1", "m2"])));
         assert_eq!(confidence["multipla_vuota"], json!(0.2));
 
-        let plain = RuleSet::parse(yaml).unwrap().classify("j", &Context::default());
+        let plain = RuleSet::parse(yaml).unwrap().apply("j", &Context::default());
         assert_eq!((&plain.confidence["regola"], &plain.rule_ids["regola"]), (&json!(0.5), &json!("regola#1")));
     }
 

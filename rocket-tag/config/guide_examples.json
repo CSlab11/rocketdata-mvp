@@ -1,0 +1,132 @@
+[
+ {
+  "side": "prime",
+  "text": "The unit shall operate between −30 °C and +60 °C.",
+  "labels": {
+   "nature": "requirement",
+   "domain": "technical",
+   "destination": "P",
+   "required_action": "declare_compliance"
+  }
+ },
+ {
+  "side": "prime",
+  "text": "The supplier shall deliver the Test Report at CDR.",
+  "labels": {
+   "nature": "requirement",
+   "domain": "deliverables",
+   "destination": "P",
+   "required_action": "produce_deliverable"
+  }
+ },
+ {
+  "side": "prime",
+  "text": "Prices shall be firm and fixed, broken down per work package.",
+  "labels": {
+   "nature": "requirement",
+   "domain": "commercial",
+   "destination": "Q",
+   "required_action": "quote"
+  }
+ },
+ {
+  "side": "prime",
+  "text": "The proposal shall describe the heritage of the offered unit.",
+  "labels": {
+   "nature": "bidder_instruction",
+   "domain": "technical",
+   "destination": "P",
+   "required_action": "provide_information"
+  }
+ },
+ {
+  "side": "prime",
+  "text": "The supplier should use parts from the preferred parts list.",
+  "labels": {
+   "nature": "recommendation",
+   "domain": "product_assurance",
+   "destination": "P",
+   "required_action": "declare_compliance"
+  }
+ },
+ {
+  "side": "prime",
+  "text": "Radiation requirements are specified in AD-4.",
+  "labels": {
+   "nature": "reference",
+   "domain": "technical",
+   "destination": "P",
+   "required_action": "none"
+  }
+ },
+ {
+  "side": "supplier",
+  "text": "Thermal cycling will be performed on each flight unit.",
+  "labels": {
+   "nature": "commitment",
+   "domain": "verification",
+   "destination": "P",
+   "required_action": "none"
+  }
+ },
+ {
+  "side": "supplier",
+  "text": "The board provides two redundant CAN interfaces.",
+  "labels": {
+   "nature": "description",
+   "domain": "technical",
+   "destination": "P",
+   "required_action": "none"
+  }
+ },
+ {
+  "side": "supplier",
+  "text": "The offer is fully compliant with the SoW except clause 5.2.",
+  "labels": {
+   "nature": "compliance_statement",
+   "domain": "management",
+   "destination": "P",
+   "required_action": "none"
+  }
+ },
+ {
+  "side": "supplier",
+  "text": "The parts procurement process is described in the EEE plan.",
+  "labels": {
+   "nature": "reference",
+   "domain": "product_assurance",
+   "destination": "P",
+   "required_action": "none"
+  }
+ },
+ {
+  "side": "supplier",
+  "text": "Payment: 30% at order, 70% at delivery.",
+  "labels": {
+   "nature": "commitment",
+   "domain": "commercial",
+   "destination": "Q",
+   "required_action": "none"
+  }
+ },
+ {
+  "side": "supplier",
+  "text": "FMECA: Failure Modes, Effects and Criticality Analysis",
+  "labels": {
+   "nature": "definition",
+   "domain": "product_assurance",
+   "destination": "none",
+   "required_action": "none"
+  }
+ },
+ {
+  "side": "supplier",
+  "text": "This document presents the verification approach.",
+  "labels": {
+   "nature": "context",
+   "domain": "verification",
+   "destination": "none",
+   "required_action": "none"
+  }
+ }
+]
