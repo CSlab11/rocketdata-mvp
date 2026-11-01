@@ -123,6 +123,7 @@
 - REQ-130 implementato — Codice di uscita 0 o diverso da 0 con il messaggio di errore su stderr (`rocket-tag/tests/cli.rs`)
 - REQ-118 implementato — Abbinamento tra file di uscita ed etichette umane per documento e righe, con controllo di text_hash (`rocket-tag/src/evaluate.rs`, `rocket-tag/src/lib.rs`)
 - REQ-120 implementato — Etichette umane non valide per lo schema corrente escluse e contate (`rocket-tag/src/evaluate.rs`)
+- REQ-119 implementato — Metriche per faccetta: accuratezza, macro-F1, copertura, valori, confusioni e fasce di confidenza (`rocket-tag/src/evaluate.rs`)
 
 ## 2026-10-25
 - REQ-068 richiesto — search-rm3: opzione --heading-weight, maggiore di 1, predefinita 3

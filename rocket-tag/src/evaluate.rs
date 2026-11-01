@@ -6,7 +6,7 @@ use serde_json::{Map, Value};
 
 use crate::labels;
 use crate::output::{Item, Output};
-use crate::schema::Schema;
+use crate::schema::{Facet, Schema};
 
 /// Etichetta umana abbinata all'elemento del file di uscita.
 #[derive(Debug, Clone, PartialEq)]
@@ -25,6 +25,156 @@ pub struct Pairing {
     pub missing: usize,
     /// Etichette non valide per lo schema corrente, da rivedere (REQ-120).
     pub invalid: usize,
+}
+
+/// Metriche di un valore.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ValueMetrics {
+    pub value: String,
+    pub precision: f64,
+    pub recall: f64,
+    pub f1: f64,
+    pub support: usize,
+    pub predicted: usize,
+}
+
+/// Una coppia (umano, predetto) con il numero di occorrenze.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Confusion {
+    pub gold: String,
+    pub predicted: String,
+    pub count: usize,
+}
+
+/// Accuratezza in una fascia di confidenza.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Band {
+    pub range: &'static str,
+    pub count: usize,
+    pub accuracy: f64,
+}
+
+/// Metriche di una faccetta (appendice G).
+#[derive(Debug, Clone, PartialEq)]
+pub struct FacetMetrics {
+    pub facet: String,
+    pub count: usize,
+    pub accuracy: f64,
+    pub macro_f1: f64,
+    pub coverage: f64,
+    pub values: Vec<ValueMetrics>,
+    pub confusions: Vec<Confusion>,
+    pub bands: Vec<Band>,
+}
+
+const BANDS: [(f64, f64, &str); 4] =
+    [(0.0, 0.5, "[0; 0,5)"), (0.5, 0.7, "[0,5; 0,7)"), (0.7, 0.85, "[0,7; 0,85)"), (0.85, f64::INFINITY, "[0,85; 1]")];
+const MAX_CONFUSIONS: usize = 8;
+
+/// Un'unità per una faccetta: valori come insiemi ordinati, così faccette singole e multiple si
+/// misurano allo stesso modo; `predicted` è `None` per l'astensione.
+struct Sample {
+    gold: Vec<String>,
+    predicted: Option<Vec<String>>,
+    confidence: Option<f64>,
+}
+
+impl Sample {
+    fn correct(&self) -> bool {
+        self.predicted.as_ref() == Some(&self.gold)
+    }
+
+    fn has_predicted(&self, value: &str) -> bool {
+        self.predicted.iter().flatten().any(|v| v == value)
+    }
+
+    fn has_gold(&self, value: &str) -> bool {
+        self.gold.iter().any(|v| v == value)
+    }
+}
+
+fn values_of(value: Option<&Value>) -> Vec<String> {
+    let mut values: Vec<String> = match value {
+        Some(Value::Array(list)) => list.iter().filter_map(Value::as_str).map(str::to_string).collect(),
+        Some(Value::String(text)) => vec![text.clone()],
+        _ => Vec::new(),
+    };
+    values.sort();
+    values
+}
+
+fn ratio(part: usize, whole: usize) -> f64 {
+    if whole == 0 { 0.0 } else { part as f64 / whole as f64 }
+}
+
+/// Accuratezza, macro-F1, copertura, metriche per valore, confusioni e fasce di una faccetta
+/// (REQ-119).
+pub fn facet_metrics(facet: &Facet, matched: &[Matched]) -> FacetMetrics {
+    let samples: Vec<Sample> = matched
+        .iter()
+        .map(|m| Sample {
+            gold: values_of(m.gold.get(&facet.name)),
+            predicted: m.item.labels.get(&facet.name).map(|value| values_of(Some(value))),
+            confidence: m.item.confidence.get(&facet.name).and_then(Value::as_f64),
+        })
+        .collect();
+    let values: Vec<ValueMetrics> =
+        facet.values.iter().map(|value| value_metrics(value, &samples)).filter(|v| v.support > 0 || v.predicted > 0).collect();
+    let supported: Vec<&ValueMetrics> = values.iter().filter(|v| v.support > 0).collect();
+    let covered = samples.iter().filter(|s| s.predicted.is_some()).count();
+    FacetMetrics {
+        facet: facet.name.clone(),
+        count: samples.len(),
+        accuracy: ratio(samples.iter().filter(|s| s.correct()).count(), samples.len()),
+        macro_f1: if supported.is_empty() { 0.0 } else { supported.iter().map(|v| v.f1).sum::<f64>() / supported.len() as f64 },
+        coverage: ratio(covered, samples.len()),
+        values,
+        confusions: confusions(&samples),
+        bands: bands(&samples),
+    }
+}
+
+fn value_metrics(value: &str, samples: &[Sample]) -> ValueMetrics {
+    let count = |test: &dyn Fn(&Sample) -> bool| samples.iter().filter(|s| test(s)).count();
+    let hits = count(&|s| s.has_gold(value) && s.has_predicted(value));
+    let predicted = count(&|s| s.has_predicted(value));
+    let support = count(&|s| s.has_gold(value));
+    let (precision, recall) = (ratio(hits, predicted), ratio(hits, support));
+    let f1 = if precision + recall > 0.0 { 2.0 * precision * recall / (precision + recall) } else { 0.0 };
+    ValueMetrics { value: value.to_string(), precision, recall, f1, support, predicted }
+}
+
+fn show(values: &[String]) -> String {
+    if values.is_empty() { "(nessuno)".to_string() } else { values.join(", ") }
+}
+
+fn confusions(samples: &[Sample]) -> Vec<Confusion> {
+    let mut found: Vec<Confusion> = Vec::new();
+    for sample in samples.iter().filter(|s| !s.correct()) {
+        let gold = show(&sample.gold);
+        let predicted = sample.predicted.as_ref().map_or_else(|| "(astensione)".to_string(), |values| show(values));
+        match found.iter_mut().find(|c| c.gold == gold && c.predicted == predicted) {
+            Some(confusion) => confusion.count += 1,
+            None => found.push(Confusion { gold, predicted, count: 1 }),
+        }
+    }
+    found.sort_by(|a, b| b.count.cmp(&a.count));
+    found.truncate(MAX_CONFUSIONS);
+    found
+}
+
+fn bands(samples: &[Sample]) -> Vec<Band> {
+    BANDS
+        .iter()
+        .filter_map(|&(low, high, range)| {
+            let inside: Vec<&Sample> = samples.iter().filter(|s| s.confidence.is_some_and(|c| low <= c && c < high)).collect();
+            (!inside.is_empty()).then(|| Band {
+                range,
+                count: inside.len(),
+                accuracy: ratio(inside.iter().filter(|s| s.correct()).count(), inside.len()),
+            })
+        })
+        .collect()
 }
 
 /// Abbina etichette di paragrafo ed elementi per documento, riga iniziale e riga finale; se la
@@ -102,6 +252,92 @@ mod tests {
             record["text_hash"] = json!(hash);
         }
         record
+    }
+
+    /// L'esempio di 10 unità: A 6 volte e B 4; 5+1 astensione, 2+2 errori.
+    fn sample(gold: &str, predicted: Option<&str>, confidence: f64) -> Matched {
+        let mut unit = item("a.md", 1, "h");
+        if let Some(value) = predicted {
+            unit.labels.insert("nature".into(), json!(value));
+            unit.confidence.insert("nature".into(), json!(confidence));
+        }
+        Matched { gold: facets(gold).as_object().unwrap().clone(), item: unit }
+    }
+
+    fn close(left: f64, right: f64) {
+        assert!((left - right).abs() < 0.005, "{left} != {right}");
+    }
+
+    #[test]
+    fn metriche_di_una_faccetta_singola() {
+        let schema = schema();
+        let facet = schema.facet("nature").unwrap();
+        let (a, b) = ("requirement", "option");
+        let mut matched = vec![sample(a, None, 0.0)];
+        matched.extend((0..5).map(|_| sample(a, Some(a), 0.9)));
+        matched.extend((0..2).map(|_| sample(b, Some(b), 0.6)));
+        matched.extend((0..2).map(|_| sample(b, Some(a), 0.4)));
+        let metrics = facet_metrics(facet, &matched);
+        assert_eq!(metrics.count, 10);
+        close(metrics.accuracy, 0.7);
+        close(metrics.coverage, 0.9);
+        close(metrics.macro_f1, 0.72);
+        let value = |name: &str| metrics.values.iter().find(|v| v.value == name).unwrap();
+        close(value(a).precision, 0.71);
+        close(value(a).recall, 0.83);
+        close(value(a).f1, 0.77);
+        close(value(b).precision, 1.0);
+        close(value(b).recall, 0.5);
+        close(value(b).f1, 0.67);
+        assert_eq!((value(a).support, value(a).predicted), (6, 7));
+        assert_eq!(metrics.values.len(), 2, "i valori mai usati non compaiono");
+        assert_eq!(
+            metrics.confusions[0],
+            Confusion { gold: "option".into(), predicted: "requirement".into(), count: 2 }
+        );
+        assert_eq!(metrics.confusions[1].predicted, "(astensione)");
+        let bands: Vec<_> = metrics.bands.iter().map(|b| (b.range, b.count)).collect();
+        assert_eq!(bands, [("[0; 0,5)", 2), ("[0,5; 0,7)", 2), ("[0,85; 1]", 5)]);
+        close(metrics.bands[0].accuracy, 0.0);
+        close(metrics.bands[2].accuracy, 1.0);
+    }
+
+    #[test]
+    fn la_macro_f1_esclude_i_valori_senza_supporto() {
+        let schema = schema();
+        let facet = schema.facet("nature").unwrap();
+        let metrics = facet_metrics(facet, &[sample("requirement", Some("requirement"), 1.0), sample("requirement", Some("option"), 1.0)]);
+        assert_eq!(metrics.values.len(), 2, "option è predetto ma non ha supporto");
+        close(metrics.macro_f1, 2.0 / 3.0);
+        assert_eq!(metrics.bands[0].range, "[0,85; 1]", "1 è incluso nell'ultima fascia");
+    }
+
+    #[test]
+    fn faccette_multiple_come_insiemi() {
+        let schema = schema();
+        let facet = schema.facet("flags").unwrap();
+        let flag = "multiple_requirements";
+        let unit = |gold: Value, predicted: Option<Value>| {
+            let mut unit = item("a.md", 1, "h");
+            if let Some(value) = predicted {
+                unit.labels.insert("flags".into(), value);
+            }
+            Matched { gold: json!({"flags": gold}).as_object().unwrap().clone(), item: unit }
+        };
+        let matched = [
+            unit(json!([flag]), Some(json!([flag]))),
+            unit(json!([]), Some(json!([]))),
+            unit(json!([flag]), Some(json!([]))),
+            unit(json!([]), Some(json!([flag]))),
+            unit(json!([flag]), None),
+        ];
+        let metrics = facet_metrics(facet, &matched);
+        close(metrics.accuracy, 0.4);
+        close(metrics.coverage, 0.8);
+        close(metrics.values[0].precision, 0.5);
+        close(metrics.values[0].recall, 1.0 / 3.0);
+        assert_eq!(metrics.confusions.len(), 3, "le confusioni valgono anche per le multiple");
+        assert!(metrics.confusions.iter().any(|c| c.gold == flag && c.predicted == "(nessuno)"));
     }
 
     #[test]
