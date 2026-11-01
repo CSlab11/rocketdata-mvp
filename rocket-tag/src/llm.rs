@@ -1,5 +1,6 @@
 //! Classificatore LLM: prompt, formato di uscita e chiamate al server locale (appendice D).
 
+use std::collections::HashMap;
 use std::time::Duration;
 
 use serde_json::{Map, Value, json};
@@ -95,13 +96,22 @@ impl Llm {
         content.map(str::to_string).ok_or_else(|| Failure::Invalid("risposta senza contenuto".to_string()))
     }
 
-    /// Etichette di un'unità. Una risposta non valida si ritenta una volta (REQ-109).
-    pub fn classify(&self, schema: &Schema, text: &str, context: &Context) -> Result<Decision, Failure> {
+    /// Etichette di un'unità. Una risposta non valida si ritenta una volta (REQ-109). Le etichette
+    /// delle regole, se fornite, danno la confidenza di ogni faccetta (REQ-113).
+    pub fn classify(
+        &self,
+        schema: &Schema,
+        text: &str,
+        context: &Context,
+        rules: Option<&Map<String, Value>>,
+    ) -> Result<Decision, Failure> {
         let user = user_prompt(text, context);
-        match self.attempt(schema, &user, context) {
+        let mut decision = match self.attempt(schema, &user, context) {
             Err(Failure::Invalid(_)) => self.attempt(schema, &user, context),
             outcome => outcome,
-        }
+        }?;
+        decision.confidence = decision.labels.iter().map(|(name, value)| (name.clone(), json!(agreement(name, value, rules)))).collect();
+        Ok(decision)
     }
 
     fn attempt(&self, schema: &Schema, user: &str, context: &Context) -> Result<Decision, Failure> {
@@ -115,10 +125,26 @@ impl Llm {
         if !errors.is_empty() {
             return Err(Failure::Invalid(errors.join("; ")));
         }
-        decision.confidence = decision.labels.keys().map(|name| (name.clone(), json!(0.7))).collect();
         decision.rule_ids.clear();
         Ok(decision)
     }
+}
+
+/// 0,9 se concorda con le regole, 0,5 se non concorda, 0,7 senza etichette delle regole (REQ-113).
+fn agreement(facet: &str, value: &Value, rules: Option<&Map<String, Value>>) -> f64 {
+    match rules {
+        Some(rules) if rules.get(facet) == Some(value) => 0.9,
+        Some(_) => 0.5,
+        None => 0.7,
+    }
+}
+
+/// Etichette delle regole per unità, dal file di uscita del classificatore a regole (REQ-083).
+pub type RuleLabels = HashMap<(String, usize, usize), Map<String, Value>>;
+
+pub fn rule_labels(output: &Output) -> RuleLabels {
+    let key = |i: &Item| (i.document.clone(), i.line_start, i.line_end);
+    output.items.iter().map(|item| (key(item), item.labels.clone())).collect()
 }
 
 /// L'oggetto JSON nella risposta del modello, anche se circondato da altro testo.
@@ -129,9 +155,11 @@ fn parse_labels(content: &str) -> Result<Map<String, Value>, Failure> {
 }
 
 /// Classifica le unità una alla volta e aggiunge gli esiti a `result`.
-pub fn classify_all(llm: &Llm, schema: &Schema, jobs: &[Job], result: &mut Output) {
+pub fn classify_all(llm: &Llm, schema: &Schema, jobs: &[Job], rules: Option<&RuleLabels>, result: &mut Output) {
     for (index, job) in jobs.iter().enumerate() {
-        match llm.classify(schema, &job.unit.text, &job.context()) {
+        let key = (job.document.clone(), job.unit.line_start, job.unit.line_end);
+        let from_rules = rules.and_then(|labels| labels.get(&key));
+        match llm.classify(schema, &job.unit.text, &job.context(), from_rules) {
             Ok(decision) => result.items.push(Item::new(job, decision)),
             Err(failure) => result.skipped.push(Skipped {
                 document: job.document.clone(),

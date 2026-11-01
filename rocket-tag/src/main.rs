@@ -85,6 +85,9 @@ struct LlmArgs {
     /// Nome del modello
     #[arg(long, value_name = "NOME")]
     model: String,
+    /// File di uscita del classificatore a regole, per le confidenze per accordo
+    #[arg(long, value_name = "FILE")]
+    rules_out: Option<PathBuf>,
     /// Regole da cui ricavare lato e tipo dei documenti (sezione documents)
     #[arg(long, value_name = "FILE")]
     rules: Option<PathBuf>,
@@ -207,7 +210,8 @@ fn run_classify_llm(args: &LlmArgs) -> Result<(), String> {
     let jobs = iterate::jobs(&iterate::documents(&args.input, &args.exclude)?, &info)?;
     let mut result = Output::new(&schema.version, llm.classifier_name());
     result.prompt_id = Some(llm.prompt_id.clone());
-    llm::classify_all(&llm, &schema, &jobs, &mut result);
+    let from_rules = args.rules_out.as_deref().map(Output::read).transpose()?.as_ref().map(llm::rule_labels);
+    llm::classify_all(&llm, &schema, &jobs, from_rules.as_ref(), &mut result);
     result.write(&args.output)
 }
 

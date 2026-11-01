@@ -201,6 +201,33 @@ fn vincoli_e_default_prima_della_validazione() {
     assert_eq!(saved(&out)["skipped"], json!([]));
 }
 
+/// Confidenza 0,9 se concorda con le regole, 0,5 se no, 0,7 senza il loro file (REQ-113).
+#[test]
+fn confidenza_dall_accordo_con_le_regole() {
+    let server = serve(|_, _| (200, labels()));
+    let (dir, docs, out) = workspace("The unit shall operate.\n");
+    run(&mut llm(&docs, &out, &server.url));
+    let without = &saved(&out)["items"][0];
+    assert_eq!(without["confidence"]["nature"], 0.7);
+    assert_eq!(without["unit_confidence"], 0.7);
+
+    let rules_out = dir.path().join("rules.json");
+    let rules = Command::new(env!("CARGO_BIN_EXE_rocket-tag"))
+        .args(["classify", "rules"])
+        .arg(&docs)
+        .arg("-o")
+        .arg(&rules_out)
+        .args(["--schema", "config/label_schema.json", "--rules", "config/rules.yaml"])
+        .output()
+        .unwrap();
+    assert!(rules.status.success());
+    run(llm(&docs, &out, &server.url).arg("--rules-out").arg(&rules_out));
+    let with = &saved(&out)["items"][0];
+    assert_eq!(with["confidence"]["nature"], 0.9, "regole: requirement");
+    assert_eq!(with["confidence"]["required_action"], 0.5, "regole: none; LLM: declare_compliance");
+    assert_eq!(with["unit_confidence"], 0.5);
+}
+
 /// La risposta può arrivare dentro un blocco di codice o con testo attorno.
 #[test]
 fn accetta_il_json_dentro_un_blocco_di_codice() {
