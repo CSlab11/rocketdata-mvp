@@ -51,7 +51,7 @@ fn esegue_rocket_tag_con_il_classificatore_scelto() {
     let (status, _) = post_json(&gui, "/api/classify/run", &json!({"src": src, "classifier": "rules"}));
     assert_eq!(status, 202);
     assert_eq!(wait_end(&gui)["exit_code"], 0);
-    let received = read_json(&folder.path().join("rules.json.args.json"));
+    let received = read_json(&folder.path().join(".classify/rules.json.args.json"));
     let args: Vec<&str> = received["args"].as_array().unwrap().iter().map(|a| a.as_str().unwrap()).collect();
     assert_eq!(args[..3], ["classify", "rules", src]);
     let config = dir.path().canonicalize().unwrap().join("rocket-tag-config");
@@ -61,11 +61,30 @@ fn esegue_rocket_tag_con_il_classificatore_scelto() {
     let request = json!({"src": src, "classifier": "llm", "base_url": "http://127.0.0.1:8080/v1", "model": "modello"});
     assert_eq!(post_json(&gui, "/api/classify/run", &request).0, 202);
     assert_eq!(wait_end(&gui)["exit_code"], 0);
-    let received = read_json(&folder.path().join("llm.json.args.json"));
+    let received = read_json(&folder.path().join(".classify/llm.json.args.json"));
     let args: Vec<&str> = received["args"].as_array().unwrap().iter().map(|a| a.as_str().unwrap()).collect();
     assert_eq!(args[..2], ["classify", "llm"]);
     assert!(args.windows(2).any(|w| w == ["--base-url", "http://127.0.0.1:8080/v1"]));
     assert!(args.windows(2).any(|w| w == ["--model", "modello"]));
+}
+
+/// File di uscita in `.classify` ed esclusione di `index.md` e `.index` (REQ-136).
+#[test]
+fn file_di_uscita_ed_esclusioni() {
+    let (_dir, exe) = install_with_fake_tag();
+    let gui = Gui::start(&exe);
+    let folder = markdown_folder();
+    assert!(!folder.path().join(".classify").exists());
+    let request = json!({"src": folder.path().to_str().unwrap(), "classifier": "rules"});
+    assert_eq!(post_json(&gui, "/api/classify/run", &request).0, 202);
+    wait_end(&gui);
+    assert!(folder.path().join(".classify/rules.json").is_file());
+    let received = read_json(&folder.path().join(".classify/rules.json.args.json"));
+    let args: Vec<&str> = received["args"].as_array().unwrap().iter().map(|a| a.as_str().unwrap()).collect();
+    let output = folder.path().join(".classify").join("rules.json");
+    assert!(args.windows(2).any(|w| w == ["-o", output.to_str().unwrap()]), "{args:?}");
+    assert!(args.windows(2).any(|w| w == ["--exclude", "index.md"]));
+    assert!(args.windows(2).any(|w| w == ["--exclude", ".index"]));
 }
 
 #[test]

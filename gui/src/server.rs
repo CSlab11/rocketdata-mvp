@@ -180,7 +180,12 @@ async fn classify_run(
         Classifier::Rules => None,
         Classifier::Llm => Some(llm_server(&request)?),
     };
-    let args = classify::arguments(request.classifier, std::path::Path::new(src), &Config::beside(exe), server.as_ref());
+    let folder = std::path::Path::new(src);
+    let output = classify::output_file(folder, request.classifier);
+    if let Some(dir) = output.parent() {
+        std::fs::create_dir_all(dir).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("impossibile creare {}: {e}", dir.display())))?;
+    }
+    let args = classify::arguments(request.classifier, folder, &Config::beside(exe), server.as_ref());
     state.classifier.start(exe, &args, &[], src).map_err(|e| (StatusCode::CONFLICT, e))?;
     Ok(StatusCode::ACCEPTED)
 }

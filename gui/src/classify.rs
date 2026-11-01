@@ -42,9 +42,9 @@ pub struct Server {
     pub model: String,
 }
 
-/// File di uscita del classificatore per la cartella `src`.
+/// File di uscita del classificatore per la cartella `src` (REQ-136).
 pub fn output_file(src: &Path, classifier: Classifier) -> PathBuf {
-    src.join(match classifier {
+    src.join(".classify").join(match classifier {
         Classifier::Rules => "rules.json",
         Classifier::Llm => "llm.json",
     })
@@ -59,6 +59,8 @@ pub fn arguments(classifier: Classifier, src: &Path, config: &Config, server: Op
     let mut args: Vec<OsString> = vec!["classify".into(), name.into(), src.into(), "-o".into()];
     args.push(output_file(src, classifier).into());
     args.extend(["--schema".into(), config.schema.clone().into(), "--rules".into(), config.rules.clone().into()]);
+    // L'indice di doc-ripper e l'indice di search-rm3 non sono documenti da classificare.
+    args.extend(["--exclude".into(), "index.md".into(), "--exclude".into(), ".index".into()]);
     if let Some(server) = server {
         args.extend(["--guide".into(), config.guide.clone().into(), "--examples".into(), config.examples.clone().into()]);
         args.extend(["--base-url".into(), server.base_url.clone().into(), "--model".into(), server.model.clone().into()]);
