@@ -192,7 +192,8 @@ fn run_classify_llm(args: &LlmArgs) -> Result<(), String> {
     let settings = Settings {
         base_url: args.base_url.clone(),
         model: args.model.clone(),
-        api_key: None,
+        // Mai da riga di comando: sarebbe visibile nell'elenco dei processi (REQ-132).
+        api_key: std::env::var("ROCKET_TAG_API_KEY").ok().filter(|key| !key.is_empty()),
         format: args.format,
         temperature: args.temperature,
         timeout: Duration::from_secs(args.timeout),

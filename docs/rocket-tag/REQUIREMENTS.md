@@ -77,7 +77,7 @@ Provengono da [`classifier-handoff/requirements.md`](../../classifier-handoff/re
 | REQ-111 | Il classificatore LLM deve fermarsi con un messaggio chiaro quando il server non risponde (5 errori di connessione senza alcun successo). | aperto | — |
 | REQ-112 | L'esecuzione con il classificatore LLM deve supportare un numero configurabile di richieste parallele e un limite al numero di unità. | aperto | — |
 | REQ-113 | Se riceve il file di uscita del classificatore a regole, il classificatore LLM deve assegnare a ogni faccetta confidenza 0,9 se concorda con le regole sulla stessa unità e 0,5 se non concorda; senza quel file, 0,7. | aperto | — |
-| REQ-132 | Il classificatore LLM deve leggere la chiave facoltativa del server (REQ-106) dalla variabile d'ambiente `ROCKET_TAG_API_KEY` e non deve richiederla come argomento da riga di comando. | aperto | — |
+| REQ-132 | Il classificatore LLM deve leggere la chiave facoltativa del server (REQ-106) dalla variabile d'ambiente `ROCKET_TAG_API_KEY` e non deve richiederla come argomento da riga di comando. | implementato | `rocket-tag/src/main.rs`, `rocket-tag/tests/llm.rs` |
 
 ## Uscita
 

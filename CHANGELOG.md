@@ -107,6 +107,7 @@
 - REQ-094 implementato — Unità vicine incluse nel prompt del classificatore LLM quando sono fornite (`rocket-tag/src/llm.rs`)
 - REQ-107 implementato — Risposta LLM vincolata al formato delle faccette, con modalità json_schema, guided_json o json_object (`rocket-tag/src/llm.rs`)
 - REQ-106 implementato — Classificatore LLM per qualsiasi server compatibile con chat completions, con URL, modello e chiave facoltativa (`rocket-tag/Cargo.lock`, `rocket-tag/Cargo.toml`, `rocket-tag/src/classifier.rs`, `rocket-tag/src/iterate.rs`, `rocket-tag/src/llm.rs`, `rocket-tag/src/main.rs`, `rocket-tag/tests/llm.rs`)
+- REQ-132 implementato — Chiave del server LLM dalla variabile d'ambiente ROCKET_TAG_API_KEY, mai da riga di comando (`rocket-tag/src/main.rs`, `rocket-tag/tests/llm.rs`)
 
 ## 2026-10-25
 - REQ-068 richiesto — search-rm3: opzione --heading-weight, maggiore di 1, predefinita 3

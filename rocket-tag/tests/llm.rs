@@ -141,6 +141,18 @@ fn chiama_il_server_configurato() {
     assert!(result["items"][0].get("rule_ids").is_none());
 }
 
+/// La chiave arriva solo dalla variabile d'ambiente (REQ-132).
+#[test]
+fn chiave_dalla_variabile_d_ambiente() {
+    let server = serve(|_, _| (200, labels()));
+    let (_dir, docs, out) = workspace("Testo.\n");
+    run(llm(&docs, &out, &server.url).env("ROCKET_TAG_API_KEY", "segreta"));
+    assert!(server.requests()[0].headers.to_lowercase().contains("authorization: bearer segreta"));
+
+    let rejected = llm(&docs, &out, &server.url).args(["--api-key", "segreta"]).output().unwrap();
+    assert!(!rejected.status.success(), "nessuna opzione da riga di comando");
+}
+
 /// La risposta può arrivare dentro un blocco di codice o con testo attorno.
 #[test]
 fn accetta_il_json_dentro_un_blocco_di_codice() {
