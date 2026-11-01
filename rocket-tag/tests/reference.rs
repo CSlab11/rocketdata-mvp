@@ -30,6 +30,16 @@ fn i_13_esempi_danno_13_su_13() {
     assert!(wrong.is_empty(), "{wrong:#?}");
 }
 
+/// Bastano lo schema e il testo dell'unità, senza il documento intero (REQ-091, REQ-093).
+#[test]
+fn le_regole_bastano_schema_e_testo() {
+    let schema = Schema::parse(SCHEMA).unwrap();
+    let rules = RuleSet::parse(RULES).unwrap();
+    let decision = rules.classify(&schema, "The unit shall operate.", &Context::default());
+    assert_eq!(decision.labels["nature"], "requirement");
+    assert_eq!(decision.labels.len(), 6);
+}
+
 #[test]
 fn x_fixed_when_vale_per_ogni_uscita() {
     let schema = Schema::parse(SCHEMA).unwrap();

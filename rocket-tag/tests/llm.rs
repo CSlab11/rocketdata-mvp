@@ -6,7 +6,11 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
+use rocket_tag::classifier::Context;
+use rocket_tag::llm::{Format, Llm, Settings};
+use rocket_tag::schema::Schema;
 use serde_json::{Value, json};
 
 /// Richiesta ricevuta dal server finto.
@@ -366,6 +370,29 @@ fn classify_one_con_l_llm() {
     assert_eq!(result["labels"]["nature"], "requirement");
     let user = server.requests()[0].body["messages"][1]["content"].as_str().unwrap().to_string();
     assert!(user.contains("Previous unit (context): Prima.") && user.contains("Next unit (context): Dopo."));
+}
+
+fn client(url: &str) -> (Schema, Llm) {
+    let schema = Schema::load(Path::new("config/label_schema.json")).unwrap();
+    let settings = Settings {
+        base_url: url.to_string(),
+        model: "modello".to_string(),
+        api_key: None,
+        format: Format::JsonSchema,
+        temperature: 0.0,
+        timeout: Duration::from_secs(5),
+    };
+    let llm = Llm::new(&schema, "Guida", &[], settings);
+    (schema, llm)
+}
+
+/// Bastano lo schema e il testo dell'unità, senza il documento intero (REQ-091).
+#[test]
+fn l_llm_bastano_schema_e_testo() {
+    let server = serve(|_, _| (200, labels()));
+    let (schema, llm) = client(&server.url);
+    let decision = llm.classify(&schema, "Testo.", &Context::default(), None).unwrap();
+    assert_eq!(decision.labels["nature"], "requirement");
 }
 
 /// La risposta può arrivare dentro un blocco di codice o con testo attorno.
