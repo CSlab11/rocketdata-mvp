@@ -80,6 +80,18 @@ pub fn install_with_fake_search() -> (tempfile::TempDir, std::path::PathBuf) {
     (dir, exe)
 }
 
+/// gui.exe in una cartella temporanea con il rocket-tag finto (examples/fake_rocket_tag.rs)
+/// copiato accanto come rocket-tag.exe.
+#[allow(dead_code)]
+pub fn install_with_fake_tag() -> (tempfile::TempDir, std::path::PathBuf) {
+    let dir = tempfile::tempdir().unwrap();
+    let exe = dir.path().join("gui.exe");
+    std::fs::copy(gui_exe(), &exe).unwrap();
+    let fake = gui_exe().parent().unwrap().join("examples").join("fake_rocket_tag.exe");
+    std::fs::copy(&fake, dir.path().join("rocket-tag.exe")).unwrap();
+    (dir, exe)
+}
+
 /// POST con corpo JSON; restituisce stato HTTP e corpo della risposta.
 #[allow(dead_code)]
 pub fn post_json(gui: &Gui, path: &str, body: &serde_json::Value) -> (u16, String) {

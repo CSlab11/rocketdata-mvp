@@ -128,6 +128,7 @@
 - REQ-122 implementato — Rapporto d'impatto di una modifica dello schema: differenze, etichette da rivedere e incoerenze delle regole (`rocket-tag/src/lib.rs`, `rocket-tag/src/main.rs`, `rocket-tag/src/schema_tool.rs`, `rocket-tag/tests/cli.rs`)
 - REQ-123 implementato — Migrazione di un file di etichette umane a una nuova versione dello schema (`rocket-tag/src/main.rs`, `rocket-tag/src/schema_tool.rs`, `rocket-tag/tests/cli.rs`)
 - REQ-097 implementato — Una modifica dello schema non richiede modifiche a classificatore LLM, iteratore e valutazione (`rocket-tag/tests/llm.rs`)
+- REQ-148 implementato — rocket-tag finto per i test di gui, senza dipendere dal tool reale (`gui/examples/fake_rocket_tag.rs`, `gui/tests/classify.rs`, `gui/tests/common/mod.rs`)
 
 ## 2026-10-25
 - REQ-068 richiesto — search-rm3: opzione --heading-weight, maggiore di 1, predefinita 3
