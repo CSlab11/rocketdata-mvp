@@ -284,6 +284,27 @@ fn evaluate_senza_abbinamenti_e_un_errore() {
     assert!(String::from_utf8_lossy(&run.stderr).contains("nessuna etichetta valida"));
 }
 
+/// Comandi di manutenzione dello schema (REQ-122).
+#[test]
+fn comandi_di_manutenzione_dello_schema() {
+    let schema = "config/label_schema.json";
+    let run = |args: &[&str]| {
+        let output = rocket_tag().args(args).output().unwrap();
+        assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+        String::from_utf8_lossy(&output.stdout).into_owned()
+    };
+    assert!(run(&["schema", "check", schema]).contains("valido, 6 faccette"));
+    assert!(run(&["schema", "diff", schema, schema]).contains("la versione non è cambiata"));
+
+    let dir = tempfile::tempdir().unwrap();
+    let labels = dir.path().join("etichette.jsonl");
+    std::fs::write(&labels, r#"{"level":"paragraph","document":"a.md","line_start":1,"line_end":1,"facets":{"nature":"mai"}}"#).unwrap();
+    let labels = labels.to_str().unwrap();
+    assert!(run(&["schema", "status", labels, schema]).contains("0 etichette valide, 1 da rivedere"));
+    let report = run(&["schema", "impact", schema, schema, "--labels", labels, "--rules", "config/rules.yaml"]);
+    assert!(report.contains("== Differenze") && report.contains("== Regole") && report.contains("rules.yaml coerente"));
+}
+
 /// Il crate si compila e si esegue da solo, senza gli altri tool (REQ-079).
 #[test]
 fn si_esegue_da_solo() {

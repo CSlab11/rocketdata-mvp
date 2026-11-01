@@ -8,7 +8,7 @@ use std::time::Duration;
 use clap::{Parser, Subcommand};
 use serde_json::{Value, json};
 
-use rocket_tag::{iterate, labels};
+use rocket_tag::{iterate, labels, schema_tool};
 use rocket_tag::classifier::{Context, DocInfo};
 use rocket_tag::evaluate::Evaluation;
 use rocket_tag::llm::{self, Format, Llm, Run, Settings};
@@ -48,6 +48,11 @@ enum Command {
         /// Storico JSONL a cui aggiungere una riga di metriche
         #[arg(long, value_name = "FILE")]
         metrics: Option<PathBuf>,
+    },
+    /// Manutenzione dello schema
+    Schema {
+        #[command(subcommand)]
+        command: SchemaCommand,
     },
     /// Controlli sul file delle regole
     Rules {
@@ -172,6 +177,43 @@ struct LlmArgs {
 }
 
 #[derive(Subcommand)]
+enum SchemaCommand {
+    /// Controlla lo schema
+    Check {
+        /// File dello schema
+        #[arg(value_name = "SCHEMA")]
+        schema: PathBuf,
+    },
+    /// Differenze tra due versioni dello schema
+    Diff {
+        #[arg(value_name = "VECCHIO")]
+        old: PathBuf,
+        #[arg(value_name = "NUOVO")]
+        new: PathBuf,
+    },
+    /// Quante etichette umane sono valide o da rivedere
+    Status {
+        #[arg(value_name = "ETICHETTE")]
+        labels: PathBuf,
+        #[arg(value_name = "SCHEMA")]
+        schema: PathBuf,
+    },
+    /// Rapporto d'impatto di una modifica dello schema
+    Impact {
+        #[arg(value_name = "VECCHIO")]
+        old: PathBuf,
+        #[arg(value_name = "NUOVO")]
+        new: PathBuf,
+        /// Etichette umane da controllare
+        #[arg(long, value_name = "FILE")]
+        labels: Option<PathBuf>,
+        /// Regole da controllare
+        #[arg(long, value_name = "FILE")]
+        rules: Option<PathBuf>,
+    },
+}
+
+#[derive(Subcommand)]
 enum RulesCommand {
     /// Controlla rules.yaml contro lo schema
     Check {
@@ -194,6 +236,7 @@ fn main() -> ExitCode {
         Command::Evaluate { labels, output, schema, report, metrics } => {
             run_evaluate(&labels, &output, &schema, report.as_deref(), metrics.as_deref())
         }
+        Command::Schema { command } => run_schema(command),
         Command::Rules { command: RulesCommand::Check { schema, rules } } => run_rules_check(&schema, &rules),
     };
     match result {
@@ -352,6 +395,34 @@ fn run_evaluate(labels_path: &Path, output: &Path, schema: &Path, report: Option
             .open(path)
             .map_err(|e| format!("impossibile scrivere {}: {e}", path.display()))?;
         writeln!(file, "{}", evaluation.history_line()).map_err(|e| format!("impossibile scrivere {}: {e}", path.display()))?;
+    }
+    Ok(())
+}
+
+/// Comandi di manutenzione dello schema (REQ-122).
+fn run_schema(command: SchemaCommand) -> Result<(), String> {
+    match command {
+        SchemaCommand::Check { schema } => {
+            let schema = Schema::load(&schema)?;
+            println!("Schema v{}: valido, {} faccette", schema.version, schema.facets.len());
+        }
+        SchemaCommand::Diff { old, new } => {
+            println!("{}", schema_tool::diff(&Schema::load(&old)?, &Schema::load(&new)?).join("\n"));
+        }
+        SchemaCommand::Status { labels: path, schema } => {
+            let schema = Schema::load(&schema)?;
+            let status = schema_tool::status(&schema, &labels::read(&path)?);
+            println!(
+                "Schema v{}: {} etichette valide, {} da rivedere, {} etichette documento",
+                schema.version, status.valid, status.to_review, status.documents
+            );
+        }
+        SchemaCommand::Impact { old, new, labels: path, rules } => {
+            let records = path.as_deref().map(labels::read).transpose()?;
+            let rules = rules.as_deref().map(RuleSet::load).transpose()?;
+            let lines = schema_tool::impact(&Schema::load(&old)?, &Schema::load(&new)?, records.as_deref(), rules.as_ref());
+            println!("{}", lines.join("\n"));
+        }
     }
     Ok(())
 }
