@@ -80,6 +80,7 @@
 - REQ-039 annullato — sostituito da REQ-150 (arresto anche di rocket-tag)
 - REQ-079 implementato — Crate rocket-tag autonomo, compilabile ed eseguibile senza gli altri tool (`rocket-tag/.gitignore`, `rocket-tag/Cargo.lock`, `rocket-tag/Cargo.toml`, `rocket-tag/src/lib.rs`, `rocket-tag/src/main.rs`, `rocket-tag/tests/cli.rs`)
 - REQ-086 implementato — Scomposizione del Markdown in paragrafi, voci di elenco e righe di tabella, con percorso dei titoli e clausola (`rocket-tag/Cargo.lock`, `rocket-tag/Cargo.toml`, `rocket-tag/src/lib.rs`, `rocket-tag/src/markdown.rs`)
+- REQ-087 implementato — Riga iniziale e finale di ogni unità, numerate da 1 e incluse (`rocket-tag/src/markdown.rs`)
 
 ## 2026-10-25
 - REQ-068 richiesto — search-rm3: opzione --heading-weight, maggiore di 1, predefinita 3

@@ -44,6 +44,9 @@ pub struct Unit {
     pub heading_path: Vec<String>,
     /// Numero iniziale del titolo più vicino che ne ha uno.
     pub clause: Option<String>,
+    /// Prima e ultima riga del file occupate dall'unità, numerate da 1 e incluse (REQ-087).
+    pub line_start: usize,
+    pub line_end: usize,
 }
 
 /// Unità di un file Markdown, nell'ordine del file (REQ-086).
@@ -152,14 +155,15 @@ impl Parser<'_> {
         self.headings.push((level, title));
     }
 
-    fn push(&mut self, kind: Kind, text: String) {
+    /// `first` e `last` sono indici in `lines`, da 0.
+    fn push(&mut self, kind: Kind, text: String, first: usize, last: usize) {
         let heading_path = self.headings.iter().map(|(_, title)| title.clone()).collect();
         let clause = self
             .headings
             .iter()
             .rev()
             .find_map(|(_, title)| CLAUSE.captures(title).map(|found| found[1].to_string()));
-        self.units.push(Unit { kind, text, heading_path, clause });
+        self.units.push(Unit { kind, text, heading_path, clause, line_start: first + 1, line_end: last + 1 });
     }
 
     /// Ogni riga dati è un'unità `intestazione: valore; …`.
@@ -178,7 +182,7 @@ impl Parser<'_> {
                 })
                 .collect();
             if !parts.is_empty() {
-                self.push(Kind::TableRow, parts.join("; "));
+                self.push(Kind::TableRow, parts.join("; "), i, i);
             }
             i += 1;
         }
@@ -197,7 +201,7 @@ impl Parser<'_> {
         }
         let text = join(&parts);
         if !text.is_empty() {
-            self.push(Kind::ListItem, text);
+            self.push(Kind::ListItem, text, start, i - 1);
         }
         i
     }
@@ -215,7 +219,7 @@ impl Parser<'_> {
             parts.push(self.lines[i].trim().to_string());
             i += 1;
         }
-        self.push(Kind::Paragraph, join(&parts));
+        self.push(Kind::Paragraph, join(&parts), start, i - 1);
         i
     }
 
@@ -275,6 +279,18 @@ mod tests {
             assert_eq!(unit.heading_path, ["4 Verification", "4.2 Thermal tests"]);
             assert_eq!(unit.clause.as_deref(), Some("4.2"));
         }
+    }
+
+    #[test]
+    fn righe_dell_appendice_a() {
+        let lines: Vec<_> = parse(EXAMPLE).iter().map(|u| (u.line_start, u.line_end)).collect();
+        assert_eq!(lines, [(5, 6), (8, 8), (9, 10), (14, 14)]);
+    }
+
+    #[test]
+    fn i_numeri_di_riga_contano_anche_le_righe_escluse() {
+        let units = parse("```\nx\n```\n<!-- a\nb -->\nTesto\n");
+        assert_eq!((units[0].line_start, units[0].line_end), (6, 6));
     }
 
     #[test]
