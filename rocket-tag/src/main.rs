@@ -1,9 +1,11 @@
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use clap::{Parser, Subcommand};
 
-use rocket_tag::iterate;
+use rocket_tag::{iterate, labels};
+use rocket_tag::classifier::DocInfo;
 use rocket_tag::output::{Item, Output};
 use rocket_tag::rules::RuleSet;
 use rocket_tag::schema::Schema;
@@ -46,6 +48,9 @@ enum ClassifyCommand {
         /// File delle regole
         #[arg(long, value_name = "FILE")]
         rules: PathBuf,
+        /// Etichette umane da cui ricavare lato e tipo dei documenti
+        #[arg(long, value_name = "FILE")]
+        labels: Option<PathBuf>,
     },
 }
 
@@ -64,8 +69,8 @@ enum RulesCommand {
 
 fn main() -> ExitCode {
     let result = match Args::parse().command {
-        Command::Classify { command: ClassifyCommand::Rules { input, output, schema, rules } } => {
-            run_classify_rules(&input, &output, &schema, &rules)
+        Command::Classify { command: ClassifyCommand::Rules { input, output, schema, rules, labels } } => {
+            run_classify_rules(&input, &output, &schema, &rules, labels.as_deref())
         }
         Command::Rules { command: RulesCommand::Check { schema, rules } } => run_rules_check(&schema, &rules),
     };
@@ -91,11 +96,23 @@ fn checked_rules(schema: &Schema, path: &Path) -> Result<RuleSet, String> {
     Ok(rules)
 }
 
+/// Lato e tipo dalle etichette documento del file di etichette umane, se fornito (REQ-089).
+fn known_documents(labels: Option<&Path>) -> Result<HashMap<String, DocInfo>, String> {
+    match labels {
+        Some(path) => Ok(labels::documents(&labels::read(path)?)),
+        None => Ok(HashMap::new()),
+    }
+}
+
 /// Classifica le unità con le regole e scrive il file di uscita (REQ-114).
-fn run_classify_rules(input: &Path, output: &Path, schema: &Path, rules: &Path) -> Result<(), String> {
+fn run_classify_rules(input: &Path, output: &Path, schema: &Path, rules: &Path, labels: Option<&Path>) -> Result<(), String> {
     let schema = Schema::load(schema)?;
     let rules = checked_rules(&schema, rules)?;
-    let jobs = iterate::jobs(&iterate::documents(input)?)?;
+    let known = known_documents(labels)?;
+    let info = |document: &str| {
+        known.get(document).cloned().or_else(|| rules.document_info(document)).unwrap_or_default()
+    };
+    let jobs = iterate::jobs(&iterate::documents(input)?, &info)?;
     let mut result = Output::new(&schema.version, format!("rules-v{}", rules.version));
     for job in &jobs {
         let decision = rules.classify(&schema, &job.unit.text, &job.context());

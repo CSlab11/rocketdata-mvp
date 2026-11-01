@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use walkdir::WalkDir;
 
-use crate::classifier::Context;
+use crate::classifier::{Context, DocInfo};
 use crate::markdown::{self, Unit};
 
 /// File Markdown da classificare.
@@ -23,6 +23,7 @@ pub struct Job {
     /// Testo dell'unità precedente e successiva dello stesso file (REQ-088).
     pub prev: Option<String>,
     pub next: Option<String>,
+    pub info: DocInfo,
 }
 
 impl Job {
@@ -33,7 +34,8 @@ impl Job {
             clause: self.unit.clause.clone(),
             prev: self.prev.clone(),
             next: self.next.clone(),
-            ..Context::default()
+            side: self.info.side.clone(),
+            doc_type: self.info.doc_type.clone(),
         }
     }
 }
@@ -65,19 +67,21 @@ fn relative_name(root: &Path, path: &Path) -> String {
 }
 
 /// Unità di tutti i documenti, nell'ordine dei file, per chiamare il classificatore su ciascuna
-/// (REQ-085).
-pub fn jobs(documents: &[Document]) -> Result<Vec<Job>, String> {
+/// (REQ-085). `info` dà lato e tipo di un documento dal suo nome.
+pub fn jobs(documents: &[Document], info: &dyn Fn(&str) -> DocInfo) -> Result<Vec<Job>, String> {
     let mut jobs = Vec::new();
     for document in documents {
         let text = fs::read_to_string(&document.path)
             .map_err(|e| format!("impossibile leggere {}: {e}", document.path.display()))?;
         let units = markdown::parse(&text);
+        let doc_info = info(&document.name);
         for (i, unit) in units.iter().enumerate() {
             jobs.push(Job {
                 document: document.name.clone(),
                 unit: unit.clone(),
                 prev: i.checked_sub(1).map(|p| units[p].text.clone()),
                 next: units.get(i + 1).map(|n| n.text.clone()),
+                info: doc_info.clone(),
             });
         }
     }
@@ -87,6 +91,10 @@ pub fn jobs(documents: &[Document]) -> Result<Vec<Job>, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn unknown(_: &str) -> DocInfo {
+        DocInfo::default()
+    }
 
     fn folder(files: &[(&str, &str)]) -> tempfile::TempDir {
         let dir = tempfile::tempdir().unwrap();
@@ -103,7 +111,7 @@ mod tests {
         let dir = folder(&[("a.md", "uno\n"), ("sotto/b.MD", "due\n\ntre\n"), ("c.txt", "no\n")]);
         let found = documents(dir.path()).unwrap();
         assert_eq!(found.len(), 2);
-        let texts: Vec<_> = jobs(&found).unwrap().into_iter().map(|j| j.unit.text).collect();
+        let texts: Vec<_> = jobs(&found, &unknown).unwrap().into_iter().map(|j| j.unit.text).collect();
         assert_eq!(texts, ["uno", "due", "tre"]);
     }
 
@@ -116,12 +124,21 @@ mod tests {
     #[test]
     fn unita_vicine_dello_stesso_file() {
         let dir = folder(&[("a.md", "uno\n\ntitolo\n\n- due\n"), ("b.md", "tre\n")]);
-        let found = jobs(&documents(dir.path()).unwrap()).unwrap();
+        let found = jobs(&documents(dir.path()).unwrap(), &unknown).unwrap();
         let near: Vec<_> = found.iter().map(|j| (j.prev.as_deref(), j.next.as_deref())).collect();
         assert_eq!(near[0], (None, Some("titolo")));
         assert_eq!(near[1], (Some("uno"), Some("due")));
         assert_eq!(near[2], (Some("titolo"), None), "le vicine non passano da un file all'altro");
         assert_eq!(near[3], (None, None));
+    }
+
+    #[test]
+    fn lato_e_tipo_passati_al_classificatore() {
+        let dir = folder(&[("a.md", "uno\n")]);
+        let info = |name: &str| DocInfo { side: Some(format!("lato di {name}")), doc_type: None };
+        let context = jobs(&documents(dir.path()).unwrap(), &info).unwrap()[0].context();
+        assert_eq!(context.side.as_deref(), Some("lato di a.md"));
+        assert_eq!(context.doc_type, None);
     }
 
     #[test]

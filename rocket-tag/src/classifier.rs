@@ -5,6 +5,13 @@ use serde_json::{Map, Value, json};
 use crate::markdown::Kind;
 use crate::schema::Schema;
 
+/// Lato e tipo di un documento; `None` se sconosciuti.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct DocInfo {
+    pub side: Option<String>,
+    pub doc_type: Option<String>,
+}
+
 /// Contesto facoltativo di un'unità.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Context {

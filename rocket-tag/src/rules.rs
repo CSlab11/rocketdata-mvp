@@ -8,7 +8,7 @@ use serde::Deserialize;
 use serde_json::{Map, Value, json};
 use serde_yaml::{Mapping, Value as Yaml};
 
-use crate::classifier::{Context, Decision};
+use crate::classifier::{Context, Decision, DocInfo};
 use crate::markdown::Kind;
 use crate::schema::{Facet, Schema};
 
@@ -159,6 +159,12 @@ impl RuleSet {
             facets.push(facet_rules(name, spec, &mut pattern_errors)?);
         }
         Ok(RuleSet { version: yaml_string(&raw.version).unwrap_or_else(|| "0".to_string()), documents, facets, pattern_errors })
+    }
+
+    /// Lato e tipo dalla prima regola `documents` che corrisponde al nome del documento (REQ-089).
+    pub fn document_info(&self, document: &str) -> Option<DocInfo> {
+        let rule = self.documents.iter().find(|d| d.pattern.is_match(document))?;
+        Some(DocInfo { side: Some(rule.side.clone()), doc_type: Some(rule.doc_type.clone()) })
     }
 
     /// Controllo delle regole contro lo schema (REQ-103).
@@ -754,6 +760,15 @@ facets:
         assert!(errors.iter().any(|e| e.starts_with("nature/guarda: espressione non valida '(?=shall)x'")));
         assert!(errors.iter().any(|e| e.starts_with("nature/gruppo: espressione non valida '(aperta'")));
         assert!(errors.iter().any(|e| e.starts_with("nature/gruppo: espressione non valida '*'")));
+    }
+
+    #[test]
+    fn lato_e_tipo_dal_nome_del_documento() {
+        let rules = RuleSet::parse(RULES).unwrap();
+        let info = rules.document_info("[TD] unita.md").unwrap();
+        assert_eq!(info, DocInfo { side: Some("supplier".into()), doc_type: Some("technical_description".into()) });
+        assert_eq!(rules.document_info("the rfq.md").unwrap().side.as_deref(), Some("prime"), "senza distinzione maiuscole");
+        assert_eq!(rules.document_info("appunti.md"), None);
     }
 
     #[test]

@@ -86,6 +86,38 @@ fn elementi_con_tipo_hash_e_confidenze() {
     assert_eq!(item["rule_ids"]["nature"], "req-modal");
 }
 
+/// Lato dalle etichette, poi da `rules.yaml`, altrimenti sconosciuto (REQ-089).
+#[test]
+fn lato_del_documento() {
+    let dir = tempfile::tempdir().unwrap();
+    let text = "The unit shall operate.\n";
+    std::fs::write(dir.path().join("[TD] a.md"), text).unwrap();
+    std::fs::write(dir.path().join("b.md"), text).unwrap();
+    let labels = dir.path().join("etichette.jsonl");
+    std::fs::write(&labels, r#"{"level":"document","document":"[TD] a.md","side":"prime","doc_type":"other"}"#).unwrap();
+
+    let action = |saved: &serde_json::Value, index: usize| saved["items"][index]["labels"]["required_action"].clone();
+    let rule = |saved: &serde_json::Value, index: usize| saved["items"][index]["rule_ids"]["required_action"].clone();
+    let out = dir.path().join("rules.json");
+    assert!(classify_rules(dir.path(), &out).status.success());
+    let saved: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&out).unwrap()).unwrap();
+    assert_eq!(rule(&saved, 0), "schema x-fixedWhen", "supplier da rules.yaml");
+    assert_eq!(rule(&saved, 1), "default", "lato sconosciuto");
+
+    let run = rocket_tag()
+        .args(["classify", "rules"])
+        .arg(dir.path())
+        .arg("-o")
+        .arg(&out)
+        .args(["--schema", "config/label_schema.json", "--rules", "config/rules.yaml", "--labels"])
+        .arg(&labels)
+        .output()
+        .unwrap();
+    assert!(run.status.success());
+    let saved: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&out).unwrap()).unwrap();
+    assert_eq!(action(&saved, 0), "declare_compliance", "le etichette umane vincono su rules.yaml");
+}
+
 /// Il crate si compila e si esegue da solo, senza gli altri tool (REQ-079).
 #[test]
 fn si_esegue_da_solo() {

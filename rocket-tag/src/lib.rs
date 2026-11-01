@@ -2,6 +2,7 @@
 
 pub mod markdown;
 pub mod iterate;
+pub mod labels;
 pub mod schema;
 pub mod rules;
 pub mod classifier;
