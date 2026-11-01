@@ -305,6 +305,34 @@ fn comandi_di_manutenzione_dello_schema() {
     assert!(report.contains("== Differenze") && report.contains("== Regole") && report.contains("rules.yaml coerente"));
 }
 
+/// `schema migrate` scrive un nuovo file di etichette (REQ-123).
+#[test]
+fn schema_migrate() {
+    let dir = tempfile::tempdir().unwrap();
+    let labels = dir.path().join("etichette.jsonl");
+    let record = serde_json::json!({"level": "paragraph", "document": "a.md", "line_start": 1, "line_end": 1,
+        "facets": {"tipo": "requirement", "domain": "technical", "destination": "P", "required_action": "none", "flags": []},
+        "provenance": {"schema_version": "0.0.9"}});
+    std::fs::write(&labels, format!("{record}\n")).unwrap();
+    let map = dir.path().join("mappa.json");
+    std::fs::write(&map, r#"{"rename_facets": {"tipo": "nature"}}"#).unwrap();
+    let run = rocket_tag()
+        .args(["schema", "migrate"])
+        .arg(&labels)
+        .arg("config/label_schema.json")
+        .arg("--map")
+        .arg(&map)
+        .output()
+        .unwrap();
+    assert!(run.status.success(), "{}", String::from_utf8_lossy(&run.stderr));
+    assert!(String::from_utf8_lossy(&run.stdout).contains("1 etichette valide per v0.1.0, 0 da rivedere"));
+    let target = dir.path().join("etichette.v0.1.0.jsonl");
+    let migrated: serde_json::Value = serde_json::from_str(std::fs::read_to_string(target).unwrap().trim()).unwrap();
+    assert_eq!(migrated["facets"]["nature"], "requirement");
+    assert_eq!(migrated["facets"]["extraction_quality"], "ok");
+    assert_eq!(migrated["provenance"]["note"], "migrated from v0.0.9");
+}
+
 /// Il crate si compila e si esegue da solo, senza gli altri tool (REQ-079).
 #[test]
 fn si_esegue_da_solo() {

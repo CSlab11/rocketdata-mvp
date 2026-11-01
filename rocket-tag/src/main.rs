@@ -15,6 +15,7 @@ use rocket_tag::llm::{self, Format, Llm, Run, Settings};
 use rocket_tag::output::{Item, Output};
 use rocket_tag::rules::RuleSet;
 use rocket_tag::schema::Schema;
+use rocket_tag::schema_tool::Migration;
 
 /// Classifica i paragrafi dei file Markdown con regole o con un LLM locale.
 #[derive(Parser)]
@@ -210,6 +211,19 @@ enum SchemaCommand {
         /// Regole da controllare
         #[arg(long, value_name = "FILE")]
         rules: Option<PathBuf>,
+    },
+    /// Migra un file di etichette umane a una nuova versione dello schema
+    Migrate {
+        #[arg(value_name = "ETICHETTE")]
+        labels: PathBuf,
+        #[arg(value_name = "SCHEMA")]
+        schema: PathBuf,
+        /// Mappa di migrazione (JSON)
+        #[arg(long, value_name = "FILE")]
+        map: Option<PathBuf>,
+        /// File di uscita; per difetto accanto alle etichette, con la versione nel nome
+        #[arg(short, value_name = "FILE")]
+        output: Option<PathBuf>,
     },
 }
 
@@ -422,6 +436,30 @@ fn run_schema(command: SchemaCommand) -> Result<(), String> {
             let rules = rules.as_deref().map(RuleSet::load).transpose()?;
             let lines = schema_tool::impact(&Schema::load(&old)?, &Schema::load(&new)?, records.as_deref(), rules.as_ref());
             println!("{}", lines.join("\n"));
+        }
+        SchemaCommand::Migrate { labels: path, schema, map, output } => {
+            let schema = Schema::load(&schema)?;
+            let migration = match map {
+                Some(map) => {
+                    let text = fs::read_to_string(&map).map_err(|e| format!("impossibile leggere {}: {e}", map.display()))?;
+                    serde_json::from_str(&text).map_err(|e| format!("{}: {e}", map.display()))?
+                }
+                None => Migration::default(),
+            };
+            let migrated = schema_tool::migrate(&schema, labels::read(&path)?, &migration);
+            let target = output.unwrap_or_else(|| {
+                let stem = path.file_stem().unwrap_or_default().to_string_lossy();
+                path.with_file_name(format!("{stem}.v{}.jsonl", schema.version))
+            });
+            let lines: Vec<String> = migrated.records.iter().map(Value::to_string).collect();
+            fs::write(&target, lines.join("\n") + "\n").map_err(|e| format!("impossibile scrivere {}: {e}", target.display()))?;
+            println!(
+                "{}: {} etichette valide per v{}, {} da rivedere",
+                target.display(),
+                migrated.valid,
+                schema.version,
+                migrated.to_review
+            );
         }
     }
     Ok(())

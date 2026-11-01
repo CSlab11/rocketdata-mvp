@@ -2,7 +2,8 @@
 
 use std::collections::BTreeMap;
 
-use serde_json::Value;
+use serde::Deserialize;
+use serde_json::{Map, Value, json};
 
 use crate::labels;
 use crate::rules::RuleSet;
@@ -65,6 +66,88 @@ pub fn status(schema: &Schema, records: &[Value]) -> Status {
     Status { valid: latest.len() - to_review, to_review, documents: documents.len() }
 }
 
+/// Mappa di migrazione (appendice F); tutte le chiavi sono facoltative.
+#[derive(Debug, Default, Deserialize)]
+#[serde(default)]
+pub struct Migration {
+    pub rename_facets: BTreeMap<String, String>,
+    pub values: BTreeMap<String, BTreeMap<String, String>>,
+    pub drop_facets: Vec<String>,
+}
+
+impl Migration {
+    fn apply(&self, facets: &Map<String, Value>) -> Map<String, Value> {
+        let mut migrated = Map::new();
+        for (name, value) in facets.iter().filter(|(name, _)| !self.drop_facets.contains(name)) {
+            let name = self.rename_facets.get(name).unwrap_or(name);
+            let values = self.values.get(name);
+            let renamed = |value: &Value| match value.as_str().and_then(|v| values?.get(v)) {
+                Some(new) => json!(new),
+                None => value.clone(),
+            };
+            let value = match value {
+                Value::Array(list) => Value::Array(list.iter().map(renamed).collect()),
+                value => renamed(value),
+            };
+            migrated.insert(name.clone(), value);
+        }
+        migrated
+    }
+}
+
+/// Esito di una migrazione.
+#[derive(Debug, PartialEq)]
+pub struct Migrated {
+    pub records: Vec<Value>,
+    pub valid: usize,
+    pub to_review: usize,
+}
+
+/// Porta le etichette al nuovo schema: quelle valide passano alla nuova versione, le altre restano
+/// alla vecchia (REQ-123).
+pub fn migrate(schema: &Schema, records: Vec<Value>, migration: &Migration) -> Migrated {
+    let documents = labels::documents(&records);
+    let (mut valid, mut to_review) = (0, 0);
+    let mut migrated = Vec::new();
+    for mut record in records {
+        if record["level"] == "paragraph" {
+            let side = record["document"].as_str().and_then(|d| documents.get(d)).and_then(|info| info.side.clone());
+            let mut facets = migration.apply(record["facets"].as_object().unwrap_or(&Map::new()));
+            for facet in &schema.facets {
+                if let Some(default) = facet.default.as_ref().filter(|_| !facets.contains_key(&facet.name)) {
+                    facets.insert(facet.name.clone(), default.clone());
+                }
+                if let Some(fixed) = facet.fixed.as_ref().filter(|f| Some(&f.side) == side.as_ref()) {
+                    facets.insert(facet.name.clone(), json!(fixed.value));
+                }
+            }
+            if schema.label_errors(&facets, side.as_deref()).is_empty() {
+                valid += 1;
+                update_provenance(&mut record, &schema.version);
+            } else {
+                to_review += 1;
+            }
+            record["facets"] = Value::Object(facets);
+        }
+        migrated.push(record);
+    }
+    Migrated { records: migrated, valid, to_review }
+}
+
+fn update_provenance(record: &mut Value, version: &str) {
+    let old = record["provenance"]["schema_version"].as_str().unwrap_or("?").to_string();
+    if old == version {
+        return;
+    }
+    let note = format!("migrated from v{old}");
+    let note = match record["provenance"]["note"].as_str() {
+        Some(previous) if !previous.is_empty() => format!("{previous} | {note}"),
+        _ => note,
+    };
+    record["provenance"]["schema_version"] = json!(version);
+    record["provenance"]["note"] = json!(note);
+}
+
 /// Rapporto d'impatto: differenze, etichette da rivedere e incoerenze delle regole (REQ-122).
 pub fn impact(old: &Schema, new: &Schema, records: Option<&[Value]>, rules: Option<&RuleSet>) -> Vec<String> {
     let mut lines = vec!["== Differenze".to_string()];
@@ -91,7 +174,6 @@ pub fn impact(old: &Schema, new: &Schema, records: Option<&[Value]>, rules: Opti
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
 
     const SCHEMA: &str = include_str!("../config/label_schema.json");
 
@@ -140,6 +222,44 @@ mod tests {
         let records = [label("requirement"), json!({"level": "document", "document": "a.md", "side": "prime"})];
         assert_eq!(status(&schema(), &records), Status { valid: 1, to_review: 0, documents: 1 });
         assert_eq!(status(&changed(), &records), Status { valid: 0, to_review: 1, documents: 1 }, "manca la faccetta nuova");
+    }
+
+    #[test]
+    fn migrazione_con_mappa() {
+        let text = SCHEMA
+            .replace("\"version\": \"0.1.0\"", "\"version\": \"0.2.0\"")
+            .replace("\"nature\": {\n          \"$ref\"", "\"natura\": {\n          \"$ref\"")
+            .replace("\"nature\",\n        \"domain\"", "\"natura\",\n        \"domain\"")
+            .replace("\"bidder_instruction\",\n        \"context\"", "\"instruction\",\n        \"context\"");
+        let schema = Schema::parse(&text).unwrap();
+        let migration: Migration = serde_json::from_value(json!({
+            "rename_facets": {"nature": "natura"},
+            "values": {"natura": {"bidder_instruction": "instruction"}},
+            "drop_facets": ["vecchia"]
+        }))
+        .unwrap();
+        let mut good = label("bidder_instruction");
+        good["facets"]["vecchia"] = json!("x");
+        good["facets"].as_object_mut().unwrap().remove("extraction_quality");
+        good["provenance"] = json!({"schema_version": "0.1.0", "note": "vista"});
+        let mut bad = label("mai");
+        bad["line_start"] = json!(9);
+        bad["provenance"] = json!({"schema_version": "0.1.0"});
+        let document = json!({"level": "document", "document": "a.md", "side": "supplier", "doc_type": "other"});
+
+        let migrated = migrate(&schema, vec![document.clone(), good, bad], &migration);
+        assert_eq!((migrated.valid, migrated.to_review), (1, 1));
+        assert_eq!(migrated.records[0], document, "le etichette documento non cambiano");
+
+        let first = &migrated.records[1];
+        assert_eq!(first["facets"]["natura"], "instruction");
+        assert!(first["facets"].get("nature").is_none());
+        assert!(first["facets"].get("vecchia").is_none());
+        assert_eq!(first["facets"]["extraction_quality"], "ok", "faccetta nuova con x-default");
+        assert_eq!(first["provenance"]["schema_version"], "0.2.0");
+        assert_eq!(first["provenance"]["note"], "vista | migrated from v0.1.0");
+
+        assert_eq!(migrated.records[2]["provenance"]["schema_version"], "0.1.0", "resta alla vecchia versione");
     }
 
     #[test]

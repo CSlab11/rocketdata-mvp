@@ -105,7 +105,7 @@ Provengono da [`classifier-handoff/requirements.md`](../../classifier-handoff/re
 | ID | Requisito | Stato | File impattati |
 | --- | --- | --- | --- |
 | REQ-122 | Il pacchetto deve offrire un rapporto d'impatto di una modifica dello schema: differenze tra due versioni (faccette e valori aggiunti o rimossi, obbligatorietà), etichette umane da rivedere e incoerenze di `rules.yaml`. | implementato | `rocket-tag/src/lib.rs`, `rocket-tag/src/main.rs`, `rocket-tag/src/schema_tool.rs`, `rocket-tag/tests/cli.rs` |
-| REQ-123 | Il pacchetto deve offrire la migrazione di un file di etichette umane a una nuova versione dello schema con una mappa di rinomina di faccette e valori ed eliminazione di faccette; le etichette valide passano alla nuova versione, le altre restano alla vecchia. | aperto | — |
+| REQ-123 | Il pacchetto deve offrire la migrazione di un file di etichette umane a una nuova versione dello schema con una mappa di rinomina di faccette e valori ed eliminazione di faccette; le etichette valide passano alla nuova versione, le altre restano alla vecchia. | implementato | `rocket-tag/src/main.rs`, `rocket-tag/src/schema_tool.rs`, `rocket-tag/tests/cli.rs` |
 
 ## Materiale di riferimento
 
