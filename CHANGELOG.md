@@ -87,6 +87,7 @@
 - REQ-095 implementato — Faccette, valori, descrizioni, x-default e x-fixedWhen ricavati dallo schema (`rocket-tag/Cargo.lock`, `rocket-tag/Cargo.toml`, `rocket-tag/config/label_schema.json`, `rocket-tag/src/lib.rs`, `rocket-tag/src/schema.rs`)
 - REQ-092 implementato — Schema fornito come percorso o come oggetto già caricato, mai da un percorso fisso (`rocket-tag/src/schema.rs`)
 - REQ-098 implementato — Controllo dello schema con messaggio che indica l'errore (`rocket-tag/src/schema.rs`)
+- REQ-099 implementato — Regole lette da un file rules.yaml indicato come input, come dati (`rocket-tag/Cargo.lock`, `rocket-tag/Cargo.toml`, `rocket-tag/config/rules.yaml`, `rocket-tag/src/lib.rs`, `rocket-tag/src/rules.rs`)
 
 ## 2026-10-25
 - REQ-068 richiesto — search-rm3: opzione --heading-weight, maggiore di 1, predefinita 3
