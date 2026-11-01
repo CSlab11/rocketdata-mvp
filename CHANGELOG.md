@@ -140,6 +140,7 @@
 - REQ-147 implementato — Conversione e classificazione mutuamente esclusive sulla stessa cartella (`gui/src/main.rs`, `gui/src/server.rs`, `gui/src/settings.rs`, `gui/tests/classify.rs`)
 - REQ-150 implementato — Pulsante Esci che termina anche rocket-tag (`gui/examples/fake_rocket_tag.rs`, `gui/src/server.rs`, `gui/tests/quit.rs`, `gui/web/app.js`)
 - REQ-149 implementato — Script di arresto che termina anche rocket-tag (`gui/stop.cmd`, `gui/tests/scripts.rs`)
+- REQ-138 implementato — Lettura dei risultati completata nella richiesta, senza avviare processi (`gui/src/server.rs`, `gui/tests/classify.rs`)
 
 ## 2026-10-25
 - REQ-068 richiesto — search-rm3: opzione --heading-weight, maggiore di 1, predefinita 3

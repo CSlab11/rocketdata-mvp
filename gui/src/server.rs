@@ -79,6 +79,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/classify/output", get(classify_output))
         .route("/api/classify/events", get(classify_events))
         .route("/api/classify/cancel", post(classify_cancel))
+        .route("/api/classify/results", get(classify_results))
         .route("/api/shutdown", post(shutdown))
         .route("/api/pick-folder", post(pick_folder))
         .route("/api/settings", get(get_settings))
@@ -253,6 +254,21 @@ fn llm_server(request: &ClassifyRequest) -> Result<Server, (StatusCode, String)>
 
 async fn classify_output(State(state): State<Arc<AppState>>) -> Json<Snapshot> {
     Json(state.classifier.snapshot())
+}
+
+#[derive(Deserialize)]
+struct ResultsRequest {
+    src: String,
+    classifier: Classifier,
+}
+
+/// Il file di uscita del classificatore: una lettura breve, senza avviare processi (REQ-138).
+async fn classify_results(Query(request): Query<ResultsRequest>) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let path = classify::output_file(std::path::Path::new(request.src.trim()), request.classifier);
+    let text = std::fs::read_to_string(&path).map_err(|_| (StatusCode::NOT_FOUND, "nessun risultato per questa cartella".to_string()))?;
+    let output = serde_json::from_str(&text)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("file di uscita non valido {}: {e}", path.display())))?;
+    Ok(Json(output))
 }
 
 /// Interrompe la classificazione in corso (REQ-137).

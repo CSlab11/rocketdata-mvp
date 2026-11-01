@@ -198,6 +198,44 @@ fn conversione_e_classificazione_si_escludono() {
     assert_eq!(post_json(&gui, "/api/doc-ripper/cancel", &json!({})).0, 202);
 }
 
+fn get(gui: &Gui, path: &str) -> (u16, String) {
+    let agent = ureq::Agent::config_builder().http_status_as_error(false).build().new_agent();
+    let mut response = agent.get(&gui.url(path)).call().unwrap();
+    (response.status().as_u16(), response.body_mut().read_to_string().unwrap())
+}
+
+fn encoded(text: &str) -> String {
+    text.bytes().map(|b| format!("%{b:02X}")).collect()
+}
+
+fn classified_folder(gui: &Gui) -> tempfile::TempDir {
+    let folder = markdown_folder();
+    let request = json!({"src": folder.path().to_str().unwrap(), "classifier": "rules"});
+    assert_eq!(post_json(gui, "/api/classify/run", &request).0, 202);
+    wait_end(gui);
+    folder
+}
+
+/// La lettura dei risultati si completa nella richiesta, senza avviare processi (REQ-138).
+#[test]
+fn risultati_nella_richiesta() {
+    let (dir, exe) = install_with_fake_tag();
+    let gui = Gui::start(&exe);
+    let folder = classified_folder(&gui);
+    let src = encoded(folder.path().to_str().unwrap());
+    fs::remove_file(dir.path().join("rocket-tag.exe")).unwrap();
+
+    let (status, body) = get(&gui, &format!("/api/classify/results?src={src}&classifier=rules"));
+    assert_eq!(status, 200, "{body}");
+    let result: Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(result["items"].as_array().unwrap().len(), 3);
+    assert_eq!(result["classifier"], "rules-v1");
+
+    let (status, body) = get(&gui, &format!("/api/classify/results?src={src}&classifier=llm"));
+    assert_eq!(status, 404);
+    assert!(body.contains("nessun risultato"));
+}
+
 #[test]
 fn richieste_non_valide() {
     let (_dir, exe) = install_with_fake_tag();
