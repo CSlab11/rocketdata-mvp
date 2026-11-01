@@ -472,6 +472,77 @@ fn solo_il_client_llm_usa_la_rete() {
     }
 }
 
+/// Uno schema con altre faccette passa da iteratore, LLM e valutazione senza toccare il codice
+/// (REQ-097).
+#[test]
+fn uno_schema_diverso_non_richiede_modifiche_al_codice() {
+    let schema = json!({
+        "version": "9.0.0",
+        "$defs": {
+            "Tono": {"type": "string", "enum": ["formale", "informale"], "x-enumDescriptions": {"formale": "Lettera"}},
+            "Tema": {"type": "string", "enum": ["spazio", "mare"]},
+            "Side": {"type": "string", "enum": ["a"]},
+            "DocType": {"type": "string", "enum": ["b"]},
+            "ParagraphFacets": {
+                "properties": {
+                    "tono": {"$ref": "#/$defs/Tono"},
+                    "temi": {"type": "array", "items": {"$ref": "#/$defs/Tema"}, "uniqueItems": true}
+                },
+                "required": ["tono", "temi"]
+            },
+            "DocumentLabel": {"properties": {"side": {"$ref": "#/$defs/Side"}, "doc_type": {"$ref": "#/$defs/DocType"}}}
+        }
+    });
+    let server = serve(|body, _| {
+        assert!(body["messages"][0]["content"].as_str().unwrap().contains("tono (one of):\n  - formale: Lettera"));
+        assert_eq!(body["response_format"]["json_schema"]["schema"]["required"], json!(["tono", "temi"]));
+        (200, json!({"tono": "formale", "temi": ["spazio"]}).to_string())
+    });
+    let (dir, docs, out) = workspace("Testo.\n");
+    let schema_file = dir.path().join("schema.json");
+    std::fs::write(&schema_file, schema.to_string()).unwrap();
+    let mut command = Command::new(env!("CARGO_BIN_EXE_rocket-tag"));
+    command
+        .args(["classify", "llm"])
+        .arg(&docs)
+        .arg("-o")
+        .arg(&out)
+        .arg("--schema")
+        .arg(&schema_file)
+        .args(["--guide", "config/prompt_guide.md", "--examples", "config/guide_examples.json"])
+        .args(["--base-url", &server.url, "--model", "modello"]);
+    run(&mut command);
+    let result = saved(&out);
+    assert_eq!(result["schema_version"], "9.0.0");
+    assert_eq!(result["items"][0]["labels"], json!({"tono": "formale", "temi": ["spazio"]}));
+
+    let labels = dir.path().join("etichette.jsonl");
+    let label = json!({"level": "paragraph", "document": "a.md", "line_start": 1, "line_end": 1,
+                       "facets": {"tono": "formale", "temi": ["mare"]}});
+    std::fs::write(&labels, label.to_string()).unwrap();
+    let mut evaluate = Command::new(env!("CARGO_BIN_EXE_rocket-tag"));
+    evaluate.arg("evaluate").arg(&labels).arg(&out).arg("--schema").arg(&schema_file);
+    let stdout = String::from_utf8_lossy(&run(&mut evaluate).stdout).into_owned();
+    assert!(stdout.contains("tono") && stdout.contains("accuratezza 100.0%"), "{stdout}");
+    assert!(stdout.contains("temi") && stdout.contains("accuratezza   0.0%"), "{stdout}");
+}
+
+/// Nessun nome di faccetta o valore nel codice dei componenti (REQ-095, REQ-097).
+#[test]
+fn nessuna_faccetta_scritta_nel_codice() {
+    let without_tests = |source: &'static str| source.split("#[cfg(test)]").next().unwrap();
+    for source in [
+        without_tests(include_str!("../src/llm.rs")),
+        without_tests(include_str!("../src/iterate.rs")),
+        without_tests(include_str!("../src/evaluate.rs")),
+        without_tests(include_str!("../src/classifier.rs")),
+    ] {
+        for name in ["\"nature\"", "\"domain\"", "\"destination\"", "\"required_action\"", "\"extraction_quality\"", "\"flags\""] {
+            assert!(!source.contains(name), "{name}");
+        }
+    }
+}
+
 /// La risposta può arrivare dentro un blocco di codice o con testo attorno.
 #[test]
 fn accetta_il_json_dentro_un_blocco_di_codice() {

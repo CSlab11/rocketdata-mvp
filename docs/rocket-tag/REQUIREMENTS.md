@@ -50,7 +50,7 @@ Provengono da [`classifier-handoff/requirements.md`](../../classifier-handoff/re
 | --- | --- | --- | --- |
 | REQ-095 | Il pacchetto deve ricavare dallo schema fornito (appendice B) faccette, valori ammessi, descrizioni, valori proposti (`x-default`) e vincoli per lato documento (`x-fixedWhen`), senza valori di faccetta scritti nel codice. | implementato | `rocket-tag/Cargo.lock`, `rocket-tag/Cargo.toml`, `rocket-tag/config/label_schema.json`, `rocket-tag/src/lib.rs`, `rocket-tag/src/schema.rs` |
 | REQ-096 | Il pacchetto deve applicare i vincoli `x-fixedWhen` a ogni uscita (es. `required_action = none` per i documenti `supplier`). | implementato | `rocket-tag/config/guide_examples.json`, `rocket-tag/src/classifier.rs`, `rocket-tag/src/rules.rs`, `rocket-tag/tests/reference.rs` |
-| REQ-097 | Una modifica dello schema non deve richiedere modifiche al codice del classificatore LLM, dell'iteratore né della valutazione. | aperto | — |
+| REQ-097 | Una modifica dello schema non deve richiedere modifiche al codice del classificatore LLM, dell'iteratore né della valutazione. | implementato | `rocket-tag/tests/llm.rs` |
 | REQ-098 | Il pacchetto deve controllare lo schema all'avvio e fermarsi con un messaggio che indica l'errore quando non è conforme all'appendice B. | implementato | `rocket-tag/src/schema.rs` |
 
 ## Classificatore a regole
