@@ -57,12 +57,39 @@ impl Schema {
         for (name, property) in properties {
             facets.push(facet(raw, name, property, required.contains(&name.as_str()))?);
         }
-        Ok(Schema {
+        let schema = Schema {
             version: raw["version"].as_str().unwrap_or("0").to_string(),
             facets,
             sides: document_values(raw, "side"),
             doc_types: document_values(raw, "doc_type"),
-        })
+        };
+        schema.check()?;
+        Ok(schema)
+    }
+
+    /// Vincoli e valori proposti devono essere ammessi dallo schema stesso (REQ-098).
+    fn check(&self) -> Result<(), String> {
+        for facet in &self.facets {
+            if let Some(fixed) = &facet.fixed {
+                if !self.sides.contains(&fixed.side) {
+                    return Err(format!("schema: {}: x-fixedWhen con lato non ammesso '{}'", facet.name, fixed.side));
+                }
+                if !facet.values.contains(&fixed.value) {
+                    return Err(format!("schema: {}: x-fixedWhen con valore non ammesso '{}'", facet.name, fixed.value));
+                }
+            }
+            let defaults = match &facet.default {
+                Some(Value::Array(values)) => values.clone(),
+                Some(value) => vec![value.clone()],
+                None => Vec::new(),
+            };
+            for value in defaults {
+                if !value.as_str().is_some_and(|v| facet.values.iter().any(|allowed| allowed == v)) {
+                    return Err(format!("schema: {}: x-default con valore non ammesso {value}", facet.name));
+                }
+            }
+        }
+        Ok(())
     }
 
     pub fn facet(&self, name: &str) -> Option<&Facet> {
@@ -131,6 +158,21 @@ mod tests {
         let raw: Value = serde_json::from_str(SCHEMA).unwrap();
         assert_eq!(from_file, Schema::from_value(&raw).unwrap());
         assert!(Schema::load(&dir.path().join("manca.json")).unwrap_err().contains("impossibile leggere"));
+    }
+
+    fn broken(from: &str, to: &str) -> String {
+        assert!(SCHEMA.contains(from), "{from}");
+        Schema::parse(&SCHEMA.replace(from, to)).unwrap_err()
+    }
+
+    #[test]
+    fn segnala_gli_schemi_non_conformi() {
+        assert!(Schema::parse("{ non json").unwrap_err().contains("JSON non valido"));
+        assert!(broken("\"ParagraphFacets\": {", "\"Altro\": {").contains("ParagraphFacets mancante"));
+        assert!(broken("\"$ref\": \"#/$defs/Nature\"", "\"type\": \"string\"").contains("'nature' non punta a un enum"));
+        assert!(broken("\"side\": \"supplier\",\n            \"value\": \"none\"", "\"side\": \"altro\",\n            \"value\": \"none\"").contains("lato non ammesso"));
+        assert!(broken("\"side\": \"supplier\",\n            \"value\": \"none\"", "\"side\": \"supplier\",\n            \"value\": \"mai\"").contains("valore non ammesso"));
+        assert!(broken("\"x-default\": \"ok\"", "\"x-default\": \"mai\"").contains("x-default"));
     }
 
     #[test]
