@@ -313,6 +313,35 @@ fn unita_scartate_nella_pagina() {
     assert!(dom.contains("a.md, righe 6–6: tono: valore non ammesso"), "{dom}");
 }
 
+/// Conta i Markdown più recenti del file di uscita, senza indici e risultati (REQ-145).
+#[test]
+fn segnala_i_file_modificati_dopo_i_risultati() {
+    let (_dir, exe) = install_with_fake_tag();
+    let gui = Gui::start(&exe);
+    let folder = classified_folder(&gui);
+    let src = encoded(folder.path().to_str().unwrap());
+    let modified = || {
+        let body = get(&gui, &format!("/api/classify/results?src={src}&classifier=rules")).1;
+        serde_json::from_str::<Value>(&body).unwrap()["modified_files"].as_u64().unwrap()
+    };
+    assert_eq!(modified(), 0);
+    let dom = dump_dom(&gui.url("/#classify"));
+    assert!(dom.contains(r#"id="classify-stale" class="alert warn" hidden="""#), "{dom}");
+
+    std::thread::sleep(Duration::from_millis(50));
+    fs::write(folder.path().join("index.md"), "Indice.\n").unwrap();
+    fs::create_dir(folder.path().join(".index")).unwrap();
+    fs::write(folder.path().join(".index/x.md"), "Interno.\n").unwrap();
+    fs::write(folder.path().join(".classify/y.md"), "Interno.\n").unwrap();
+    assert_eq!(modified(), 0, "indici e risultati non contano");
+
+    fs::write(folder.path().join("a.md"), "Primo testo cambiato.\n").unwrap();
+    fs::write(folder.path().join("sotto/c.md"), "Nuovo.\n").unwrap();
+    assert_eq!(modified(), 2, "file cambiati e file nuovi");
+    let dom = dump_dom(&gui.url("/#classify"));
+    assert!(dom.contains("File Markdown modificati dopo questi risultati: 2."), "{dom}");
+}
+
 /// Niente nomi di faccette o valori nel codice di gui (REQ-142).
 #[test]
 fn nessuna_faccetta_nel_codice() {

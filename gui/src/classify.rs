@@ -49,6 +49,31 @@ impl Config {
     }
 }
 
+/// Quanti file Markdown di `src` sono più recenti di `output`, confrontando solo le date (REQ-145).
+/// Gli indici e i risultati non sono documenti classificati.
+pub fn modified_after(src: &Path, output: &Path) -> usize {
+    let Ok(reference) = std::fs::metadata(output).and_then(|m| m.modified()) else { return 0 };
+    let skip = |path: &Path| path == src.join("index.md") || path == src.join(".index") || path == src.join(".classify");
+    let mut pending = vec![src.to_path_buf()];
+    let mut count = 0;
+    while let Some(dir) = pending.pop() {
+        for entry in std::fs::read_dir(dir).into_iter().flatten().flatten() {
+            let path = entry.path();
+            if skip(&path) {
+                continue;
+            }
+            if path.is_dir() {
+                pending.push(path);
+            } else if path.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
+                && entry.metadata().and_then(|m| m.modified()).is_ok_and(|time| time > reference)
+            {
+                count += 1;
+            }
+        }
+    }
+    count
+}
+
 /// Testo del file Markdown `document`, solo se il percorso risolto resta dentro `src`, anche
 /// seguendo collegamenti: `document` arriva da un file, non dall'utente (REQ-146).
 pub fn read_document(src: &Path, document: &str) -> Result<String, String> {

@@ -553,6 +553,7 @@ async function renderClassify(content) {
   const progress = el("div", { id: "classify-progress", class: "progress", hidden: "" }, progressBar, progressText);
   const result = el("div", { id: "classify-result", class: "alert", hidden: "" });
   const output = el("pre", { id: "classify-output", class: "output", hidden: "" });
+  const staleNotice = el("div", { id: "classify-stale", class: "alert warn", hidden: "" });
   // Filtri per valore di faccetta e per soglia di confidenza (REQ-143).
   const labelFilter = el("select", { id: "classify-filter" });
   const threshold = el("input", { id: "classify-threshold", class: "top", type: "number", min: "0", max: "1", step: "0.05", value: "0.7" });
@@ -580,6 +581,7 @@ async function renderClassify(content) {
     progress,
     result,
     output,
+    staleNotice,
     filters,
     results,
     skipped,
@@ -663,10 +665,14 @@ async function renderClassify(content) {
       results.hidden = true;
       filters.hidden = true;
       skipped.hidden = true;
+      staleNotice.hidden = true;
       return;
     }
     shown = await response.json();
     texts = new Map();
+    // I numeri di riga potrebbero non corrispondere più ai file modificati (REQ-145).
+    staleNotice.textContent = `File Markdown modificati dopo questi risultati: ${shown.modified_files}. Conviene classificare di nuovo.`;
+    staleNotice.hidden = shown.modified_files === 0;
     fillLabelFilter();
     await drawResults();
   };

@@ -265,10 +265,12 @@ struct ResultsRequest {
 
 /// Il file di uscita del classificatore: una lettura breve, senza avviare processi (REQ-138).
 async fn classify_results(Query(request): Query<ResultsRequest>) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let path = classify::output_file(std::path::Path::new(request.src.trim()), request.classifier);
+    let src = std::path::Path::new(request.src.trim());
+    let path = classify::output_file(src, request.classifier);
     let text = std::fs::read_to_string(&path).map_err(|_| (StatusCode::NOT_FOUND, "nessun risultato per questa cartella".to_string()))?;
-    let output = serde_json::from_str(&text)
+    let mut output: serde_json::Value = serde_json::from_str(&text)
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("file di uscita non valido {}: {e}", path.display())))?;
+    output["modified_files"] = classify::modified_after(src, &path).into();
     Ok(Json(output))
 }
 
