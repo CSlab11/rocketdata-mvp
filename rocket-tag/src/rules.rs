@@ -462,7 +462,8 @@ facets:
         assert!(!matches("any: ['x'], unless: ['y']", "x e y", &none));
         assert!(!matches("any: ['x'], count_min: 2", "x", &none));
         assert!(matches("any: ['x', 'y'], count_min: 2", "x y", &none));
-        assert!(!matches("min_len: 5", "città", &Context { ..Context::default() }) == false, "lunghezza in caratteri");
+        assert!(matches("min_len: 5", "città", &none), "lunghezza in caratteri, non in byte");
+        assert!(!matches("min_len: 6", "città", &none));
         assert!(!matches("max_len: 4", "città", &none));
         assert!(matches("any: ['X']", "x", &none), "senza distinzione maiuscole");
         assert!(!matches("any: ['X'], case: true", "x", &none));
@@ -510,6 +511,16 @@ facets:
         assert_eq!(labels(yaml, "x")["c"], "da-a");
         assert_eq!(labels(yaml, "y")["c"], "da-b");
         assert_eq!(labels(yaml, "z")["c"], "sconosciuta");
+    }
+
+    #[test]
+    fn astensione_se_nessuna_regola_si_applica_e_manca_il_valore_predefinito() {
+        let rules = RuleSet::parse(
+            "version: \"1\"\nfacets:\n  a:\n    rules:\n      - {value: x, any: ['k']}\n    default: null\n  b:\n    rules:\n      - {value: y, any: ['k']}\n",
+        )
+        .unwrap();
+        let decision = rules.classify("niente", &Context::default());
+        assert_eq!(decision, Decision::default(), "faccette assenti da etichette, confidenza e regole");
     }
 
     #[test]
