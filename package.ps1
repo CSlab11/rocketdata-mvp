@@ -1,6 +1,7 @@
-﻿# Prepara dist\ con tutto il necessario per usare RocketData (REQ-073):
-#   gui.exe, doc-ripper.exe, search-rm3.exe, pdfium.dll, start.cmd, stop.cmd e la licenza di PDFium.
-# Compila in release doc-ripper, gui e search-rm3, ciascuno nel proprio progetto Cargo: lo script non
+﻿# Prepara dist\ con tutto il necessario per usare RocketData (REQ-127):
+#   gui.exe, doc-ripper.exe, search-rm3.exe, rocket-tag.exe, pdfium.dll, start.cmd, stop.cmd, la licenza
+#   di PDFium e rocket-tag-config\ con i file di configurazione di rocket-tag.
+# Compila in release doc-ripper, gui, search-rm3 e rocket-tag, ciascuno nel proprio progetto Cargo: lo script non
 # appartiene a nessun tool e i tool non condividono nulla (REQ-005).
 # Uso: .\package.ps1   poi   dist\start.cmd
 $ErrorActionPreference = 'Stop'
@@ -18,7 +19,7 @@ if (-not (Test-Path $Pdfium)) {
     & (Join-Path $Root 'doc-ripper\scripts\fetch-pdfium.ps1')
 }
 
-foreach ($Tool in 'doc-ripper', 'gui', 'search\search-rm3') {
+foreach ($Tool in 'doc-ripper', 'gui', 'search\search-rm3', 'rocket-tag') {
     Write-Output "Compilazione di $Tool..."
     & $Cargo build --release --quiet --manifest-path (Join-Path $Root "$Tool\Cargo.toml")
     if ($LASTEXITCODE -ne 0) { throw "compilazione di $Tool fallita" }
@@ -26,7 +27,7 @@ foreach ($Tool in 'doc-ripper', 'gui', 'search\search-rm3') {
 
 # Una gui avviata da dist\ tiene bloccati i file: si controlla prima di cancellare qualsiasi cosa,
 # così dist\ non resta a metà.
-$Running = Get-Process gui, doc-ripper, search-rm3 -ErrorAction SilentlyContinue |
+$Running = Get-Process gui, doc-ripper, search-rm3, rocket-tag -ErrorAction SilentlyContinue |
     Where-Object { $_.Path -and $_.Path.StartsWith("$Dist\", [StringComparison]::OrdinalIgnoreCase) }
 if ($Running) {
     throw "la gui di $Dist è in esecuzione: fermarla con dist\stop.cmd e rilanciare lo script"
@@ -42,11 +43,14 @@ $Files = @(
     'gui\stop.cmd',
     'doc-ripper\target\release\doc-ripper.exe',
     'doc-ripper\target\release\pdfium.dll',
-    'search\search-rm3\target\release\search-rm3.exe'
+    'search\search-rm3\target\release\search-rm3.exe',
+    'rocket-tag\target\release\rocket-tag.exe'
 )
 foreach ($File in $Files) {
     Copy-Item (Join-Path $Root $File) $Dist
 }
+# File di configurazione di rocket-tag, proposti dalla gui (REQ-127).
+Copy-Item (Join-Path $Root 'rocket-tag\config') (Join-Path $Dist 'rocket-tag-config') -Recurse
 # Licenza di PDFium, da distribuire insieme alla DLL.
 Copy-Item (Join-Path $Root 'doc-ripper\vendor\pdfium\LICENSE') (Join-Path $Dist 'pdfium-LICENSE.txt')
 

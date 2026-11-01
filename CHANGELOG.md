@@ -146,6 +146,7 @@
 - REQ-143 implementato — Filtri per valore di faccetta e soglia di confidenza (`gui/tests/classify.rs`, `gui/web/app.js`, `gui/web/style.css`)
 - REQ-144 implementato — Unità scartate con documento, righe e motivo (`gui/tests/classify.rs`, `gui/web/app.js`)
 - REQ-145 implementato — Segnalazione dei Markdown modificati dopo il file di uscita (`gui/src/classify.rs`, `gui/src/server.rs`, `gui/tests/classify.rs`, `gui/web/app.js`)
+- REQ-127 implementato — package.ps1 con rocket-tag disponibile per la gui e rocket-tag-config in dist (`README.md`, `package.ps1`)
 
 ## 2026-10-25
 - REQ-068 richiesto — search-rm3: opzione --heading-weight, maggiore di 1, predefinita 3

@@ -3,7 +3,8 @@
 RocketData converte i documenti di una cartella (PDF, DOCX e fogli di calcolo) in Markdown e CSV, pronti da leggere, cercare o elaborare. È composto da due tool indipendenti:
 
 - **`doc-ripper`**: il convertitore, usabile anche da riga di comando;
-- **`gui`**: un'interfaccia web locale che avvia `doc-ripper` e ne mostra avanzamento e risultati.
+- **`gui`**: un'interfaccia web locale che avvia `doc-ripper` e ne mostra avanzamento e risultati;
+- **`rocket-tag`**: il classificatore dei paragrafi dei file Markdown, a regole o con un LLM locale, usabile dalla `gui` e da riga di comando.
 
 Funziona su **Windows 10 e Windows 11**.
 
@@ -82,6 +83,26 @@ Alla fine scrive il riepilogo.
 | `1` | Almeno un file non è stato convertito (vedi "Falliti" nel riepilogo); gli altri sono stati elaborati |
 | `2` | Parametri mancanti, cartella di origine inesistente o destinazione non creabile |
 
+## Classificare i paragrafi
+
+Nella schermata **Classificazione** della gui:
+
+1. Scegli la cartella dei file Markdown: viene proposta l'ultima destinazione di `doc-ripper`.
+2. Scegli **Regole**, oppure **LLM** indicando URL e modello di un server locale compatibile con l'API OpenAI. L'eventuale chiave non viene salvata.
+3. Premi **Classifica**: la pagina resta utilizzabile, con barra di avanzamento e **Annulla**.
+4. I risultati compaiono per documento e unità, con i filtri per etichetta e confidenza, le unità scartate e l'avviso se i Markdown sono stati modificati dopo.
+
+I risultati sono in `.classify\rules.json` e `.classify\llm.json` dentro la cartella. Un'esecuzione LLM annullata riprende dalle unità già classificate.
+
+Da riga di comando (i file di configurazione sono in `dist\rocket-tag-config\`):
+
+```
+dist\rocket-tag.exe classify rules <cartella> -o rules.json --schema <schema> --rules <regole>
+dist\rocket-tag.exe evaluate <etichette.jsonl> rules.json --schema <schema> --report report.md
+```
+
+`dist\rocket-tag.exe --help` elenca tutti i comandi. La chiave del server LLM si passa con la variabile d'ambiente `ROCKET_TAG_API_KEY`.
+
 ## Cosa viene prodotto
 
 `doc-ripper` elabora ricorsivamente le sottocartelle e riproduce nella destinazione la stessa struttura. I file già presenti con lo stesso nome vengono sovrascritti.
@@ -116,8 +137,8 @@ Dalla radice del repository, in PowerShell:
 
 Lo script:
 1. scarica PDFium, se manca;
-2. compila in release `doc-ripper`, `gui` e `search-rm3`;
-3. ricrea `dist\` con `gui.exe`, `doc-ripper.exe`, `search-rm3.exe`, `pdfium.dll` con la sua licenza, `start.cmd` e `stop.cmd`.
+2. compila in release `doc-ripper`, `gui`, `search-rm3` e `rocket-tag`;
+3. ricrea `dist\` con `gui.exe`, `doc-ripper.exe`, `search-rm3.exe`, `rocket-tag.exe`, `pdfium.dll` con la sua licenza, `start.cmd`, `stop.cmd` e `rocket-tag-config\`.
 
 Se la gui di `dist\` è in esecuzione lo script si ferma: chiudila prima con `dist\stop.cmd`.
 
@@ -126,6 +147,7 @@ Test di ciascun tool:
 ```
 cargo test --manifest-path doc-ripper\Cargo.toml
 cargo test --manifest-path gui\Cargo.toml
+cargo test --manifest-path rocket-tag\Cargo.toml
 ```
 
 I test della gui usano Microsoft Edge in modalità headless.
@@ -158,6 +180,7 @@ git push origin main vX.Y.Z
 |---|---|
 | `doc-ripper/` | Il convertitore (progetto Cargo autonomo) |
 | `gui/` | L'interfaccia web locale (progetto Cargo autonomo) |
+| `rocket-tag/` | Il classificatore dei paragrafi (progetto Cargo autonomo) |
 | `dist/` | Eseguibili pronti all'uso della release corrente |
 | `package.ps1` | Compila i tool e prepara `dist\` |
 | `docs/` | Requisiti e tracciabilità (`REQUIREMENTS.md`, uno per tool) |
