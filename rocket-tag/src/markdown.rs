@@ -4,6 +4,7 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use sha1::{Digest, Sha1};
 
 static HEADING: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^ {0,3}(#{1,6})(?:\s+(.*))?$").unwrap());
 static CLOSING_HASHES: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\s+#+\s*$").unwrap());
@@ -47,6 +48,13 @@ pub struct Unit {
     /// Prima e ultima riga del file occupate dall'unità, numerate da 1 e incluse (REQ-087).
     pub line_start: usize,
     pub line_end: usize,
+}
+
+/// Primi 16 caratteri esadecimali dello SHA-1 del testo con gli spazi normalizzati (REQ-116).
+pub fn text_hash(text: &str) -> String {
+    let normalized = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    let digest = Sha1::digest(normalized.as_bytes());
+    digest.iter().take(8).map(|byte| format!("{byte:02x}")).collect()
 }
 
 /// Unità di un file Markdown, nell'ordine del file (REQ-086).
@@ -279,6 +287,12 @@ mod tests {
             assert_eq!(unit.heading_path, ["4 Verification", "4.2 Thermal tests"]);
             assert_eq!(unit.clause.as_deref(), Some("4.2"));
         }
+    }
+
+    #[test]
+    fn text_hash_con_spazi_normalizzati() {
+        assert_eq!(text_hash("abc"), "a9993e364706816a");
+        assert_eq!(text_hash("  a   b	c "), text_hash("a b c"));
     }
 
     #[test]

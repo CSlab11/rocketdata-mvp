@@ -97,6 +97,7 @@
 - REQ-102 implementato — Espressioni con la sintassi del crate regex; ogni espressione non compilabile è un errore del controllo (`rocket-tag/src/rules.rs`)
 - REQ-114 implementato — File JSON di uscita per ogni esecuzione di un classificatore, con il comando classify rules (`rocket-tag/Cargo.lock`, `rocket-tag/Cargo.toml`, `rocket-tag/src/lib.rs`, `rocket-tag/src/main.rs`, `rocket-tag/src/output.rs`, `rocket-tag/tests/cli.rs`)
 - REQ-115 implementato — Elementi di uscita con documento, righe ed etichette, un valore per faccetta (`rocket-tag/src/iterate.rs`, `rocket-tag/src/main.rs`, `rocket-tag/src/output.rs`, `rocket-tag/tests/cli.rs`)
+- REQ-116 implementato — Tipo di unità, text_hash, confidenza per faccetta e dell'unità in ogni elemento (`rocket-tag/Cargo.lock`, `rocket-tag/Cargo.toml`, `rocket-tag/src/markdown.rs`, `rocket-tag/src/output.rs`, `rocket-tag/tests/cli.rs`)
 
 ## 2026-10-25
 - REQ-068 richiesto — search-rm3: opzione --heading-weight, maggiore di 1, predefinita 3

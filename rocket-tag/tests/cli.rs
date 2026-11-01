@@ -68,6 +68,24 @@ fn elementi_con_documento_righe_ed_etichette() {
     assert_eq!(item["labels"]["flags"], serde_json::json!([]));
 }
 
+/// Tipo di unità, `text_hash`, confidenze e regole (REQ-116).
+#[test]
+fn elementi_con_tipo_hash_e_confidenze() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("a.md"), "- The unit shall operate.\n").unwrap();
+    let out = dir.path().join("rules.json");
+    assert!(classify_rules(dir.path(), &out).status.success());
+    let saved: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&out).unwrap()).unwrap();
+    let item = &saved["items"][0];
+    assert_eq!(item["kind"], "list_item");
+    assert_eq!(item["text_hash"].as_str().unwrap().len(), 16);
+    let confidences = item["confidence"].as_object().unwrap();
+    assert_eq!(confidences.len(), 6);
+    let lowest = confidences.values().map(|c| c.as_f64().unwrap()).fold(1.0, f64::min);
+    assert_eq!(item["unit_confidence"].as_f64().unwrap(), lowest);
+    assert_eq!(item["rule_ids"]["nature"], "req-modal");
+}
+
 /// Il crate si compila e si esegue da solo, senza gli altri tool (REQ-079).
 #[test]
 fn si_esegue_da_solo() {

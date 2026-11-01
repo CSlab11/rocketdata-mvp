@@ -9,6 +9,7 @@ use serde_json::{Map, Value};
 
 use crate::classifier::Decision;
 use crate::iterate::Job;
+use crate::markdown::{self, Kind};
 
 /// Etichette di un'unità.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -16,17 +17,31 @@ pub struct Item {
     pub document: String,
     pub line_start: usize,
     pub line_end: usize,
+    pub kind: Kind,
+    pub text_hash: String,
     /// Un valore per faccetta (REQ-115).
     pub labels: Map<String, Value>,
+    pub confidence: Map<String, Value>,
+    /// Minimo delle confidenze per faccetta (REQ-116).
+    pub unit_confidence: f64,
+    /// Solo per il classificatore a regole.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rule_ids: Option<Map<String, Value>>,
 }
 
 impl Item {
     pub fn new(job: &Job, decision: Decision) -> Item {
+        let lowest = decision.confidence.values().filter_map(Value::as_f64).reduce(f64::min);
         Item {
             document: job.document.clone(),
             line_start: job.unit.line_start,
             line_end: job.unit.line_end,
+            kind: job.unit.kind,
+            text_hash: markdown::text_hash(&job.unit.text),
             labels: decision.labels,
+            confidence: decision.confidence,
+            unit_confidence: lowest.unwrap_or(0.0),
+            rule_ids: Some(decision.rule_ids).filter(|ids| !ids.is_empty()),
         }
     }
 }
@@ -86,7 +101,17 @@ mod tests {
     use super::*;
 
     fn item(document: &str, line_start: usize) -> Item {
-        Item { document: document.into(), line_start, line_end: line_start, labels: Map::new() }
+        Item {
+            document: document.into(),
+            line_start,
+            line_end: line_start,
+            kind: Kind::Paragraph,
+            text_hash: String::new(),
+            labels: Map::new(),
+            confidence: Map::new(),
+            unit_confidence: 0.0,
+            rule_ids: None,
+        }
     }
 
     #[test]
