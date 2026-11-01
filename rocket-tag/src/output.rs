@@ -79,7 +79,8 @@ impl Output {
         }
     }
 
-    /// Scrive il file, con gli elementi per documento e poi per riga.
+    /// Scrive il file, con gli elementi per documento e poi per riga. Passa da un file temporaneo
+    /// e una rinomina: un'interruzione non lascia mai un JSON a metà (REQ-117).
     pub fn write(&mut self, path: &Path) -> Result<(), String> {
         self.items.sort_by(|a, b| (&a.document, a.line_start).cmp(&(&b.document, b.line_start)));
         self.skipped.sort_by(|a, b| (&a.document, a.line_start).cmp(&(&b.document, b.line_start)));
@@ -87,7 +88,10 @@ impl Output {
         if let Some(dir) = path.parent().filter(|d| !d.as_os_str().is_empty()) {
             fs::create_dir_all(dir).map_err(|e| format!("impossibile creare {}: {e}", dir.display()))?;
         }
-        fs::write(path, json).map_err(|e| format!("impossibile scrivere {}: {e}", path.display()))
+        let mut temporary = path.as_os_str().to_os_string();
+        temporary.push(".tmp");
+        fs::write(&temporary, json).map_err(|e| format!("impossibile scrivere {}: {e}", path.display()))?;
+        fs::rename(&temporary, path).map_err(|e| format!("impossibile scrivere {}: {e}", path.display()))
     }
 
     pub fn read(path: &Path) -> Result<Output, String> {
@@ -112,6 +116,20 @@ mod tests {
             unit_confidence: 0.0,
             rule_ids: None,
         }
+    }
+
+    #[test]
+    fn la_scrittura_non_lascia_file_a_meta() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("out.json");
+        // Un'esecuzione interrotta durante la scrittura lascia solo il temporaneo.
+        Output::new("1", "a".into()).write(&path).unwrap();
+        fs::write(dir.path().join("out.json.tmp"), "{ interrotto").unwrap();
+        assert_eq!(Output::read(&path).unwrap().classifier, "a", "il file resta valido");
+
+        Output::new("1", "b".into()).write(&path).unwrap();
+        assert_eq!(Output::read(&path).unwrap().classifier, "b");
+        assert!(!dir.path().join("out.json.tmp").exists());
     }
 
     #[test]
