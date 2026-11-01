@@ -1,6 +1,6 @@
 @echo off
 rem Arresta il server di gui avviato da start.cmd, insieme ai processi figli
-rem (es. un doc-ripper in corso) (REQ-037).
+rem (es. un doc-ripper o un rocket-tag in corso) (REQ-149).
 setlocal
 
 set "PIDFILE=%LOCALAPPDATA%\rocketdata-gui\gui.pid"

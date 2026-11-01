@@ -44,6 +44,9 @@ fn avvio_e_arresto_con_gli_script() {
     let pid_file = local.path().join("rocketdata-gui/gui.pid");
     let gui = plain_canonical(dir.path()).join("gui.exe");
     let doc_ripper = plain_canonical(dir.path()).join("doc-ripper.exe");
+    let rocket_tag = plain_canonical(dir.path()).join("rocket-tag.exe");
+    let fake_tag = common::gui_exe().parent().unwrap().join("examples/fake_rocket_tag.exe");
+    fs::copy(fake_tag, &rocket_tag).unwrap();
 
     let started = script(dir.path(), "start.cmd", &["--no-browser"], local.path());
     let pid: u32 = started
@@ -58,7 +61,7 @@ fn avvio_e_arresto_con_gli_script() {
     assert_eq!(again, format!("gui e' gia' in esecuzione (PID {pid})."));
     assert_eq!(running_from(&gui), 1, "avviata una seconda gui");
 
-    // Un doc-ripper in corso viene terminato insieme al server.
+    // Un doc-ripper e un rocket-tag in corso vengono terminati insieme al server.
     let src = tempfile::tempdir().unwrap();
     fs::write(src.path().join("lento"), "").unwrap();
     let port = listening_port(pid);
@@ -70,11 +73,20 @@ fn avvio_e_arresto_con_gli_script() {
         .status();
     assert_eq!(status, 202);
     assert!(wait_running(&doc_ripper, 1));
+    let body = serde_json::json!({ "src": src.path(), "classifier": "rules" }).to_string();
+    let status = ureq::post(&format!("http://127.0.0.1:{port}/api/classify/run"))
+        .header("Content-Type", "application/json")
+        .send(body.as_str())
+        .unwrap()
+        .status();
+    assert_eq!(status, 202);
+    assert!(wait_running(&rocket_tag, 1));
 
     let stopped = script(dir.path(), "stop.cmd", &[], local.path());
     assert_eq!(stopped, format!("gui arrestato (PID {pid})."));
     assert!(wait_running(&gui, 0));
     assert!(wait_running(&doc_ripper, 0));
+    assert!(wait_running(&rocket_tag, 0));
     assert!(!pid_file.exists());
 
     assert_eq!(script(dir.path(), "stop.cmd", &[], local.path()), "gui non risulta in esecuzione.");
