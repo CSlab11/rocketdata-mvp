@@ -2,7 +2,7 @@ use std::ffi::OsStr;
 use std::fs;
 use std::os::windows::ffi::OsStrExt;
 use std::os::windows::fs::MetadataExt;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::process::Stdio;
 
 use tokio::process::Command;
@@ -32,6 +32,13 @@ pub fn index_dir(src: &Path) -> Result<PathBuf, String> {
         }
     }
     Ok(dir)
+}
+
+/// Percorso relativo di un file `.md`, senza `..` né radice.
+pub fn is_relative_markdown(file: &Path) -> bool {
+    let inside = file.components().all(|c| matches!(c, Component::Normal(_)));
+    let is_md = file.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("md"));
+    !file.as_os_str().is_empty() && inside && is_md
 }
 
 /// La cartella esiste ma non è mai stata indicizzata: `.index` manca o è vuota (REQ-078).

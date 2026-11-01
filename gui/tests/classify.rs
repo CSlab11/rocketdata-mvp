@@ -236,6 +236,36 @@ fn risultati_nella_richiesta() {
     assert!(body.contains("nessun risultato"));
 }
 
+/// Un `document` che esce dalla cartella non si legge (REQ-146).
+#[test]
+fn percorsi_fuori_dalla_cartella_rifiutati() {
+    let (_dir, exe) = install_with_fake_tag();
+    let gui = Gui::start(&exe);
+    let parent = tempfile::tempdir().unwrap();
+    let folder = parent.path().join("documenti");
+    fs::create_dir(&folder).unwrap();
+    fs::write(folder.join("a.md"), "Interno.\n").unwrap();
+    fs::write(parent.path().join("segreto.md"), "Segreto.\n").unwrap();
+    let src = encoded(folder.to_str().unwrap());
+    let text = |document: &str| get(&gui, &format!("/api/classify/text?src={src}&document={}", encoded(document)));
+
+    assert_eq!(text("a.md"), (200, "Interno.\n".to_string()));
+    for document in ["../segreto.md", r"..\segreto.md", parent.path().join("segreto.md").to_str().unwrap(), "a.txt"] {
+        let (status, body) = text(document);
+        assert_eq!(status, 403, "{document}");
+        assert!(body.contains("fuori dalla cartella"), "{body}");
+        assert!(!body.contains("Segreto."));
+    }
+    assert!(text("manca.md").1.contains("non esiste"));
+
+    let link = folder.join("uscita");
+    let junction = Command::new("cmd").args(["/c", "mklink", "/J"]).arg(&link).arg(parent.path()).output().unwrap();
+    assert!(junction.status.success());
+    let (status, body) = text("uscita/segreto.md");
+    assert_eq!(status, 403, "giunzione verso l'esterno");
+    assert!(!body.contains("Segreto."));
+}
+
 #[test]
 fn richieste_non_valide() {
     let (_dir, exe) = install_with_fake_tag();

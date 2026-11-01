@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
+use crate::search;
 use crate::settings::ConfigPaths;
 
 /// Classificatore di rocket-tag.
@@ -46,6 +47,22 @@ impl Config {
             examples: chosen(&paths.examples, self.examples),
         }
     }
+}
+
+/// Testo del file Markdown `document`, solo se il percorso risolto resta dentro `src`, anche
+/// seguendo collegamenti: `document` arriva da un file, non dall'utente (REQ-146).
+pub fn read_document(src: &Path, document: &str) -> Result<String, String> {
+    let outside = || format!("percorso fuori dalla cartella: {document}");
+    if !search::is_relative_markdown(Path::new(document)) {
+        return Err(outside());
+    }
+    let path = src.join(document);
+    let (root, resolved) = (src.canonicalize().map_err(|e| e.to_string())?, path.canonicalize());
+    let resolved = resolved.map_err(|_| format!("il file non esiste più: {document}"))?;
+    if !resolved.starts_with(&root) {
+        return Err(outside());
+    }
+    std::fs::read_to_string(resolved).map_err(|e| format!("impossibile leggere {document}: {e}"))
 }
 
 /// Server LLM da usare.

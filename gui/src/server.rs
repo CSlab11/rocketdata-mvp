@@ -80,6 +80,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/classify/events", get(classify_events))
         .route("/api/classify/cancel", post(classify_cancel))
         .route("/api/classify/results", get(classify_results))
+        .route("/api/classify/text", get(classify_text))
         .route("/api/shutdown", post(shutdown))
         .route("/api/pick-folder", post(pick_folder))
         .route("/api/settings", get(get_settings))
@@ -271,6 +272,17 @@ async fn classify_results(Query(request): Query<ResultsRequest>) -> Result<Json<
     Ok(Json(output))
 }
 
+#[derive(Deserialize)]
+struct TextRequest {
+    src: String,
+    document: String,
+}
+
+/// Testo di un documento, per mostrare le unità (REQ-142, REQ-146).
+async fn classify_text(Query(request): Query<TextRequest>) -> Result<String, (StatusCode, String)> {
+    classify::read_document(std::path::Path::new(request.src.trim()), &request.document).map_err(|e| (StatusCode::FORBIDDEN, e))
+}
+
 /// Interrompe la classificazione in corso (REQ-137).
 async fn classify_cancel(State(state): State<Arc<AppState>>) -> Result<StatusCode, (StatusCode, String)> {
     state.classifier.cancel().map_err(|e| (StatusCode::CONFLICT, e))?;
@@ -410,9 +422,7 @@ async fn search_open(
 ) -> Result<StatusCode, (StatusCode, String)> {
     let src = search_src(&request.src)?;
     let file = std::path::Path::new(&request.file);
-    let inside = file.components().all(|c| matches!(c, std::path::Component::Normal(_)));
-    let is_md = file.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("md"));
-    if request.file.is_empty() || !inside || !is_md {
+    if !search::is_relative_markdown(file) {
         return Err((StatusCode::FORBIDDEN, "si possono aprire solo i file .md della cartella indicizzata".into()));
     }
     let path = src.join(file);
