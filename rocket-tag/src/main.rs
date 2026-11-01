@@ -124,9 +124,10 @@ fn run_classify_rules(
     };
     let jobs = iterate::jobs(&iterate::documents(input, exclude)?, &info)?;
     let mut result = Output::new(&schema.version, format!("rules-v{}", rules.version));
-    for job in &jobs {
+    for (index, job) in jobs.iter().enumerate() {
         let decision = rules.classify(&schema, &job.unit.text, &job.context());
         result.items.push(Item::new(job, decision));
+        println!("[{}/{}] {}", index + 1, jobs.len(), job.document);
     }
     result.write(output)
 }

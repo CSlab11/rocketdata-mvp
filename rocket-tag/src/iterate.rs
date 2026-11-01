@@ -179,7 +179,7 @@ mod tests {
             ("sotto/index.md", "x\n"),
             (".indexato/d.md", "x\n"),
         ]);
-        let exclude = ["INDEX.md".to_string(), r"\.index\".replace('\\', "")];
+        let exclude = ["INDEX.md".to_string(), ".index/".to_string()];
         let names: Vec<_> = documents(dir.path(), &exclude).unwrap().into_iter().map(|d| d.name).collect();
         assert_eq!(names, [".indexato/d.md", "a.md", "sotto/index.md"], "solo i percorsi indicati, dalla radice");
     }

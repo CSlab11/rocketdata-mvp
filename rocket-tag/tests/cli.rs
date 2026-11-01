@@ -143,6 +143,20 @@ fn opzione_exclude() {
     assert_eq!(items[0]["document"], "a.md");
 }
 
+/// Una riga di avanzamento su stdout per ogni unità elaborata (REQ-129).
+#[test]
+fn righe_di_avanzamento() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir(dir.path().join("sotto")).unwrap();
+    std::fs::write(dir.path().join("a.md"), "Uno.\n\nDue.\n").unwrap();
+    std::fs::write(dir.path().join("sotto/b.md"), "Tre.\n").unwrap();
+    let run = classify_rules(dir.path(), &dir.path().join("rules.json"));
+    assert!(run.status.success());
+    let stdout = String::from_utf8_lossy(&run.stdout);
+    let lines: Vec<_> = stdout.lines().collect();
+    assert_eq!(lines, ["[1/3] a.md", "[2/3] a.md", "[3/3] sotto/b.md"]);
+}
+
 /// Il crate si compila e si esegue da solo, senza gli altri tool (REQ-079).
 #[test]
 fn si_esegue_da_solo() {

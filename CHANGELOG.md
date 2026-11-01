@@ -101,6 +101,7 @@
 - REQ-117 implementato — File di uscita sempre valido: scrittura su temporaneo e rinomina (`rocket-tag/src/output.rs`)
 - REQ-089 implementato — Lato e tipo del documento dalle etichette umane, poi da rules.yaml, altrimenti sconosciuti (`rocket-tag/src/classifier.rs`, `rocket-tag/src/iterate.rs`, `rocket-tag/src/labels.rs`, `rocket-tag/src/lib.rs`, `rocket-tag/src/main.rs`, `rocket-tag/src/rules.rs`, `rocket-tag/tests/cli.rs`)
 - REQ-128 implementato — Opzione --exclude ripetibile per file e cartelle, senza esclusioni predefinite (`rocket-tag/src/iterate.rs`, `rocket-tag/src/main.rs`, `rocket-tag/tests/cli.rs`)
+- REQ-129 implementato — Riga di avanzamento su stdout per ogni unità elaborata (`rocket-tag/src/iterate.rs`, `rocket-tag/src/main.rs`, `rocket-tag/tests/cli.rs`)
 
 ## 2026-10-25
 - REQ-068 richiesto — search-rm3: opzione --heading-weight, maggiore di 1, predefinita 3
