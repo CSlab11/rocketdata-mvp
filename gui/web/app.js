@@ -553,6 +553,10 @@ async function renderClassify(content) {
     if (!response.ok) showError(await response.text());
   });
 
+  // Proposta: l'ultima cartella di destinazione usata da doc-ripper (REQ-135, REQ-035).
+  const saved = await fetch("/api/settings").then((r) => r.json());
+  if (!folder.value) folder.defaultValue = saved.dst;
+
   // rocket-tag.exe deve trovarsi accanto a gui.exe (REQ-134).
   const status = await fetch("/api/classify/status").then((r) => r.json());
   if (!status.available) {

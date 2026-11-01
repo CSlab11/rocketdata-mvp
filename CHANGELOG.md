@@ -131,6 +131,7 @@
 - REQ-148 implementato — rocket-tag finto per i test di gui, senza dipendere dal tool reale (`gui/examples/fake_rocket_tag.rs`, `gui/tests/classify.rs`, `gui/tests/common/mod.rs`)
 - REQ-133 implementato — Schermata di classificazione che esegue rocket-tag come processo separato (`gui/src/classify.rs`, `gui/src/main.rs`, `gui/src/runner.rs`, `gui/src/server.rs`, `gui/tests/classify.rs`, `gui/web/app.js`, `gui/web/style.css`)
 - REQ-134 implementato — Ricerca di rocket-tag.exe accanto a gui.exe; se manca, errore e classificazione disabilitata (`gui/src/main.rs`, `gui/src/server.rs`, `gui/tests/rocket_tag_lookup.rs`, `gui/web/app.js`)
+- REQ-135 implementato — Ultima destinazione di doc-ripper proposta come cartella da classificare, modificabile con Sfoglia (`gui/tests/classify.rs`, `gui/web/app.js`)
 
 ## 2026-10-25
 - REQ-068 richiesto — search-rm3: opzione --heading-weight, maggiore di 1, predefinita 3

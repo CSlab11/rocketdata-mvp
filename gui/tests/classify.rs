@@ -91,6 +91,20 @@ fn la_schermata_e_nel_menu() {
     assert!(dom.contains(r#"id="classify-kind""#), "{dom}");
 }
 
+/// La schermata propone l'ultima destinazione di doc-ripper, modificabile con "Sfoglia" (REQ-135).
+#[test]
+fn propone_l_ultima_destinazione_di_doc_ripper() {
+    let (_dir, exe) = install_with_fake_tag();
+    let appdata = tempfile::tempdir().unwrap();
+    let settings = appdata.path().join("rocketdata-gui");
+    fs::create_dir(&settings).unwrap();
+    fs::write(settings.join("settings.json"), json!({"src": "C:\\origine", "dst": "C:\\convertiti"}).to_string()).unwrap();
+    let gui = Gui::start_with_appdata(&exe, appdata.path());
+    let dom = dump_dom(&gui.url("/#classify"));
+    assert!(dom.contains(r#"id="classify-src" type="text" spellcheck="false" autocomplete="off" value="C:\convertiti""#), "{dom}");
+    assert!(dom.contains(r#"<button id="classify-src-browse" type="button">Sfoglia…</button>"#), "{dom}");
+}
+
 /// I test usano un rocket-tag finto, senza dipendere dal tool reale (REQ-148).
 #[test]
 fn il_rocket_tag_finto_scrive_il_file_di_uscita() {
