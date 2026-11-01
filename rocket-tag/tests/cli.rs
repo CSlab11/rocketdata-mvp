@@ -157,6 +157,26 @@ fn righe_di_avanzamento() {
     assert_eq!(lines, ["[1/3] a.md", "[2/3] a.md", "[3/3] sotto/b.md"]);
 }
 
+/// Solo i file Markdown esistenti: niente conversioni, pulizia o scritture nei documenti (REQ-080).
+#[test]
+fn non_tocca_i_documenti() {
+    let dir = tempfile::tempdir().unwrap();
+    let docs = dir.path().join("docs");
+    std::fs::create_dir(&docs).unwrap();
+    std::fs::write(docs.join("a.md"), "Uno.\n").unwrap();
+    std::fs::write(docs.join("b.pdf"), "%PDF finto").unwrap();
+    std::fs::write(docs.join("c.docx"), "finto").unwrap();
+    let out = dir.path().join("rules.json");
+    let run = classify_rules(&docs, &out);
+    assert!(run.status.success());
+    let saved: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&out).unwrap()).unwrap();
+    assert_eq!(saved["items"].as_array().unwrap().len(), 1, "i file non Markdown si ignorano");
+    let mut names: Vec<_> = std::fs::read_dir(&docs).unwrap().map(|e| e.unwrap().file_name()).collect();
+    names.sort();
+    assert_eq!(names, ["a.md", "b.pdf", "c.docx"]);
+    assert_eq!(std::fs::read_to_string(docs.join("a.md")).unwrap(), "Uno.\n");
+}
+
 /// Il crate si compila e si esegue da solo, senza gli altri tool (REQ-079).
 #[test]
 fn si_esegue_da_solo() {
