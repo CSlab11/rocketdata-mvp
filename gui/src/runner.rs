@@ -1,3 +1,4 @@
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::{Arc, Mutex};
@@ -9,7 +10,7 @@ use tokio::sync::{broadcast, oneshot};
 
 use crate::summary::{self, Summary};
 
-/// Stato dell'ultima esecuzione di doc-ripper.
+/// Stato dell'ultima esecuzione di un tool.
 #[derive(Debug, Default, Clone, Serialize)]
 pub struct Snapshot {
     pub running: bool,
@@ -30,8 +31,10 @@ pub enum Event {
     End(Option<i32>),
 }
 
-/// Esegue doc-ripper come processo separato, uno alla volta (REQ-028).
+/// Esegue un tool come processo separato, una esecuzione alla volta (REQ-028, REQ-133).
 pub struct Runner {
+    /// Nome del tool nei messaggi di errore.
+    name: &'static str,
     state: Mutex<Snapshot>,
     events: broadcast::Sender<Event>,
     /// Segnale per interrompere l'esecuzione in corso (REQ-034).
@@ -40,7 +43,7 @@ pub struct Runner {
 
 impl Default for Runner {
     fn default() -> Self {
-        Runner { state: Mutex::default(), events: broadcast::channel(1024).0, cancel: Mutex::default() }
+        Runner::new("doc-ripper")
     }
 }
 
@@ -48,6 +51,10 @@ impl Default for Runner {
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 impl Runner {
+    pub fn new(name: &'static str) -> Runner {
+        Runner { name, state: Mutex::default(), events: broadcast::channel(1024).0, cancel: Mutex::default() }
+    }
+
     /// Runner con un'esecuzione già terminata su `dst`, per i test.
     #[cfg(test)]
     pub fn finished(dst: &str) -> Runner {
@@ -67,17 +74,19 @@ impl Runner {
         (state.clone(), self.events.subscribe())
     }
 
-    /// Avvia `exe --src <src> --dst <dst>`; errore se un'esecuzione è già in corso.
-    pub fn start(self: &Arc<Self>, exe: &Path, src: &str, dst: &str) -> Result<(), String> {
+    /// Avvia `exe` con `args` e le variabili d'ambiente `envs`; `dst` è la cartella su cui lavora.
+    /// Errore se un'esecuzione è già in corso.
+    pub fn start(self: &Arc<Self>, exe: &Path, args: &[OsString], envs: &[(&str, String)], dst: &str) -> Result<(), String> {
         {
             let mut state = self.state.lock().unwrap();
             if state.running {
-                return Err("doc-ripper è già in esecuzione".into());
+                return Err(format!("{} è già in esecuzione", self.name));
             }
             *state = Snapshot { running: true, dst: Some(dst.to_string()), ..Snapshot::default() };
         }
         let spawned = Command::new(exe)
-            .args(["--src", src, "--dst", dst])
+            .args(args)
+            .envs(envs.iter().map(|(name, value)| (*name, value)))
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -88,7 +97,7 @@ impl Runner {
             Ok(child) => child,
             Err(error) => {
                 self.state.lock().unwrap().running = false;
-                return Err(format!("impossibile avviare doc-ripper: {error}"));
+                return Err(format!("impossibile avviare {}: {error}", self.name));
             }
         };
 
@@ -131,7 +140,7 @@ impl Runner {
         let signal = self.cancel.lock().unwrap().take();
         match signal.map(|s| s.send(())) {
             Some(Ok(())) => Ok(()),
-            _ => Err("nessuna esecuzione di doc-ripper in corso".into()),
+            _ => Err(format!("nessuna esecuzione di {} in corso", self.name)),
         }
     }
 

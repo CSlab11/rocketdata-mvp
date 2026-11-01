@@ -2,6 +2,7 @@
 #[cfg(not(windows))]
 compile_error!("gui supporta solo Windows 10 e Windows 11");
 
+mod classify;
 mod dialogs;
 mod runner;
 mod search;
@@ -53,8 +54,10 @@ async fn main() {
         port,
         doc_ripper: find_doc_ripper(),
         search_rm3: find_search_rm3(),
+        rocket_tag: find_rocket_tag(),
         last_search: Default::default(),
         runner: Default::default(),
+        classifier: Arc::new(runner::Runner::new("rocket-tag")),
         shutdown: Arc::clone(&shutdown),
         folder_picker: dialogs::system_folder_picker(),
         picking: Default::default(),
@@ -80,6 +83,12 @@ async fn main() {
 /// `doc-ripper.exe` nella cartella di `gui.exe`, se presente (REQ-029).
 fn find_doc_ripper() -> Option<PathBuf> {
     let path = std::env::current_exe().ok()?.parent()?.join("doc-ripper.exe");
+    path.is_file().then_some(path)
+}
+
+/// `rocket-tag.exe` nella cartella di `gui.exe`, se presente (REQ-133).
+fn find_rocket_tag() -> Option<PathBuf> {
+    let path = std::env::current_exe().ok()?.parent()?.join("rocket-tag.exe");
     path.is_file().then_some(path)
 }
 

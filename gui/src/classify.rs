@@ -1,0 +1,67 @@
+//! Esecuzione di rocket-tag come processo separato: gui ne conosce i comandi e il file di uscita.
+
+use std::ffi::OsString;
+use std::path::{Path, PathBuf};
+
+use serde::Deserialize;
+
+/// Classificatore di rocket-tag.
+#[derive(Debug, Clone, Copy, PartialEq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Classifier {
+    Rules,
+    Llm,
+}
+
+/// File di configurazione di rocket-tag.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Config {
+    pub schema: PathBuf,
+    pub rules: PathBuf,
+    pub guide: PathBuf,
+    pub examples: PathBuf,
+}
+
+impl Config {
+    /// I file di `rocket-tag-config\` nella cartella di `exe`.
+    pub fn beside(exe: &Path) -> Config {
+        let dir = exe.with_file_name("rocket-tag-config");
+        Config {
+            schema: dir.join("label_schema.json"),
+            rules: dir.join("rules.yaml"),
+            guide: dir.join("prompt_guide.md"),
+            examples: dir.join("guide_examples.json"),
+        }
+    }
+}
+
+/// Server LLM da usare.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Server {
+    pub base_url: String,
+    pub model: String,
+}
+
+/// File di uscita del classificatore per la cartella `src`.
+pub fn output_file(src: &Path, classifier: Classifier) -> PathBuf {
+    src.join(match classifier {
+        Classifier::Rules => "rules.json",
+        Classifier::Llm => "llm.json",
+    })
+}
+
+/// Argomenti di `rocket-tag classify rules|llm` (REQ-133).
+pub fn arguments(classifier: Classifier, src: &Path, config: &Config, server: Option<&Server>) -> Vec<OsString> {
+    let name = match classifier {
+        Classifier::Rules => "rules",
+        Classifier::Llm => "llm",
+    };
+    let mut args: Vec<OsString> = vec!["classify".into(), name.into(), src.into(), "-o".into()];
+    args.push(output_file(src, classifier).into());
+    args.extend(["--schema".into(), config.schema.clone().into(), "--rules".into(), config.rules.clone().into()]);
+    if let Some(server) = server {
+        args.extend(["--guide".into(), config.guide.clone().into(), "--examples".into(), config.examples.clone().into()]);
+        args.extend(["--base-url".into(), server.base_url.clone().into(), "--model".into(), server.model.clone().into()]);
+    }
+    args
+}

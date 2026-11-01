@@ -14,6 +14,12 @@ const FUNCTIONS = [
     description: "Cerca nei file Markdown di una cartella con search-rm3.",
     render: renderSearch,
   },
+  {
+    id: "classify",
+    title: "Classificazione",
+    description: "Classifica i paragrafi dei file Markdown di una cartella con rocket-tag.",
+    render: renderClassify,
+  },
 ];
 
 function el(tag, attrs = {}, ...children) {
@@ -509,6 +515,43 @@ async function renderSearch(content) {
     return;
   }
   indexButton.disabled = searchButton.disabled = false;
+}
+
+// Classificazione con rocket-tag, eseguito dal server come processo separato (REQ-133).
+async function renderClassify(content) {
+  const alert = el("div", { class: "alert error", role: "alert", hidden: "" });
+  const { input: folder, row: folderRow } = folderField("classify-src", "Cartella dei file Markdown");
+  const kind = el(
+    "select",
+    { id: "classify-kind" },
+    el("option", { value: "rules" }, "Regole"),
+    el("option", { value: "llm" }, "LLM"),
+  );
+  const start = el("button", { id: "classify-start", class: "primary", type: "button" }, "Classifica");
+  const result = el("div", { id: "classify-result", class: "alert", hidden: "" });
+  content.append(
+    alert,
+    folderRow,
+    el("div", { class: "field" }, el("label", { for: "classify-kind" }, "Classificatore"), el("div", { class: "field-row" }, kind)),
+    el("div", { class: "actions" }, start),
+    result,
+  );
+
+  const showError = (message) => {
+    alert.textContent = message;
+    alert.hidden = false;
+  };
+
+  start.addEventListener("click", async () => {
+    alert.hidden = true;
+    const body = { src: folder.value, classifier: kind.value };
+    const response = await fetch("/api/classify/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) showError(await response.text());
+  });
 }
 
 // Connessioni in tempo reale aperte: vanno chiuse prima di spegnere il server.

@@ -16,6 +16,7 @@ use tokio_stream::{Stream, StreamExt};
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use crate::classify::{self, Classifier, Config, Server};
 use crate::dialogs::{FolderPicker, Opener, Opening};
 use crate::search;
 use crate::settings::{self, Settings};
@@ -33,9 +34,13 @@ pub struct AppState {
     pub doc_ripper: Option<PathBuf>,
     /// `search-rm3.exe` accanto a `gui.exe`, se presente (REQ-069).
     pub search_rm3: Option<PathBuf>,
+    /// `rocket-tag.exe` accanto a `gui.exe`, se presente (REQ-133).
+    pub rocket_tag: Option<PathBuf>,
     /// Ultima ricerca riuscita dall'avvio del server (REQ-077).
     pub last_search: std::sync::Mutex<Option<LastSearch>>,
     pub runner: Arc<Runner>,
+    /// Esecuzioni di rocket-tag (REQ-133).
+    pub classifier: Arc<Runner>,
     /// Segnala al server di spegnersi (REQ-039).
     pub shutdown: Arc<tokio::sync::Notify>,
     /// Selettore di cartelle (REQ-030); sostituibile nei test.
@@ -67,6 +72,8 @@ pub fn router(state: AppState) -> Router {
         .route("/api/search/open", post(search_open))
         .route("/api/search/last", get(search_last))
         .route("/api/search/stale", get(search_stale))
+        .route("/api/classify/run", post(classify_run))
+        .route("/api/classify/output", get(classify_output))
         .route("/api/shutdown", post(shutdown))
         .route("/api/pick-folder", post(pick_folder))
         .route("/api/settings", get(get_settings))
@@ -112,7 +119,8 @@ async fn doc_ripper_run(
         return Err((StatusCode::BAD_REQUEST, "indicare la cartella di origine e quella di destinazione".into()));
     }
     let (src, dst) = (request.src.trim(), request.dst.trim());
-    state.runner.start(exe, src, dst).map_err(|e| (StatusCode::CONFLICT, e))?;
+    let args = ["--src".into(), src.into(), "--dst".into(), dst.into()];
+    state.runner.start(exe, &args, &[], dst).map_err(|e| (StatusCode::CONFLICT, e))?;
     // Ultime cartelle usate, riproposte ai prossimi avvii (REQ-035).
     if let Some(path) = &state.settings_path {
         let change = |s: &mut Settings| {
@@ -136,6 +144,45 @@ async fn search_status(State(state): State<Arc<AppState>>) -> Json<DocRipperStat
             message: Some("search-rm3.exe non trovato nella cartella di gui.exe: copiarlo lì e riavviare la gui.".into()),
         },
     })
+}
+
+#[derive(Deserialize)]
+struct ClassifyRequest {
+    src: String,
+    classifier: Classifier,
+    base_url: Option<String>,
+    model: Option<String>,
+}
+
+/// Avvia rocket-tag sulla cartella dei file Markdown (REQ-133).
+async fn classify_run(
+    State(state): State<Arc<AppState>>,
+    Json(request): Json<ClassifyRequest>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    let exe = state.rocket_tag.as_deref().ok_or((StatusCode::SERVICE_UNAVAILABLE, "rocket-tag.exe non disponibile".to_string()))?;
+    let src = request.src.trim();
+    if !std::path::Path::new(src).is_dir() {
+        return Err((StatusCode::BAD_REQUEST, "indicare una cartella di file Markdown esistente".into()));
+    }
+    let server = match request.classifier {
+        Classifier::Rules => None,
+        Classifier::Llm => Some(llm_server(&request)?),
+    };
+    let args = classify::arguments(request.classifier, std::path::Path::new(src), &Config::beside(exe), server.as_ref());
+    state.classifier.start(exe, &args, &[], src).map_err(|e| (StatusCode::CONFLICT, e))?;
+    Ok(StatusCode::ACCEPTED)
+}
+
+fn llm_server(request: &ClassifyRequest) -> Result<Server, (StatusCode, String)> {
+    let filled = |value: &Option<String>| value.as_deref().map(str::trim).filter(|v| !v.is_empty()).map(str::to_string);
+    match (filled(&request.base_url), filled(&request.model)) {
+        (Some(base_url), Some(model)) => Ok(Server { base_url, model }),
+        _ => Err((StatusCode::BAD_REQUEST, "indicare URL e modello del server LLM".into())),
+    }
+}
+
+async fn classify_output(State(state): State<Arc<AppState>>) -> Json<Snapshot> {
+    Json(state.classifier.snapshot())
 }
 
 #[derive(Deserialize)]
@@ -459,8 +506,10 @@ mod tests {
             port: 4000,
             doc_ripper: None,
             search_rm3: None,
+            rocket_tag: None,
             last_search: Default::default(),
             runner: Arc::default(),
+            classifier: Arc::default(),
             shutdown: Arc::default(),
             folder_picker,
             picking: AtomicBool::new(false),
