@@ -229,6 +229,61 @@ fn errori_con_codice_di_uscita_e_stderr() {
     }
 }
 
+/// Report Markdown e riga di metriche nello storico JSONL (REQ-121).
+#[test]
+fn evaluate_scrive_report_e_storico() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("a.md"), "The unit shall operate.\n\nAltro testo qui.\n").unwrap();
+    let out = dir.path().join("rules.json");
+    assert!(classify_rules(dir.path(), &out).status.success());
+    let labels = dir.path().join("etichette.jsonl");
+    let right = serde_json::json!({"level": "paragraph", "document": "a.md", "line_start": 1, "line_end": 1,
+        "facets": {"nature": "requirement", "domain": "technical", "destination": "P",
+                   "required_action": "none", "extraction_quality": "ok", "flags": []}});
+    let wrong = r#"{"level":"paragraph","document":"a.md","line_start":3,"line_end":3,"facets":{"nature":"mai"}}"#;
+    std::fs::write(&labels, format!("{right}\n{wrong}\n")).unwrap();
+    let (report, metrics) = (dir.path().join("r.md"), dir.path().join("m.jsonl"));
+    for _ in 0..2 {
+        let run = rocket_tag()
+            .arg("evaluate")
+            .arg(&labels)
+            .arg(&out)
+            .args(["--schema", "config/label_schema.json", "--report"])
+            .arg(&report)
+            .arg("--metrics")
+            .arg(&metrics)
+            .output()
+            .unwrap();
+        assert!(run.status.success(), "{}", String::from_utf8_lossy(&run.stderr));
+        assert!(String::from_utf8_lossy(&run.stdout).contains("1 unità valutate, 1 etichette da rivedere"));
+    }
+    let text = std::fs::read_to_string(&report).unwrap();
+    assert!(text.starts_with("# Valutazione – rules-v0.1.0"));
+    assert!(text.contains("| Faccetta | Accuratezza | Macro-F1 | Copertura | N |"));
+    assert!(text.contains("| nature | 100.0% | 1.00 | 100% | 1 |"));
+    assert!(text.contains("## nature\n\n| Valore | Precisione"));
+    let history = std::fs::read_to_string(&metrics).unwrap();
+    let lines: Vec<_> = history.lines().collect();
+    assert_eq!(lines.len(), 2, "una riga per esecuzione");
+    let first: serde_json::Value = serde_json::from_str(lines[0]).unwrap();
+    assert_eq!(first["classifier"], "rules-v0.1.0");
+    assert_eq!(first["n_eval"], 1);
+    assert_eq!(first["facets"]["nature"]["accuracy"], 1.0);
+}
+
+#[test]
+fn evaluate_senza_abbinamenti_e_un_errore() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("a.md"), "Testo.\n").unwrap();
+    let out = dir.path().join("rules.json");
+    assert!(classify_rules(dir.path(), &out).status.success());
+    let labels = dir.path().join("etichette.jsonl");
+    std::fs::write(&labels, "").unwrap();
+    let run = rocket_tag().arg("evaluate").arg(&labels).arg(&out).args(["--schema", "config/label_schema.json"]).output().unwrap();
+    assert!(!run.status.success());
+    assert!(String::from_utf8_lossy(&run.stderr).contains("nessuna etichetta valida"));
+}
+
 /// Il crate si compila e si esegue da solo, senza gli altri tool (REQ-079).
 #[test]
 fn si_esegue_da_solo() {

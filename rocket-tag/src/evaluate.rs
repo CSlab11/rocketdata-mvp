@@ -1,8 +1,9 @@
 //! Valutazione di un file di uscita contro le etichette umane (appendici F e G).
 
 use std::collections::{BTreeMap, HashMap};
+use std::time::SystemTime;
 
-use serde_json::{Map, Value};
+use serde_json::{Map, Value, json};
 
 use crate::labels;
 use crate::output::{Item, Output};
@@ -177,6 +178,109 @@ fn bands(samples: &[Sample]) -> Vec<Band> {
         .collect()
 }
 
+/// Risultato di una valutazione.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Evaluation {
+    pub timestamp: String,
+    pub schema_version: String,
+    pub classifier: String,
+    pub evaluated: usize,
+    pub invalid: usize,
+    pub misaligned: usize,
+    pub missing: usize,
+    pub facets: Vec<FacetMetrics>,
+}
+
+impl Evaluation {
+    /// Metriche di tutte le faccette dello schema (REQ-119).
+    pub fn new(schema: &Schema, records: &[Value], output: &Output) -> Result<Evaluation, String> {
+        let pairing = pair(schema, records, output);
+        if pairing.matched.is_empty() {
+            return Err("nessuna etichetta valida con un elemento corrispondente nel file di uscita".to_string());
+        }
+        Ok(Evaluation {
+            timestamp: humantime::format_rfc3339_seconds(SystemTime::now()).to_string(),
+            schema_version: schema.version.clone(),
+            classifier: output.classifier.clone(),
+            evaluated: pairing.matched.len(),
+            invalid: pairing.invalid,
+            misaligned: pairing.misaligned,
+            missing: pairing.missing,
+            facets: schema.facets.iter().map(|facet| facet_metrics(facet, &pairing.matched)).collect(),
+        })
+    }
+
+    /// Report Markdown: tabella riassuntiva, poi per ogni faccetta valori, confusioni e fasce
+    /// (REQ-121).
+    pub fn report(&self) -> String {
+        let mut lines = vec![
+            format!("# Valutazione – {} contro le etichette umane", self.classifier),
+            String::new(),
+            format!(
+                "Schema v{} · {} unità valutate · {} etichette da rivedere escluse · {} non allineate · {} senza elemento · {}",
+                self.schema_version, self.evaluated, self.invalid, self.misaligned, self.missing, self.timestamp
+            ),
+            String::new(),
+            "| Faccetta | Accuratezza | Macro-F1 | Copertura | N |".to_string(),
+            "| --- | --- | --- | --- | --- |".to_string(),
+        ];
+        for facet in &self.facets {
+            lines.push(format!(
+                "| {} | {:.1}% | {:.2} | {:.0}% | {} |",
+                facet.facet,
+                facet.accuracy * 100.0,
+                facet.macro_f1,
+                facet.coverage * 100.0,
+                facet.count
+            ));
+        }
+        for facet in &self.facets {
+            lines.extend([
+                String::new(),
+                format!("## {}", facet.facet),
+                String::new(),
+                "| Valore | Precisione | Richiamo | F1 | Supporto | Predetti |".to_string(),
+                "| --- | --- | --- | --- | --- | --- |".to_string(),
+            ]);
+            let mut values: Vec<&ValueMetrics> = facet.values.iter().collect();
+            values.sort_by(|a, b| b.support.cmp(&a.support));
+            for value in values {
+                lines.push(format!(
+                    "| {} | {:.2} | {:.2} | {:.2} | {} | {} |",
+                    value.value, value.precision, value.recall, value.f1, value.support, value.predicted
+                ));
+            }
+            if !facet.confusions.is_empty() {
+                let list: Vec<String> =
+                    facet.confusions.iter().map(|c| format!("{} → {} ({})", c.gold, c.predicted, c.count)).collect();
+                lines.extend([String::new(), format!("Confusioni più frequenti (umano → predetto): {}", list.join("; "))]);
+            }
+            if !facet.bands.is_empty() {
+                let list: Vec<String> =
+                    facet.bands.iter().map(|b| format!("{}: {:.0}% (n={})", b.range, b.accuracy * 100.0, b.count)).collect();
+                lines.extend([String::new(), format!("Accuratezza per confidenza: {}", list.join("; "))]);
+            }
+        }
+        lines.join("\n") + "\n"
+    }
+
+    /// Riga dello storico JSONL (REQ-121).
+    pub fn history_line(&self) -> String {
+        let round = |value: f64| (value * 10000.0).round() / 10000.0;
+        let facets: Map<String, Value> = self
+            .facets
+            .iter()
+            .map(|f| {
+                let metrics = json!({"accuracy": round(f.accuracy), "macro_f1": round(f.macro_f1), "coverage": round(f.coverage)});
+                (f.facet.clone(), metrics)
+            })
+            .collect();
+        json!({"timestamp": self.timestamp, "schema_version": self.schema_version, "classifier": self.classifier,
+               "n_eval": self.evaluated, "facets": facets})
+        .to_string()
+    }
+}
+
 /// Abbina etichette di paragrafo ed elementi per documento, riga iniziale e riga finale; se la
 /// stessa unità compare più volte vale l'ultima riga (REQ-118).
 pub fn pair(schema: &Schema, records: &[Value], output: &Output) -> Pairing {
@@ -216,7 +320,6 @@ pub fn pair(schema: &Schema, records: &[Value], output: &Output) -> Pairing {
 mod tests {
     use super::*;
     use crate::markdown::Kind;
-    use serde_json::json;
 
     fn item(document: &str, line: usize, hash: &str) -> Item {
         Item {

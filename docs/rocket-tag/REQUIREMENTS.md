@@ -98,7 +98,7 @@ Provengono da [`classifier-handoff/requirements.md`](../../classifier-handoff/re
 | REQ-118 | La valutazione deve abbinare un file di uscita e un file di etichette umane (appendice F) per nome del documento, riga iniziale e riga finale; se entrambi hanno `text_hash` e differiscono, l'etichetta deve essere esclusa e contata come non allineata. | implementato | `rocket-tag/src/evaluate.rs`, `rocket-tag/src/lib.rs` |
 | REQ-119 | La valutazione deve calcolare per ogni faccetta accuratezza, macro-F1, copertura, precisione e richiamo per valore, confusioni più frequenti e accuratezza per fascia di confidenza (appendice G). | implementato | `rocket-tag/src/evaluate.rs` |
 | REQ-120 | La valutazione deve escludere e contare le etichette umane non valide per lo schema corrente. | implementato | `rocket-tag/src/evaluate.rs` |
-| REQ-121 | La valutazione deve produrre un report Markdown e aggiungere una riga di metriche a uno storico JSONL (appendice G). | aperto | — |
+| REQ-121 | La valutazione deve produrre un report Markdown e aggiungere una riga di metriche a uno storico JSONL (appendice G). | implementato | `rocket-tag/src/evaluate.rs`, `rocket-tag/src/main.rs`, `rocket-tag/tests/cli.rs` |
 
 ## Manutenzione dello schema
 

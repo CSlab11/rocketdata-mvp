@@ -1,5 +1,6 @@
 use std::collections::HashMap;
-use std::fs;
+use std::fs::{self, OpenOptions};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::Duration;
@@ -9,6 +10,7 @@ use serde_json::{Value, json};
 
 use rocket_tag::{iterate, labels};
 use rocket_tag::classifier::{Context, DocInfo};
+use rocket_tag::evaluate::Evaluation;
 use rocket_tag::llm::{self, Format, Llm, Run, Settings};
 use rocket_tag::output::{Item, Output};
 use rocket_tag::rules::RuleSet;
@@ -28,6 +30,24 @@ enum Command {
     Classify {
         #[command(subcommand)]
         command: ClassifyCommand,
+    },
+    /// Valuta un file di uscita contro le etichette umane
+    Evaluate {
+        /// Etichette umane (JSONL)
+        #[arg(value_name = "ETICHETTE")]
+        labels: PathBuf,
+        /// File di uscita di un classificatore
+        #[arg(value_name = "USCITA")]
+        output: PathBuf,
+        /// File dello schema
+        #[arg(long, value_name = "FILE")]
+        schema: PathBuf,
+        /// Report Markdown
+        #[arg(long, value_name = "FILE")]
+        report: Option<PathBuf>,
+        /// Storico JSONL a cui aggiungere una riga di metriche
+        #[arg(long, value_name = "FILE")]
+        metrics: Option<PathBuf>,
     },
     /// Controlli sul file delle regole
     Rules {
@@ -171,6 +191,9 @@ fn main() -> ExitCode {
         }
         Command::Classify { command: ClassifyCommand::Llm(args) } => run_classify_llm(&args),
         Command::Classify { command: ClassifyCommand::One(args) } => run_classify_one(&args),
+        Command::Evaluate { labels, output, schema, report, metrics } => {
+            run_evaluate(&labels, &output, &schema, report.as_deref(), metrics.as_deref())
+        }
         Command::Rules { command: RulesCommand::Check { schema, rules } } => run_rules_check(&schema, &rules),
     };
     match result {
@@ -300,6 +323,37 @@ fn run_classify_llm(args: &LlmArgs) -> Result<(), String> {
     let run = Run { llm: &llm, schema: &schema, rules: from_rules.as_ref(), workers: args.workers, path: &args.output };
     run.classify_all(&jobs, &mut result)?;
     result.write(&args.output)
+}
+
+/// Valuta il file di uscita, scrive report e storico e riepiloga su stdout (REQ-121).
+fn run_evaluate(labels_path: &Path, output: &Path, schema: &Path, report: Option<&Path>, metrics: Option<&Path>) -> Result<(), String> {
+    let schema = Schema::load(schema)?;
+    let evaluation = Evaluation::new(&schema, &labels::read(labels_path)?, &Output::read(output)?)?;
+    println!(
+        "{}: {} unità valutate, {} etichette da rivedere, {} non allineate, {} senza elemento",
+        evaluation.classifier, evaluation.evaluated, evaluation.invalid, evaluation.misaligned, evaluation.missing
+    );
+    for facet in &evaluation.facets {
+        println!(
+            "  {:20} accuratezza {:5.1}%  macro-F1 {:.2}  copertura {:3.0}%",
+            facet.facet,
+            facet.accuracy * 100.0,
+            facet.macro_f1,
+            facet.coverage * 100.0
+        );
+    }
+    if let Some(path) = report {
+        fs::write(path, evaluation.report()).map_err(|e| format!("impossibile scrivere {}: {e}", path.display()))?;
+    }
+    if let Some(path) = metrics {
+        let mut file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)
+            .map_err(|e| format!("impossibile scrivere {}: {e}", path.display()))?;
+        writeln!(file, "{}", evaluation.history_line()).map_err(|e| format!("impossibile scrivere {}: {e}", path.display()))?;
+    }
+    Ok(())
 }
 
 fn run_rules_check(schema: &Path, rules: &Path) -> Result<(), String> {
