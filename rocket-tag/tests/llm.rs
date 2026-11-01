@@ -420,6 +420,30 @@ fn contesto_facoltativo() {
     assert!(user(1).contains("Heading path: (none)"));
 }
 
+/// Regole e LLM girano ciascuno da solo, con il proprio file di uscita (REQ-082).
+#[test]
+fn classificatori_indipendenti_con_file_propri() {
+    let server = serve(|_, _| (200, labels()));
+    let (dir, docs, out) = workspace("Testo.\n");
+    let rules_out = dir.path().join("rules.json");
+    let rules = Command::new(env!("CARGO_BIN_EXE_rocket-tag"))
+        .args(["classify", "rules"])
+        .arg(&docs)
+        .arg("-o")
+        .arg(&rules_out)
+        .args(["--schema", "config/label_schema.json", "--rules", "config/rules.yaml"])
+        .output()
+        .unwrap();
+    assert!(rules.status.success());
+    assert!(server.requests().is_empty(), "le regole non chiamano il server");
+    assert!(!out.exists());
+
+    std::fs::remove_file(&rules_out).unwrap();
+    run(&mut llm(&docs, &out, &server.url));
+    assert!(!rules_out.exists(), "l'LLM non ha bisogno delle regole");
+    assert_eq!(saved(&out)["classifier"], "llm:modello");
+}
+
 /// La risposta può arrivare dentro un blocco di codice o con testo attorno.
 #[test]
 fn accetta_il_json_dentro_un_blocco_di_codice() {
