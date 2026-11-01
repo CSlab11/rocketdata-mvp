@@ -110,6 +110,33 @@ fn passa_le_regole_all_llm_se_esistono() {
     assert!(args[position + 1].as_str().unwrap().ends_with(r".classify\rules.json"));
 }
 
+/// URL e modello si ricordano; la chiave passa solo dalla variabile d'ambiente (REQ-141).
+#[test]
+fn server_llm_ricordato_e_chiave_solo_in_ambiente() {
+    let (_dir, exe) = install_with_fake_tag();
+    let appdata = tempfile::tempdir().unwrap();
+    let folder = markdown_folder();
+    let request = json!({"src": folder.path().to_str().unwrap(), "classifier": "llm",
+                         "base_url": "http://server/v1", "model": "qwen", "api_key": "segreta"});
+    {
+        let gui = Gui::start_with_appdata(&exe, appdata.path());
+        assert_eq!(post_json(&gui, "/api/classify/run", &request).0, 202);
+        let snapshot = wait_end(&gui);
+        assert!(!snapshot.to_string().contains("segreta"));
+    }
+    let received = read_json(&folder.path().join(".classify/llm.json.args.json"));
+    assert_eq!(received["key"], "segreta");
+    assert!(!received["args"].to_string().contains("segreta"), "mai come argomento");
+    let settings = fs::read_to_string(appdata.path().join("rocketdata-gui/settings.json")).unwrap();
+    assert!(!settings.contains("segreta"), "la chiave non si salva");
+
+    let gui = Gui::start_with_appdata(&exe, appdata.path());
+    let dom = dump_dom(&gui.url("/#classify"));
+    assert!(dom.contains(r#"value="http://server/v1""#), "{dom}");
+    assert!(dom.contains(r#"value="qwen""#), "{dom}");
+    assert!(dom.contains(r#"id="classify-key""#) && dom.contains(r#"type="password""#), "{dom}");
+}
+
 #[test]
 fn richieste_non_valide() {
     let (_dir, exe) = install_with_fake_tag();

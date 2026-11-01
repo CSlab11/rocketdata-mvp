@@ -166,6 +166,8 @@ struct ClassifyRequest {
     classifier: Classifier,
     base_url: Option<String>,
     model: Option<String>,
+    /// Passata solo con una variabile d'ambiente e mai salvata (REQ-141).
+    api_key: Option<String>,
 }
 
 /// Avvia rocket-tag sulla cartella dei file Markdown (REQ-133).
@@ -188,7 +190,19 @@ async fn classify_run(
         std::fs::create_dir_all(dir).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("impossibile creare {}: {e}", dir.display())))?;
     }
     let args = classify::arguments(request.classifier, folder, &Config::beside(exe), server.as_ref());
-    state.classifier.start(exe, &args, &[], src).map_err(|e| (StatusCode::CONFLICT, e))?;
+    let key = request.api_key.as_deref().map(str::trim).filter(|key| !key.is_empty());
+    let envs: Vec<(&str, String)> = key.map(|key| ("ROCKET_TAG_API_KEY", key.to_string())).into_iter().collect();
+    state.classifier.start(exe, &args, &envs, src).map_err(|e| (StatusCode::CONFLICT, e))?;
+    // Ultimi URL e modello, riproposti ai prossimi avvii (REQ-141).
+    if let (Some(path), Some(server)) = (&state.settings_path, &server) {
+        let change = |s: &mut Settings| {
+            s.classify.base_url = server.base_url.clone();
+            s.classify.model = server.model.clone();
+        };
+        if let Err(error) = settings::update(path, change) {
+            eprintln!("Impossibile salvare le impostazioni in {}: {error}", path.display());
+        }
+    }
     Ok(StatusCode::ACCEPTED)
 }
 

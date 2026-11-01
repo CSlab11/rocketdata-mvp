@@ -15,6 +15,17 @@ pub struct Settings {
     /// Cartelle convertite da doc-ripper il cui indice va rifatto (REQ-074).
     #[serde(default)]
     pub stale: Vec<String>,
+    /// Assente nei file salvati prima di REQ-141.
+    #[serde(default)]
+    pub classify: ClassifySettings,
+}
+
+/// Ultimi valori della classificazione (REQ-141); la chiave del server non si salva mai.
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ClassifySettings {
+    pub base_url: String,
+    pub model: String,
 }
 
 /// Chiave di confronto di una cartella: senza distinzione tra maiuscole e minuscole, con `/`
@@ -75,7 +86,7 @@ mod tests {
         let path = dir.path().join("rocketdata-gui/settings.json");
         assert_eq!(load(&path), Settings::default());
         let settings =
-            Settings { src: r"C:\Dati\Città".into(), dst: r"D:\Uscita".into(), top: Some(25), stale: vec![r"D:\Uscita".into()] };
+            Settings { src: r"C:\Dati\Città".into(), dst: r"D:\Uscita".into(), top: Some(25), stale: vec![r"D:\Uscita".into()], classify: ClassifySettings::default() };
         save(&path, &settings).unwrap();
         assert_eq!(load(&path), settings);
         fs::write(&path, "non json").unwrap();
@@ -89,7 +100,8 @@ mod tests {
         // File scritto prima di REQ-072: senza `top`.
         fs::write(&path, r#"{"src":"C:\\A","dst":"C:\\B"}"#).unwrap();
         update(&path, |s| s.top = Some(3)).unwrap();
-        assert_eq!(load(&path), Settings { src: r"C:\A".into(), dst: r"C:\B".into(), top: Some(3), stale: vec![] });
+        let expected = Settings { src: r"C:\A".into(), dst: r"C:\B".into(), top: Some(3), ..Settings::default() };
+        assert_eq!(load(&path), expected);
         update(&path, |s| s.dst = r"C:\C".into()).unwrap();
         assert_eq!(load(&path).top, Some(3));
     }

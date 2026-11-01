@@ -527,6 +527,16 @@ async function renderClassify(content) {
     el("option", { value: "rules" }, "Regole"),
     el("option", { value: "llm" }, "LLM"),
   );
+  // Server LLM: URL e modello si ricordano, la chiave no (REQ-141).
+  const textField = (id, label, attrs = {}) => {
+    const input = el("input", { id, type: "text", spellcheck: "false", autocomplete: "off", ...attrs });
+    return { input, row: el("div", { class: "field" }, el("label", { for: id }, label), el("div", { class: "field-row" }, input)) };
+  };
+  const baseUrl = textField("classify-url", "URL del server LLM");
+  const model = textField("classify-model", "Modello");
+  const apiKey = textField("classify-key", "Chiave del server (facoltativa)", { type: "password" });
+  const llmFields = el("div", { id: "classify-llm", hidden: "" }, baseUrl.row, model.row, apiKey.row);
+  kind.addEventListener("change", () => (llmFields.hidden = kind.value !== "llm"));
   const start = el("button", { id: "classify-start", class: "primary", type: "button", disabled: "" }, "Classifica");
   const cancel = el("button", { id: "classify-cancel", type: "button", hidden: "" }, "Annulla");
   const progressBar = el("progress", { max: "100", value: "0" });
@@ -538,6 +548,7 @@ async function renderClassify(content) {
     alert,
     folderRow,
     el("div", { class: "field" }, el("label", { for: "classify-kind" }, "Classificatore"), el("div", { class: "field-row" }, kind)),
+    llmFields,
     el("div", { class: "actions" }, start, cancel),
     progress,
     result,
@@ -607,7 +618,13 @@ async function renderClassify(content) {
 
   start.addEventListener("click", async () => {
     alert.hidden = true;
-    const body = { src: folder.value, classifier: kind.value };
+    const body = {
+      src: folder.value,
+      classifier: kind.value,
+      base_url: baseUrl.input.value,
+      model: model.input.value,
+      api_key: apiKey.input.value,
+    };
     const response = await fetch("/api/classify/run", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -623,6 +640,8 @@ async function renderClassify(content) {
   // Proposta: l'ultima cartella di destinazione usata da doc-ripper (REQ-135, REQ-035).
   const saved = await fetch("/api/settings").then((r) => r.json());
   if (!folder.value) folder.defaultValue = saved.dst;
+  baseUrl.input.defaultValue = saved.classify.base_url;
+  model.input.defaultValue = saved.classify.model;
 
   // rocket-tag.exe deve trovarsi accanto a gui.exe (REQ-134).
   const status = await fetch("/api/classify/status").then((r) => r.json());
