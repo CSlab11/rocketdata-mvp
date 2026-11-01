@@ -302,6 +302,17 @@ fn filtri_dei_risultati() {
     assert!(source.contains("item.unit_confidence <= Number(threshold.value)"), "minore o uguale alla soglia");
 }
 
+/// Unità scartate con documento, righe e motivo (REQ-144).
+#[test]
+fn unita_scartate_nella_pagina() {
+    let (_dir, exe) = install_with_fake_tag();
+    let gui = Gui::start(&exe);
+    let _folder = classified_folder(&gui);
+    let dom = dump_dom(&gui.url("/#classify"));
+    assert!(dom.contains("Unità scartate: 1"), "{dom}");
+    assert!(dom.contains("a.md, righe 6–6: tono: valore non ammesso"), "{dom}");
+}
+
 /// Niente nomi di faccette o valori nel codice di gui (REQ-142).
 #[test]
 fn nessuna_faccetta_nel_codice() {

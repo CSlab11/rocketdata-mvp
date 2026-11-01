@@ -569,6 +569,7 @@ async function renderClassify(content) {
   const documents = el("ul", { id: "classify-documents", class: "documents" });
   const units = el("div", { id: "classify-units", class: "units" });
   const results = el("section", { id: "classify-results", class: "results", hidden: "" }, documents, units);
+  const skipped = el("section", { id: "classify-skipped", class: "preview", hidden: "" });
   content.append(
     alert,
     folderRow,
@@ -581,6 +582,7 @@ async function renderClassify(content) {
     output,
     filters,
     results,
+    skipped,
   );
   filters.hidden = true;
 
@@ -648,6 +650,10 @@ async function renderClassify(content) {
     units.replaceChildren(...(await Promise.all(cards)));
     results.hidden = false;
     filters.hidden = false;
+    // Unità scartate, con il motivo (REQ-144).
+    const list = shown.skipped.map((s) => el("li", {}, `${s.document}, righe ${s.line_start}–${s.line_end}: ${s.error}`));
+    skipped.replaceChildren(el("h2", {}, `Unità scartate: ${list.length}`), el("ul", {}, ...list));
+    skipped.hidden = list.length === 0;
   };
   [labelFilter, threshold, lowOnly].forEach((control) => control.addEventListener("change", () => shown && drawResults()));
   const loadResults = async () => {
@@ -656,6 +662,7 @@ async function renderClassify(content) {
       shown = null;
       results.hidden = true;
       filters.hidden = true;
+      skipped.hidden = true;
       return;
     }
     shown = await response.json();
