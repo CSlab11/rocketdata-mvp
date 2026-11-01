@@ -288,6 +288,20 @@ fn risultati_nella_pagina() {
     assert!(!dom.contains("Terzo testo."), "solo il documento scelto");
 }
 
+/// Filtri ricavati dal file di uscita, con soglia predefinita 0,7 (REQ-143).
+#[test]
+fn filtri_dei_risultati() {
+    let (_dir, exe) = install_with_fake_tag();
+    let gui = Gui::start(&exe);
+    let _folder = classified_folder(&gui);
+    let dom = dump_dom(&gui.url("/#classify"));
+    assert!(dom.contains(r#"<option value="tono=formale">tono: formale</option>"#), "{dom}");
+    assert!(dom.contains(r#"<option value="temi=mare">temi: mare</option>"#), "{dom}");
+    assert!(dom.contains(r#"id="classify-threshold""#) && dom.contains(r#"value="0.7""#), "{dom}");
+    let source = include_str!("../web/app.js");
+    assert!(source.contains("item.unit_confidence <= Number(threshold.value)"), "minore o uguale alla soglia");
+}
+
 /// Niente nomi di faccette o valori nel codice di gui (REQ-142).
 #[test]
 fn nessuna_faccetta_nel_codice() {

@@ -553,6 +553,19 @@ async function renderClassify(content) {
   const progress = el("div", { id: "classify-progress", class: "progress", hidden: "" }, progressBar, progressText);
   const result = el("div", { id: "classify-result", class: "alert", hidden: "" });
   const output = el("pre", { id: "classify-output", class: "output", hidden: "" });
+  // Filtri per valore di faccetta e per soglia di confidenza (REQ-143).
+  const labelFilter = el("select", { id: "classify-filter" });
+  const threshold = el("input", { id: "classify-threshold", class: "top", type: "number", min: "0", max: "1", step: "0.05", value: "0.7" });
+  const lowOnly = el("input", { id: "classify-low", type: "checkbox" });
+  const filters = el(
+    "div",
+    { class: "filters" },
+    el("label", { for: "classify-filter" }, "Etichetta"),
+    labelFilter,
+    el("label", { for: "classify-threshold" }, "Soglia di confidenza"),
+    threshold,
+    el("label", {}, lowOnly, " Solo bassa confidenza"),
+  );
   const documents = el("ul", { id: "classify-documents", class: "documents" });
   const units = el("div", { id: "classify-units", class: "units" });
   const results = el("section", { id: "classify-results", class: "results", hidden: "" }, documents, units);
@@ -566,8 +579,10 @@ async function renderClassify(content) {
     progress,
     result,
     output,
+    filters,
     results,
   );
+  filters.hidden = true;
 
   const showError = (message) => {
     alert.textContent = message;
@@ -576,7 +591,6 @@ async function renderClassify(content) {
 
   // Risultati di un classificatore alla volta (REQ-142): tutto viene dal file di uscita, gui non
   // conosce le faccette.
-  const THRESHOLD = 0.7;
   let shown = null;
   let selected = null;
   let texts = new Map();
@@ -605,15 +619,26 @@ async function renderClassify(content) {
       el("ul", { class: "labels" }, ...facets.map((name) => el("li", {}, `${name}: ${facetValue(item.labels[name])}`))),
     );
   };
+  const isLow = (item) => item.unit_confidence <= Number(threshold.value);
+  // Coppie faccetta/valore presenti nel file: `faccetta=valore`.
+  const labelPairs = (item) =>
+    Object.entries(item.labels).flatMap(([name, value]) => (Array.isArray(value) ? value : [value]).map((v) => `${name}=${v}`));
+  const fillLabelFilter = () => {
+    const pairs = [...new Set(shown.items.flatMap(labelPairs))].sort();
+    const current = labelFilter.value;
+    labelFilter.replaceChildren(el("option", { value: "" }, "Tutte"), ...pairs.map((pair) => el("option", { value: pair }, pair.replace("=", ": "))));
+    labelFilter.value = pairs.includes(current) ? current : "";
+  };
+  const passes = (item) => (!labelFilter.value || labelPairs(item).includes(labelFilter.value)) && (!lowOnly.checked || isLow(item));
   const drawResults = async () => {
-    const items = shown.items;
-    const facets = [...new Set(items.flatMap((item) => Object.keys(item.labels)))];
-    const names = [...new Set(items.map((item) => item.document))];
+    const items = shown.items.filter(passes);
+    const facets = [...new Set(shown.items.flatMap((item) => Object.keys(item.labels)))];
+    const names = [...new Set(shown.items.map((item) => item.document))];
     if (!names.includes(selected)) selected = names[0] ?? null;
     documents.replaceChildren(
       ...names.map((name) => {
         const own = items.filter((item) => item.document === name);
-        const low = own.filter((item) => item.unit_confidence <= THRESHOLD).length;
+        const low = own.filter(isLow).length;
         const button = el("button", { type: "button", onclick: () => ((selected = name), drawResults()) }, `${name} — ${own.length} unità (${low} a bassa confidenza)`);
         if (name === selected) button.setAttribute("aria-current", "true");
         return el("li", {}, button);
@@ -622,16 +647,20 @@ async function renderClassify(content) {
     const cards = items.filter((item) => item.document === selected).map((item) => unitCard(item, facets));
     units.replaceChildren(...(await Promise.all(cards)));
     results.hidden = false;
+    filters.hidden = false;
   };
+  [labelFilter, threshold, lowOnly].forEach((control) => control.addEventListener("change", () => shown && drawResults()));
   const loadResults = async () => {
     const response = await fetch(`/api/classify/results?src=${encodeURIComponent(folder.value)}&classifier=${kind.value}`);
     if (!response.ok) {
       shown = null;
       results.hidden = true;
+      filters.hidden = true;
       return;
     }
     shown = await response.json();
     texts = new Map();
+    fillLabelFilter();
     await drawResults();
   };
   kind.addEventListener("change", loadResults);

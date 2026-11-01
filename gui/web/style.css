@@ -238,6 +238,19 @@ h1 { font-size: 22px; margin: 0 0 4px; }
 
 .labels li { background: var(--bg); border-radius: 4px; padding: 2px 8px; }
 
+.filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 16px; }
+
+.filters select, .filters input[type="number"] {
+  font: inherit;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.filters input[type="number"] { width: 90px; }
+
 .config { margin-bottom: 14px; }
 
 .config summary { cursor: pointer; font-weight: 600; margin-bottom: 8px; }
