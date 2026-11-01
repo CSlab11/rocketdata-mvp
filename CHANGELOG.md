@@ -85,6 +85,7 @@
 - REQ-090 implementato — Nome del documento relativo alla cartella di ingresso con separatore /, o nome del file (`rocket-tag/src/iterate.rs`)
 - REQ-088 implementato — Unità precedente e successiva dello stesso file passate con testo, titoli, clausola e tipo (`rocket-tag/src/iterate.rs`)
 - REQ-095 implementato — Faccette, valori, descrizioni, x-default e x-fixedWhen ricavati dallo schema (`rocket-tag/Cargo.lock`, `rocket-tag/Cargo.toml`, `rocket-tag/config/label_schema.json`, `rocket-tag/src/lib.rs`, `rocket-tag/src/schema.rs`)
+- REQ-092 implementato — Schema fornito come percorso o come oggetto già caricato, mai da un percorso fisso (`rocket-tag/src/schema.rs`)
 
 ## 2026-10-25
 - REQ-068 richiesto — search-rm3: opzione --heading-weight, maggiore di 1, predefinita 3

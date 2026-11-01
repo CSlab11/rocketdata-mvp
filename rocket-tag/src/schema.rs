@@ -1,6 +1,8 @@
 //! Schema delle etichette (appendice B): unica fonte di faccette e valori.
 
 use std::collections::HashMap;
+use std::fs;
+use std::path::Path;
 
 use serde_json::Value;
 
@@ -37,10 +39,17 @@ impl Schema {
     /// Faccette, valori, descrizioni e vincoli ricavati dal testo dello schema (REQ-095).
     pub fn parse(text: &str) -> Result<Schema, String> {
         let raw: Value = serde_json::from_str(text).map_err(|e| format!("schema: JSON non valido: {e}"))?;
-        Schema::read(&raw)
+        Schema::from_value(&raw)
     }
 
-    fn read(raw: &Value) -> Result<Schema, String> {
+    /// Schema letto dal file indicato, mai da un percorso fisso (REQ-092).
+    pub fn load(path: &Path) -> Result<Schema, String> {
+        let text = fs::read_to_string(path).map_err(|e| format!("impossibile leggere {}: {e}", path.display()))?;
+        Schema::parse(&text)
+    }
+
+    /// Schema da un oggetto già caricato (REQ-092).
+    pub fn from_value(raw: &Value) -> Result<Schema, String> {
         let facets_node = raw.pointer("/$defs/ParagraphFacets").ok_or("schema: $defs/ParagraphFacets mancante")?;
         let required: Vec<&str> = facets_node["required"].as_array().into_iter().flatten().filter_map(Value::as_str).collect();
         let properties = facets_node["properties"].as_object().ok_or("schema: ParagraphFacets senza properties")?;
@@ -111,6 +120,17 @@ mod tests {
         assert_eq!(names, ["nature", "domain", "destination", "required_action", "extraction_quality", "flags"]);
         assert_eq!(schema.sides, ["prime", "supplier"]);
         assert!(schema.doc_types.contains(&"pa_plan".to_string()));
+    }
+
+    #[test]
+    fn schema_da_file_o_da_oggetto_gia_caricato() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("altro_nome.json");
+        fs::write(&path, SCHEMA).unwrap();
+        let from_file = Schema::load(&path).unwrap();
+        let raw: Value = serde_json::from_str(SCHEMA).unwrap();
+        assert_eq!(from_file, Schema::from_value(&raw).unwrap());
+        assert!(Schema::load(&dir.path().join("manca.json")).unwrap_err().contains("impossibile leggere"));
     }
 
     #[test]
