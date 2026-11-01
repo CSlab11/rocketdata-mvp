@@ -1,6 +1,9 @@
 //! Classificatore LLM: prompt, formato di uscita e chiamate al server locale (appendice D).
 
 use std::collections::HashMap;
+use std::sync::Mutex;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::thread;
 use std::time::Duration;
 
 use serde_json::{Map, Value, json};
@@ -154,21 +157,52 @@ fn parse_labels(content: &str) -> Result<Map<String, Value>, Failure> {
     serde_json::from_str(&content[start..=end]).map_err(|e| invalid(e.to_string()))
 }
 
-/// Classifica le unità una alla volta e aggiunge gli esiti a `result`.
-pub fn classify_all(llm: &Llm, schema: &Schema, jobs: &[Job], rules: Option<&RuleLabels>, result: &mut Output) {
-    for (index, job) in jobs.iter().enumerate() {
+/// Una esecuzione del classificatore su più unità.
+pub struct Run<'a> {
+    pub llm: &'a Llm,
+    pub schema: &'a Schema,
+    pub rules: Option<&'a RuleLabels>,
+    /// Richieste parallele (REQ-112).
+    pub workers: usize,
+}
+
+impl Run<'_> {
+    /// Classifica le unità con `workers` richieste parallele e aggiunge gli esiti a `result`.
+    pub fn classify_all(&self, jobs: &[Job], result: &mut Output) {
+        let next = AtomicUsize::new(0);
+        let done = Mutex::new((result, 0));
+        thread::scope(|scope| {
+            for _ in 0..self.workers.max(1) {
+                scope.spawn(|| {
+                    while let Some(job) = jobs.get(next.fetch_add(1, Ordering::SeqCst)) {
+                        let outcome = self.classify_job(job);
+                        let mut done = done.lock().unwrap();
+                        let (result, count) = &mut *done;
+                        match outcome {
+                            Ok(decision) => result.items.push(Item::new(job, decision)),
+                            Err(failure) => result.skipped.push(skipped(job, &failure)),
+                        }
+                        *count += 1;
+                        println!("[{count}/{}] {}", jobs.len(), job.document);
+                    }
+                });
+            }
+        });
+    }
+
+    fn classify_job(&self, job: &Job) -> Result<Decision, Failure> {
         let key = (job.document.clone(), job.unit.line_start, job.unit.line_end);
-        let from_rules = rules.and_then(|labels| labels.get(&key));
-        match llm.classify(schema, &job.unit.text, &job.context(), from_rules) {
-            Ok(decision) => result.items.push(Item::new(job, decision)),
-            Err(failure) => result.skipped.push(Skipped {
-                document: job.document.clone(),
-                line_start: job.unit.line_start,
-                line_end: job.unit.line_end,
-                error: failure.message().to_string(),
-            }),
-        }
-        println!("[{}/{}] {}", index + 1, jobs.len(), job.document);
+        let from_rules = self.rules.and_then(|labels| labels.get(&key));
+        self.llm.classify(self.schema, &job.unit.text, &job.context(), from_rules)
+    }
+}
+
+fn skipped(job: &Job, failure: &Failure) -> Skipped {
+    Skipped {
+        document: job.document.clone(),
+        line_start: job.unit.line_start,
+        line_end: job.unit.line_end,
+        error: failure.message().to_string(),
     }
 }
 

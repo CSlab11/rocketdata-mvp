@@ -4,6 +4,7 @@ use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 use serde_json::{Value, json};
@@ -226,6 +227,31 @@ fn confidenza_dall_accordo_con_le_regole() {
     assert_eq!(with["confidence"]["nature"], 0.9, "regole: requirement");
     assert_eq!(with["confidence"]["required_action"], 0.5, "regole: none; LLM: declare_compliance");
     assert_eq!(with["unit_confidence"], 0.5);
+}
+
+/// Richieste parallele configurabili e limite al numero di unità (REQ-112).
+#[test]
+fn richieste_parallele_e_limite() {
+    let running = Arc::new(AtomicUsize::new(0));
+    let peak = Arc::new(AtomicUsize::new(0));
+    let (now, top) = (Arc::clone(&running), Arc::clone(&peak));
+    let server = serve(move |_, _| {
+        top.fetch_max(now.fetch_add(1, Ordering::SeqCst) + 1, Ordering::SeqCst);
+        std::thread::sleep(std::time::Duration::from_millis(150));
+        now.fetch_sub(1, Ordering::SeqCst);
+        (200, labels())
+    });
+    let (_dir, docs, out) = workspace("Uno.\n\nDue.\n\nTre.\n\nQuattro.\n\nCinque.\n\nSei.\n");
+    run(llm(&docs, &out, &server.url).args(["--workers", "3"]));
+    assert_eq!(peak.load(Ordering::SeqCst), 3);
+    let lines: Vec<_> = saved(&out)["items"].as_array().unwrap().iter().map(|i| i["line_start"].as_u64().unwrap()).collect();
+    assert_eq!(lines, [1, 3, 5, 7, 9, 11], "in ordine di documento e riga");
+
+    let requests = server.requests().len();
+    let limited = run(llm(&docs, &out, &server.url).args(["--limit", "2"]));
+    assert_eq!(server.requests().len() - requests, 2);
+    assert_eq!(saved(&out)["items"].as_array().unwrap().len(), 2);
+    assert_eq!(String::from_utf8_lossy(&limited.stdout).lines().last(), Some("[2/2] a.md"));
 }
 
 /// La risposta può arrivare dentro un blocco di codice o con testo attorno.

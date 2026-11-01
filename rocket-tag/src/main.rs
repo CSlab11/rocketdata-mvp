@@ -8,7 +8,7 @@ use clap::{Parser, Subcommand};
 
 use rocket_tag::{iterate, labels};
 use rocket_tag::classifier::DocInfo;
-use rocket_tag::llm::{self, Format, Llm, Settings};
+use rocket_tag::llm::{self, Format, Llm, Run, Settings};
 use rocket_tag::output::{Item, Output};
 use rocket_tag::rules::RuleSet;
 use rocket_tag::schema::Schema;
@@ -100,6 +100,12 @@ struct LlmArgs {
     /// Temperatura del modello
     #[arg(long, default_value_t = 0.0)]
     temperature: f64,
+    /// Richieste parallele
+    #[arg(long, value_name = "N", default_value_t = 2)]
+    workers: usize,
+    /// Numero massimo di unità da classificare
+    #[arg(long, value_name = "N")]
+    limit: Option<usize>,
     /// Secondi di attesa per ogni richiesta
     #[arg(long, value_name = "SECONDI", default_value_t = 180)]
     timeout: u64,
@@ -207,11 +213,15 @@ fn run_classify_llm(args: &LlmArgs) -> Result<(), String> {
         let from_rules = || rules.as_ref().and_then(|r| r.document_info(document));
         known.get(document).cloned().or_else(from_rules).unwrap_or_default()
     };
-    let jobs = iterate::jobs(&iterate::documents(&args.input, &args.exclude)?, &info)?;
+    let mut jobs = iterate::jobs(&iterate::documents(&args.input, &args.exclude)?, &info)?;
+    if let Some(limit) = args.limit {
+        jobs.truncate(limit);
+    }
     let mut result = Output::new(&schema.version, llm.classifier_name());
     result.prompt_id = Some(llm.prompt_id.clone());
     let from_rules = args.rules_out.as_deref().map(Output::read).transpose()?.as_ref().map(llm::rule_labels);
-    llm::classify_all(&llm, &schema, &jobs, from_rules.as_ref(), &mut result);
+    let run = Run { llm: &llm, schema: &schema, rules: from_rules.as_ref(), workers: args.workers };
+    run.classify_all(&jobs, &mut result);
     result.write(&args.output)
 }
 
