@@ -7,3 +7,4 @@ pub mod schema;
 pub mod rules;
 pub mod classifier;
 pub mod output;
+pub mod llm;
