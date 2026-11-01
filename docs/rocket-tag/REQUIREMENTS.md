@@ -20,7 +20,7 @@ Provengono da [`classifier-handoff/requirements.md`](../../classifier-handoff/re
 | REQ-080 | Il pacchetto deve presupporre che i file Markdown esistano già e non deve convertire, pulire o estrarre documenti. | implementato | `rocket-tag/tests/cli.rs` |
 | REQ-081 | Il pacchetto deve funzionare interamente in locale e non deve inviare il contenuto dei documenti a servizi diversi dal server LLM configurato dall'utente. | aperto | — |
 | REQ-082 | Il classificatore a regole e il classificatore LLM devono essere componenti separati, eseguibili in modo indipendente, ciascuno con il proprio file di uscita. | implementato | `rocket-tag/tests/llm.rs` |
-| REQ-083 | Il classificatore LLM non deve dipendere dal codice del classificatore a regole; può usarne l'uscita solo come file in ingresso facoltativo. | aperto | — |
+| REQ-083 | Il classificatore LLM non deve dipendere dal codice del classificatore a regole; può usarne l'uscita solo come file in ingresso facoltativo. | implementato | `rocket-tag/src/llm.rs` |
 | REQ-084 | L'iteratore deve essere separato dai classificatori: ciascun classificatore deve esporre una funzione di libreria che classifica una singola unità e un comando che classifica un testo passato da riga di comando. | implementato | `rocket-tag/src/main.rs`, `rocket-tag/tests/cli.rs`, `rocket-tag/tests/llm.rs` |
 
 ## Iteratore sul Markdown

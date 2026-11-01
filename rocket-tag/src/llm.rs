@@ -498,6 +498,14 @@ mod tests {
         assert_ne!(id, prompt_id("s", &output, "m2"));
     }
 
+    /// Delle regole l'LLM usa solo il file di uscita, facoltativo (REQ-083).
+    #[test]
+    fn non_dipende_dal_codice_delle_regole() {
+        let source = include_str!("llm.rs");
+        assert!(!source.contains(concat!("crate::", "rules")));
+        assert!(!source.contains(concat!("RuleSet", "::")));
+    }
+
     #[test]
     fn senza_esempi_la_sezione_manca() {
         assert!(!system_prompt(&schema(), "Guida", &[]).contains("Examples"));
