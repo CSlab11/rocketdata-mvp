@@ -72,6 +72,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/search/open", post(search_open))
         .route("/api/search/last", get(search_last))
         .route("/api/search/stale", get(search_stale))
+        .route("/api/classify/status", get(classify_status))
         .route("/api/classify/run", post(classify_run))
         .route("/api/classify/output", get(classify_output))
         .route("/api/shutdown", post(shutdown))
@@ -142,6 +143,17 @@ async fn search_status(State(state): State<Arc<AppState>>) -> Json<DocRipperStat
         None => DocRipperStatus {
             available: false,
             message: Some("search-rm3.exe non trovato nella cartella di gui.exe: copiarlo lì e riavviare la gui.".into()),
+        },
+    })
+}
+
+/// Disponibilità di `rocket-tag.exe` accanto a `gui.exe` (REQ-134).
+async fn classify_status(State(state): State<Arc<AppState>>) -> Json<DocRipperStatus> {
+    Json(match &state.rocket_tag {
+        Some(_) => DocRipperStatus { available: true, message: None },
+        None => DocRipperStatus {
+            available: false,
+            message: Some("rocket-tag.exe non trovato nella cartella di gui.exe: copiarlo lì e riavviare la gui.".into()),
         },
     })
 }

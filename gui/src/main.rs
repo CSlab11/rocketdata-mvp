@@ -86,7 +86,7 @@ fn find_doc_ripper() -> Option<PathBuf> {
     path.is_file().then_some(path)
 }
 
-/// `rocket-tag.exe` nella cartella di `gui.exe`, se presente (REQ-133).
+/// `rocket-tag.exe` nella cartella di `gui.exe`, se presente (REQ-134).
 fn find_rocket_tag() -> Option<PathBuf> {
     let path = std::env::current_exe().ok()?.parent()?.join("rocket-tag.exe");
     path.is_file().then_some(path)

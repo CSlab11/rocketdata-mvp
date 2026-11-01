@@ -527,7 +527,7 @@ async function renderClassify(content) {
     el("option", { value: "rules" }, "Regole"),
     el("option", { value: "llm" }, "LLM"),
   );
-  const start = el("button", { id: "classify-start", class: "primary", type: "button" }, "Classifica");
+  const start = el("button", { id: "classify-start", class: "primary", type: "button", disabled: "" }, "Classifica");
   const result = el("div", { id: "classify-result", class: "alert", hidden: "" });
   content.append(
     alert,
@@ -552,6 +552,14 @@ async function renderClassify(content) {
     });
     if (!response.ok) showError(await response.text());
   });
+
+  // rocket-tag.exe deve trovarsi accanto a gui.exe (REQ-134).
+  const status = await fetch("/api/classify/status").then((r) => r.json());
+  if (!status.available) {
+    showError(status.message);
+    return;
+  }
+  start.disabled = false;
 }
 
 // Connessioni in tempo reale aperte: vanno chiuse prima di spegnere il server.
