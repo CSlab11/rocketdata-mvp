@@ -47,7 +47,8 @@
 - REQ-122 richiesto — rocket-tag: Il pacchetto deve offrire un rapporto d'impatto di una modifica dello schema: differenze tra due versioni (faccette e valori aggiunti o rimossi, obbligatorietà), etichette umane da rivedere e incoerenze di `rules.yaml`
 - REQ-123 richiesto — rocket-tag: Il pacchetto deve offrire la migrazione di un file di etichette umane a una nuova versione dello schema con una mappa di rinomina di faccette e valori ed eliminazione di faccette; le etichette valide passano alla nuova versione, le altre restano alla vecchia
 - REQ-124 richiesto — rocket-tag: Il repository deve conservare in `classifier-handoff/` il pacchetto di passaggio del classificatore, senza modifiche: `requirements.md` e `CHANGELOG.md` con gli ID locali originali e, in `reference/`, i file di riferimento dell'appendice I
-- REQ-125 richiesto — package.ps1 che include anche rocket-tag.exe in dist\n- REQ-073 annullato — sostituito da REQ-125 (rocket-tag in dist\)
+- REQ-125 richiesto — package.ps1 che include anche rocket-tag.exe in dist\
+- REQ-073 annullato — sostituito da REQ-125 (rocket-tag in dist\)
 - REQ-126 richiesto — rocket-tag: classifier-handoff/ sul branch di lavoro e rimossa prima del merge in main
 - REQ-124 annullato — sostituito da REQ-126 (classifier-handoff/ non si conserva)
 
