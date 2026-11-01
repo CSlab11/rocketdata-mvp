@@ -351,6 +351,23 @@ fn dopo_un_successo_gli_errori_scartano_le_unita() {
     assert!(result["skipped"][0]["error"].as_str().unwrap().starts_with("server:"));
 }
 
+/// Un testo da riga di comando anche con l'LLM, con le unità vicine nel prompt (REQ-084).
+#[test]
+fn classify_one_con_l_llm() {
+    let server = serve(|_, _| (200, labels()));
+    let output = Command::new(env!("CARGO_BIN_EXE_rocket-tag"))
+        .args(["classify", "one", "--text", "Testo.", "--prev", "Prima.", "--next", "Dopo."])
+        .args(["--schema", "config/label_schema.json", "--guide", "config/prompt_guide.md"])
+        .args(["--examples", "config/guide_examples.json", "--base-url", &server.url, "--model", "modello"])
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+    let result: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(result["labels"]["nature"], "requirement");
+    let user = server.requests()[0].body["messages"][1]["content"].as_str().unwrap().to_string();
+    assert!(user.contains("Previous unit (context): Prima.") && user.contains("Next unit (context): Dopo."));
+}
+
 /// La risposta può arrivare dentro un blocco di codice o con testo attorno.
 #[test]
 fn accetta_il_json_dentro_un_blocco_di_codice() {

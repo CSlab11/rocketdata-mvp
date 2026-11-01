@@ -5,9 +5,10 @@ use std::process::ExitCode;
 use std::time::Duration;
 
 use clap::{Parser, Subcommand};
+use serde_json::{Value, json};
 
 use rocket_tag::{iterate, labels};
-use rocket_tag::classifier::DocInfo;
+use rocket_tag::classifier::{Context, DocInfo};
 use rocket_tag::llm::{self, Format, Llm, Run, Settings};
 use rocket_tag::output::{Item, Output};
 use rocket_tag::rules::RuleSet;
@@ -60,6 +61,42 @@ enum ClassifyCommand {
     },
     /// Classifica un file Markdown o una cartella con un LLM locale
     Llm(LlmArgs),
+    /// Classifica un testo passato da riga di comando
+    One(OneArgs),
+}
+
+#[derive(clap::Args)]
+struct OneArgs {
+    /// Testo da classificare
+    #[arg(long, value_name = "TESTO")]
+    text: String,
+    /// File dello schema
+    #[arg(long, value_name = "FILE")]
+    schema: PathBuf,
+    /// File delle regole: classifica con le regole
+    #[arg(long, value_name = "FILE", conflicts_with = "base_url", required_unless_present = "base_url")]
+    rules: Option<PathBuf>,
+    /// URL del server: classifica con l'LLM
+    #[arg(long, value_name = "URL", requires_all = ["model", "guide", "examples"])]
+    base_url: Option<String>,
+    /// Nome del modello
+    #[arg(long, value_name = "NOME")]
+    model: Option<String>,
+    /// Regole di decisione per il modello (prompt_guide.md)
+    #[arg(long, value_name = "FILE")]
+    guide: Option<PathBuf>,
+    /// Esempi per il modello (guide_examples.json)
+    #[arg(long, value_name = "FILE")]
+    examples: Option<PathBuf>,
+    /// Lato del documento
+    #[arg(long, value_name = "LATO")]
+    side: Option<String>,
+    /// Testo dell'unità precedente
+    #[arg(long, value_name = "TESTO")]
+    prev: Option<String>,
+    /// Testo dell'unità successiva
+    #[arg(long, value_name = "TESTO")]
+    next: Option<String>,
 }
 
 #[derive(clap::Args)]
@@ -133,6 +170,7 @@ fn main() -> ExitCode {
             run_classify_rules(&input, &output, &schema, &rules, labels.as_deref(), &exclude)
         }
         Command::Classify { command: ClassifyCommand::Llm(args) } => run_classify_llm(&args),
+        Command::Classify { command: ClassifyCommand::One(args) } => run_classify_one(&args),
         Command::Rules { command: RulesCommand::Check { schema, rules } } => run_rules_check(&schema, &rules),
     };
     match result {
@@ -190,19 +228,56 @@ fn run_classify_rules(
     result.write(output)
 }
 
+/// Testo di `prompt_guide.md` ed esempi di `guide_examples.json`.
+fn read_guide(guide: &Path, examples: &Path) -> Result<(String, Vec<Value>), String> {
+    let read = |path: &Path| fs::read_to_string(path).map_err(|e| format!("impossibile leggere {}: {e}", path.display()));
+    let parsed = serde_json::from_str(&read(examples)?).map_err(|e| format!("{}: {e}", examples.display()))?;
+    Ok((read(guide)?, parsed))
+}
+
+/// Classifica un solo testo e scrive l'esito su stdout (REQ-084).
+fn run_classify_one(args: &OneArgs) -> Result<(), String> {
+    let schema = Schema::load(&args.schema)?;
+    let context =
+        Context { side: args.side.clone(), prev: args.prev.clone(), next: args.next.clone(), ..Context::default() };
+    let decision = match &args.rules {
+        Some(path) => checked_rules(&schema, path)?.classify(&schema, &args.text, &context),
+        None => {
+            let (Some(base_url), Some(model), Some(guide), Some(examples)) = (&args.base_url, &args.model, &args.guide, &args.examples)
+            else {
+                return Err("indicare --rules oppure --base-url, --model, --guide ed --examples".to_string());
+            };
+            let (guide, examples) = read_guide(guide, examples)?;
+            let settings = Settings {
+                base_url: base_url.clone(),
+                model: model.clone(),
+                api_key: api_key(),
+                format: Format::JsonSchema,
+                temperature: 0.0,
+                timeout: Duration::from_secs(180),
+            };
+            let llm = Llm::new(&schema, &guide, &examples, settings);
+            llm.classify(&schema, &args.text, &context, None).map_err(|failure| failure.message().to_string())?
+        }
+    };
+    println!("{}", json!({"labels": decision.labels, "confidence": decision.confidence, "rule_ids": decision.rule_ids}));
+    Ok(())
+}
+
+/// Mai da riga di comando: sarebbe visibile nell'elenco dei processi (REQ-132).
+fn api_key() -> Option<String> {
+    std::env::var("ROCKET_TAG_API_KEY").ok().filter(|key| !key.is_empty())
+}
+
 /// Classifica le unità con il server LLM e scrive il file di uscita (REQ-106).
 fn run_classify_llm(args: &LlmArgs) -> Result<(), String> {
     let schema = Schema::load(&args.schema)?;
-    let read = |path: &Path| fs::read_to_string(path).map_err(|e| format!("impossibile leggere {}: {e}", path.display()));
-    let guide = read(&args.guide)?;
-    let examples: Vec<serde_json::Value> =
-        serde_json::from_str(&read(&args.examples)?).map_err(|e| format!("{}: {e}", args.examples.display()))?;
+    let (guide, examples) = read_guide(&args.guide, &args.examples)?;
     let rules = args.rules.as_deref().map(|path| checked_rules(&schema, path)).transpose()?;
     let settings = Settings {
         base_url: args.base_url.clone(),
         model: args.model.clone(),
-        // Mai da riga di comando: sarebbe visibile nell'elenco dei processi (REQ-132).
-        api_key: std::env::var("ROCKET_TAG_API_KEY").ok().filter(|key| !key.is_empty()),
+        api_key: api_key(),
         format: args.format,
         temperature: args.temperature,
         timeout: Duration::from_secs(args.timeout),

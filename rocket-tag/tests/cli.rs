@@ -177,6 +177,35 @@ fn non_tocca_i_documenti() {
     assert_eq!(std::fs::read_to_string(docs.join("a.md")).unwrap(), "Uno.\n");
 }
 
+/// Iteratore e classificatori sono separati: un testo si classifica senza file Markdown (REQ-084).
+#[test]
+fn classify_one_con_le_regole() {
+    let run = rocket_tag()
+        .args(["classify", "one", "--text", "The unit shall operate.", "--side", "prime"])
+        .args(["--schema", "config/label_schema.json", "--rules", "config/rules.yaml"])
+        .output()
+        .unwrap();
+    assert!(run.status.success(), "{}", String::from_utf8_lossy(&run.stderr));
+    let result: serde_json::Value = serde_json::from_slice(&run.stdout).unwrap();
+    assert_eq!(result["labels"]["nature"], "requirement");
+    assert_eq!(result["labels"]["required_action"], "declare_compliance");
+    assert_eq!(result["confidence"]["nature"], 0.85);
+    assert_eq!(result["rule_ids"]["nature"], "req-modal");
+}
+
+#[test]
+fn classify_one_vuole_un_solo_classificatore() {
+    let schema = ["--schema", "config/label_schema.json"];
+    let neither = rocket_tag().args(["classify", "one", "--text", "x"]).args(schema).output().unwrap();
+    assert!(!neither.status.success());
+    let both = rocket_tag()
+        .args(["classify", "one", "--text", "x", "--rules", "r", "--base-url", "u", "--model", "m", "--guide", "g", "--examples", "e"])
+        .args(schema)
+        .output()
+        .unwrap();
+    assert!(!both.status.success());
+}
+
 /// Il crate si compila e si esegue da solo, senza gli altri tool (REQ-079).
 #[test]
 fn si_esegue_da_solo() {
