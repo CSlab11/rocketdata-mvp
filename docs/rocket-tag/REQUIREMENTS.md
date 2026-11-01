@@ -27,7 +27,7 @@ Provengono da [`classifier-handoff/requirements.md`](../../classifier-handoff/re
 
 | ID | Requisito | Stato | File impattati |
 | --- | --- | --- | --- |
-| REQ-085 | L'iteratore deve ricevere un file Markdown oppure una cartella, di cui legge ricorsivamente i file `*.md`, e chiamare il classificatore scelto per ogni unità. | aperto | — |
+| REQ-085 | L'iteratore deve ricevere un file Markdown oppure una cartella, di cui legge ricorsivamente i file `*.md`, e chiamare il classificatore scelto per ogni unità. | implementato | `rocket-tag/Cargo.lock`, `rocket-tag/Cargo.toml`, `rocket-tag/src/iterate.rs`, `rocket-tag/src/lib.rs` |
 | REQ-086 | L'iteratore deve scomporre il Markdown in unità (paragrafi, voci di elenco, righe dati di tabella) secondo l'appendice A, usare i titoli solo per percorso dei titoli e clausola, ed escludere blocchi di codice, immagini, commenti HTML, separatori e righe vuote. | implementato | `rocket-tag/Cargo.lock`, `rocket-tag/Cargo.toml`, `rocket-tag/src/lib.rs`, `rocket-tag/src/markdown.rs` |
 | REQ-087 | Per ogni unità l'iteratore deve determinare la riga iniziale e la riga finale nel file Markdown, numerate da 1 e incluse. | implementato | `rocket-tag/src/markdown.rs` |
 | REQ-088 | Per ogni unità l'iteratore deve passare al classificatore testo, testo dell'unità precedente e successiva dello stesso file, percorso dei titoli, clausola, tipo di unità, lato e tipo del documento. | aperto | — |
