@@ -5,3 +5,4 @@ pub mod iterate;
 pub mod schema;
 pub mod rules;
 pub mod classifier;
+pub mod output;
