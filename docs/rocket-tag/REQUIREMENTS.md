@@ -42,7 +42,7 @@ Provengono da [`classifier-handoff/requirements.md`](../../classifier-handoff/re
 | REQ-091 | Ciascun classificatore deve ricevere come input obbligatori lo schema delle etichette e il testo di una singola unità, e restituire le etichette di quell'unità senza richiedere il documento intero. | aperto | — |
 | REQ-092 | Lo schema deve essere fornito come input (percorso del file o oggetto già caricato) e non letto da un percorso fisso, così che lo stesso file sia condiviso con lo strumento di etichettatura. | implementato | `rocket-tag/src/schema.rs` |
 | REQ-093 | Ciascun classificatore deve accettare come input facoltativi le unità vicine e il contesto (percorso dei titoli, clausola, tipo di unità, lato e tipo del documento) e funzionare anche quando mancano. | aperto | — |
-| REQ-094 | Il classificatore LLM deve includere nel prompt le unità vicine quando sono fornite. | aperto | — |
+| REQ-094 | Il classificatore LLM deve includere nel prompt le unità vicine quando sono fornite. | implementato | `rocket-tag/src/llm.rs` |
 
 ## Schema delle etichette
 

@@ -104,6 +104,7 @@
 - REQ-129 implementato — Riga di avanzamento su stdout per ogni unità elaborata (`rocket-tag/src/iterate.rs`, `rocket-tag/src/main.rs`, `rocket-tag/tests/cli.rs`)
 - REQ-080 implementato — Il pacchetto lavora solo su file Markdown esistenti e non tocca i documenti (`rocket-tag/tests/cli.rs`)
 - REQ-108 implementato — Prompt costruito da prompt_guide.md, schema ed esempi, ignorando negli esempi ciò che non è nello schema (`rocket-tag/config/prompt_guide.md`, `rocket-tag/src/lib.rs`, `rocket-tag/src/llm.rs`)
+- REQ-094 implementato — Unità vicine incluse nel prompt del classificatore LLM quando sono fornite (`rocket-tag/src/llm.rs`)
 
 ## 2026-10-25
 - REQ-068 richiesto — search-rm3: opzione --heading-weight, maggiore di 1, predefinita 3
