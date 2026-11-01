@@ -113,6 +113,7 @@
 - REQ-112 implementato — Richieste parallele configurabili e limite al numero di unità (`rocket-tag/src/llm.rs`, `rocket-tag/src/main.rs`, `rocket-tag/tests/llm.rs`)
 - REQ-111 implementato — Arresto con messaggio chiaro quando il server LLM non risponde (`rocket-tag/src/llm.rs`, `rocket-tag/src/main.rs`, `rocket-tag/tests/llm.rs`)
 - REQ-110 implementato — Ripresa dopo un'interruzione saltando le unità già presenti nel file di uscita (`rocket-tag/src/llm.rs`, `rocket-tag/src/main.rs`, `rocket-tag/tests/llm.rs`)
+- REQ-131 implementato — File di uscita dell'LLM aggiornato almeno ogni 20 unità (`rocket-tag/src/llm.rs`, `rocket-tag/src/main.rs`, `rocket-tag/tests/llm.rs`)
 
 ## 2026-10-25
 - REQ-068 richiesto — search-rm3: opzione --heading-weight, maggiore di 1, predefinita 3

@@ -222,7 +222,7 @@ fn run_classify_llm(args: &LlmArgs) -> Result<(), String> {
     let mut result = Output::new(&schema.version, llm.classifier_name());
     result.prompt_id = Some(llm.prompt_id.clone());
     result.items = items;
-    let run = Run { llm: &llm, schema: &schema, rules: from_rules.as_ref(), workers: args.workers };
+    let run = Run { llm: &llm, schema: &schema, rules: from_rules.as_ref(), workers: args.workers, path: &args.output };
     run.classify_all(&jobs, &mut result)?;
     result.write(&args.output)
 }

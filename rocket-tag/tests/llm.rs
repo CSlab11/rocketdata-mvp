@@ -282,6 +282,33 @@ fn riprende_dopo_un_interruzione() {
     assert_eq!(server.requests().len(), 7, "prompt_id diverso: si rifà tutto");
 }
 
+/// Il file si aggiorna ogni 20 unità: dopo un'interruzione forzata resta valido e la ripresa
+/// trova le unità già classificate (REQ-131).
+#[test]
+fn file_aggiornato_durante_l_esecuzione() {
+    let server = serve(|_, _| {
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        (200, labels())
+    });
+    let text: String = (0..100).map(|i| format!("Unità {i}.\n\n")).collect();
+    let (_dir, docs, out) = workspace(&text);
+    let mut child = llm(&docs, &out, &server.url).args(["--workers", "1"]).stdout(std::process::Stdio::null()).spawn().unwrap();
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
+    while !out.exists() {
+        assert!(std::time::Instant::now() < deadline, "nessun aggiornamento durante l'esecuzione");
+        std::thread::sleep(std::time::Duration::from_millis(5));
+    }
+    child.kill().unwrap();
+    child.wait().unwrap();
+
+    let partial = saved(&out)["items"].as_array().unwrap().len();
+    assert!((20..100).contains(&partial) && partial % 20 == 0, "{partial}");
+    let before = server.requests().len();
+    run(&mut llm(&docs, &out, &server.url));
+    assert_eq!(saved(&out)["items"].as_array().unwrap().len(), 100);
+    assert_eq!(server.requests().len() - before, 100 - partial);
+}
+
 #[test]
 fn le_unita_sparite_non_restano_nel_file() {
     let server = serve(|_, _| (200, labels()));

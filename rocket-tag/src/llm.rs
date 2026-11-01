@@ -20,6 +20,9 @@ use crate::schema::Schema;
 const CONTEXT_CHARS: usize = 400;
 const UNIT_CHARS: usize = 2500;
 
+/// Unità elaborate tra due aggiornamenti del file di uscita (REQ-131).
+const SAVE_EVERY: usize = 20;
+
 /// Errori di connessione senza alcun successo oltre i quali ci si ferma (REQ-111).
 const MAX_SERVER_ERRORS: usize = 5;
 
@@ -205,6 +208,8 @@ pub struct Run<'a> {
     pub rules: Option<&'a RuleLabels>,
     /// Richieste parallele (REQ-112).
     pub workers: usize,
+    /// File di uscita, aggiornato durante l'esecuzione.
+    pub path: &'a Path,
 }
 
 impl Run<'_> {
@@ -232,6 +237,11 @@ impl Run<'_> {
                         }
                         *count += 1;
                         println!("[{count}/{total}] {}", job.document);
+                        if (*count - resumed) % SAVE_EVERY == 0 {
+                            if let Err(error) = result.write(self.path) {
+                                eprintln!("avviso: {error}");
+                            }
+                        }
                     }
                 });
             }

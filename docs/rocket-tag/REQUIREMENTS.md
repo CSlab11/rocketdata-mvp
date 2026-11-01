@@ -89,7 +89,7 @@ Provengono da [`classifier-handoff/requirements.md`](../../classifier-handoff/re
 | REQ-117 | Il file di uscita deve restare un JSON valido anche se l'esecuzione si interrompe (scrittura su file temporaneo e rinomina). | implementato | `rocket-tag/src/output.rs` |
 | REQ-129 | I comandi che classificano un file o una cartella devono scrivere su stdout una riga `[<unità elaborate>/<unità totali>] <documento>` per ogni unità elaborata, così che chi li esegue possa seguirne l'avanzamento. | implementato | `rocket-tag/src/iterate.rs`, `rocket-tag/src/main.rs`, `rocket-tag/tests/cli.rs` |
 | REQ-130 | Ogni comando del pacchetto deve terminare con codice di uscita 0 se riesce e diverso da 0 in caso di errore, con il messaggio di errore su stderr; le unità scartate (REQ-109) non sono un errore del comando. | aperto | — |
-| REQ-131 | Durante l'esecuzione il classificatore LLM deve aggiornare il file di uscita almeno ogni 20 unità elaborate, con la scrittura di REQ-117, così che dopo un'interruzione forzata del processo la ripresa (REQ-110) trovi le unità già classificate. | aperto | — |
+| REQ-131 | Durante l'esecuzione il classificatore LLM deve aggiornare il file di uscita almeno ogni 20 unità elaborate, con la scrittura di REQ-117, così che dopo un'interruzione forzata del processo la ripresa (REQ-110) trovi le unità già classificate. | implementato | `rocket-tag/src/llm.rs`, `rocket-tag/src/main.rs`, `rocket-tag/tests/llm.rs` |
 
 ## Valutazione
 
