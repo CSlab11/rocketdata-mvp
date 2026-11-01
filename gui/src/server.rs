@@ -19,7 +19,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use crate::classify::{self, Classifier, Config, Server};
 use crate::dialogs::{FolderPicker, Opener, Opening};
 use crate::search;
-use crate::settings::{self, Settings};
+use crate::settings::{self, ConfigPaths, Settings};
 use crate::runner::{self, Event, Runner, Snapshot};
 
 /// Interfaccia web incorporata nell'eseguibile (REQ-026).
@@ -149,13 +149,22 @@ async fn search_status(State(state): State<Arc<AppState>>) -> Json<DocRipperStat
     })
 }
 
+#[derive(Serialize)]
+struct ClassifyStatus {
+    available: bool,
+    message: Option<String>,
+    /// File di configurazione predefiniti (REQ-140).
+    config: Option<Config>,
+}
+
 /// Disponibilità di `rocket-tag.exe` accanto a `gui.exe` (REQ-134).
-async fn classify_status(State(state): State<Arc<AppState>>) -> Json<DocRipperStatus> {
+async fn classify_status(State(state): State<Arc<AppState>>) -> Json<ClassifyStatus> {
     Json(match &state.rocket_tag {
-        Some(_) => DocRipperStatus { available: true, message: None },
-        None => DocRipperStatus {
+        Some(exe) => ClassifyStatus { available: true, message: None, config: Some(Config::beside(exe)) },
+        None => ClassifyStatus {
             available: false,
             message: Some("rocket-tag.exe non trovato nella cartella di gui.exe: copiarlo lì e riavviare la gui.".into()),
+            config: None,
         },
     })
 }
@@ -168,6 +177,9 @@ struct ClassifyRequest {
     model: Option<String>,
     /// Passata solo con una variabile d'ambiente e mai salvata (REQ-141).
     api_key: Option<String>,
+    /// File di configurazione diversi da quelli predefiniti (REQ-140).
+    #[serde(default)]
+    config: ConfigPaths,
 }
 
 /// Avvia rocket-tag sulla cartella dei file Markdown (REQ-133).
@@ -189,15 +201,19 @@ async fn classify_run(
     if let Some(dir) = output.parent() {
         std::fs::create_dir_all(dir).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("impossibile creare {}: {e}", dir.display())))?;
     }
-    let args = classify::arguments(request.classifier, folder, &Config::beside(exe), server.as_ref());
+    let config = Config::beside(exe).with(&request.config);
+    let args = classify::arguments(request.classifier, folder, &config, server.as_ref());
     let key = request.api_key.as_deref().map(str::trim).filter(|key| !key.is_empty());
     let envs: Vec<(&str, String)> = key.map(|key| ("ROCKET_TAG_API_KEY", key.to_string())).into_iter().collect();
     state.classifier.start(exe, &args, &envs, src).map_err(|e| (StatusCode::CONFLICT, e))?;
-    // Ultimi URL e modello, riproposti ai prossimi avvii (REQ-141).
-    if let (Some(path), Some(server)) = (&state.settings_path, &server) {
+    // Ultimi percorsi, URL e modello, riproposti ai prossimi avvii (REQ-140, REQ-141).
+    if let Some(path) = &state.settings_path {
         let change = |s: &mut Settings| {
-            s.classify.base_url = server.base_url.clone();
-            s.classify.model = server.model.clone();
+            s.classify.config = request.config.clone();
+            if let Some(server) = &server {
+                s.classify.base_url = server.base_url.clone();
+                s.classify.model = server.model.clone();
+            }
         };
         if let Err(error) = settings::update(path, change) {
             eprintln!("Impossibile salvare le impostazioni in {}: {error}", path.display());

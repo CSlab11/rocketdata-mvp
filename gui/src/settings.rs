@@ -26,6 +26,17 @@ pub struct Settings {
 pub struct ClassifySettings {
     pub base_url: String,
     pub model: String,
+    pub config: ConfigPaths,
+}
+
+/// Percorsi dei file di configurazione di rocket-tag; vuoti per i file predefiniti (REQ-140).
+#[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ConfigPaths {
+    pub schema: String,
+    pub rules: String,
+    pub guide: String,
+    pub examples: String,
 }
 
 /// Chiave di confronto di una cartella: senza distinzione tra maiuscole e minuscole, con `/`

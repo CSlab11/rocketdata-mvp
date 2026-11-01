@@ -214,6 +214,10 @@ h1 { font-size: 22px; margin: 0 0 4px; }
 
 .actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
 
+.config { margin-bottom: 14px; }
+
+.config summary { cursor: pointer; font-weight: 600; margin-bottom: 8px; }
+
 .field select {
   font: inherit;
   padding: 7px 10px;

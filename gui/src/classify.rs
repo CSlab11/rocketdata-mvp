@@ -3,7 +3,9 @@
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+
+use crate::settings::ConfigPaths;
 
 /// Classificatore di rocket-tag.
 #[derive(Debug, Clone, Copy, PartialEq, Deserialize)]
@@ -14,7 +16,7 @@ pub enum Classifier {
 }
 
 /// File di configurazione di rocket-tag.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Config {
     pub schema: PathBuf,
     pub rules: PathBuf,
@@ -31,6 +33,17 @@ impl Config {
             rules: dir.join("rules.yaml"),
             guide: dir.join("prompt_guide.md"),
             examples: dir.join("guide_examples.json"),
+        }
+    }
+
+    /// I percorsi indicati al posto di quelli predefiniti (REQ-140).
+    pub fn with(self, paths: &ConfigPaths) -> Config {
+        let chosen = |path: &str, default: PathBuf| if path.trim().is_empty() { default } else { PathBuf::from(path.trim()) };
+        Config {
+            schema: chosen(&paths.schema, self.schema),
+            rules: chosen(&paths.rules, self.rules),
+            guide: chosen(&paths.guide, self.guide),
+            examples: chosen(&paths.examples, self.examples),
         }
     }
 }

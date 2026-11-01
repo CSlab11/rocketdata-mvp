@@ -137,6 +137,38 @@ fn server_llm_ricordato_e_chiave_solo_in_ambiente() {
     assert!(dom.contains(r#"id="classify-key""#) && dom.contains(r#"type="password""#), "{dom}");
 }
 
+/// File di configurazione predefiniti accanto a gui.exe, oppure quelli scelti e ricordati (REQ-140).
+#[test]
+fn file_di_configurazione_modificabili_e_ricordati() {
+    let (_dir, exe) = install_with_fake_tag();
+    let appdata = tempfile::tempdir().unwrap();
+    let folder = markdown_folder();
+    let src = folder.path().to_str().unwrap();
+    let args = |folder: &Path| read_json(&folder.join(".classify/rules.json.args.json"))["args"].clone();
+    {
+        let gui = Gui::start_with_appdata(&exe, appdata.path());
+        assert_eq!(post_json(&gui, "/api/classify/run", &json!({"src": src, "classifier": "rules"})).0, 202);
+        wait_end(&gui);
+        let received = args(folder.path());
+        let list = received.as_array().unwrap();
+        let position = list.iter().position(|a| a == "--rules").unwrap();
+        assert!(list[position + 1].as_str().unwrap().ends_with(r"rocket-tag-config\rules.yaml"));
+
+        let request = json!({"src": src, "classifier": "rules",
+                             "config": {"schema": "D:\\mio\\schema.json", "rules": "D:\\mio\\regole.yaml"}});
+        assert_eq!(post_json(&gui, "/api/classify/run", &request).0, 202);
+        wait_end(&gui);
+        let received = args(folder.path());
+        let list: Vec<_> = received.as_array().unwrap().iter().map(|a| a.as_str().unwrap()).collect();
+        assert!(list.windows(2).any(|w| w == ["--schema", r"D:\mio\schema.json"]));
+        assert!(list.windows(2).any(|w| w == ["--rules", r"D:\mio\regole.yaml"]));
+    }
+    let gui = Gui::start_with_appdata(&exe, appdata.path());
+    let dom = dump_dom(&gui.url("/#classify"));
+    assert!(dom.contains(r#"value="D:\mio\regole.yaml""#), "{dom}");
+    assert!(dom.contains(r#"placeholder=""#) && dom.contains(r"rocket-tag-config\prompt_guide.md"), "{dom}");
+}
+
 #[test]
 fn richieste_non_valide() {
     let (_dir, exe) = install_with_fake_tag();

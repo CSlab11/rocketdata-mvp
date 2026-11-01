@@ -537,6 +537,15 @@ async function renderClassify(content) {
   const apiKey = textField("classify-key", "Chiave del server (facoltativa)", { type: "password" });
   const llmFields = el("div", { id: "classify-llm", hidden: "" }, baseUrl.row, model.row, apiKey.row);
   kind.addEventListener("change", () => (llmFields.hidden = kind.value !== "llm"));
+  // File di configurazione di rocket-tag: vuoti, valgono quelli accanto a gui.exe (REQ-140).
+  const configFields = {
+    schema: textField("classify-schema", "Schema (label_schema.json)"),
+    rules: textField("classify-rules", "Regole (rules.yaml)"),
+    guide: textField("classify-guide", "Guida (prompt_guide.md)"),
+    examples: textField("classify-examples", "Esempi (guide_examples.json)"),
+  };
+  const configRows = Object.values(configFields).map((f) => f.row);
+  const configSection = el("details", { id: "classify-config", class: "config" }, el("summary", {}, "File di configurazione"), ...configRows);
   const start = el("button", { id: "classify-start", class: "primary", type: "button", disabled: "" }, "Classifica");
   const cancel = el("button", { id: "classify-cancel", type: "button", hidden: "" }, "Annulla");
   const progressBar = el("progress", { max: "100", value: "0" });
@@ -549,6 +558,7 @@ async function renderClassify(content) {
     folderRow,
     el("div", { class: "field" }, el("label", { for: "classify-kind" }, "Classificatore"), el("div", { class: "field-row" }, kind)),
     llmFields,
+    configSection,
     el("div", { class: "actions" }, start, cancel),
     progress,
     result,
@@ -624,6 +634,7 @@ async function renderClassify(content) {
       base_url: baseUrl.input.value,
       model: model.input.value,
       api_key: apiKey.input.value,
+      config: Object.fromEntries(Object.entries(configFields).map(([name, f]) => [name, f.input.value])),
     };
     const response = await fetch("/api/classify/run", {
       method: "POST",
@@ -642,6 +653,7 @@ async function renderClassify(content) {
   if (!folder.value) folder.defaultValue = saved.dst;
   baseUrl.input.defaultValue = saved.classify.base_url;
   model.input.defaultValue = saved.classify.model;
+  Object.entries(configFields).forEach(([name, f]) => (f.input.defaultValue = saved.classify.config[name]));
 
   // rocket-tag.exe deve trovarsi accanto a gui.exe (REQ-134).
   const status = await fetch("/api/classify/status").then((r) => r.json());
@@ -649,6 +661,7 @@ async function renderClassify(content) {
     showError(status.message);
     return;
   }
+  Object.entries(configFields).forEach(([name, f]) => f.input.setAttribute("placeholder", status.config[name]));
 
   // Pagina ricaricata: si ricollega all'esecuzione in corso o mostra l'esito dell'ultima.
   const snapshot = await fetch("/api/classify/output").then((r) => r.json());
