@@ -1,5 +1,53 @@
 # Changelog
 
+## 2026-11-01
+- REQ-079 richiesto — rocket-tag: Il pacchetto deve essere implementato in Rust come parte del progetto `rocketdata-mvp`, in un crate dedicato compilabile ed eseguibile senza le altre parti della pipeline
+- REQ-080 richiesto — rocket-tag: Il pacchetto deve presupporre che i file Markdown esistano già e non deve convertire, pulire o estrarre documenti
+- REQ-081 richiesto — rocket-tag: Il pacchetto deve funzionare interamente in locale e non deve inviare il contenuto dei documenti a servizi diversi dal server LLM configurato dall'utente
+- REQ-082 richiesto — rocket-tag: Il classificatore a regole e il classificatore LLM devono essere componenti separati, eseguibili in modo indipendente, ciascuno con il proprio file di uscita
+- REQ-083 richiesto — rocket-tag: Il classificatore LLM non deve dipendere dal codice del classificatore a regole; può usarne l'uscita solo come file in ingresso facoltativo
+- REQ-084 richiesto — rocket-tag: L'iteratore deve essere separato dai classificatori: ciascun classificatore deve esporre una funzione di libreria che classifica una singola unità e un comando che classifica un testo passato da riga di comando
+- REQ-085 richiesto — rocket-tag: L'iteratore deve ricevere un file Markdown oppure una cartella, di cui legge ricorsivamente i file `*.md`, e chiamare il classificatore scelto per ogni unità
+- REQ-086 richiesto — rocket-tag: L'iteratore deve scomporre il Markdown in unità (paragrafi, voci di elenco, righe dati di tabella) secondo l'appendice A, usare i titoli solo per percorso dei titoli e clausola, ed escludere blocchi di codice, immagini, commenti HTML, separatori e righe vuote
+- REQ-087 richiesto — rocket-tag: Per ogni unità l'iteratore deve determinare la riga iniziale e la riga finale nel file Markdown, numerate da 1 e incluse
+- REQ-088 richiesto — rocket-tag: Per ogni unità l'iteratore deve passare al classificatore testo, testo dell'unità precedente e successiva dello stesso file, percorso dei titoli, clausola, tipo di unità, lato e tipo del documento
+- REQ-089 richiesto — rocket-tag: L'iteratore deve ricavare lato e tipo del documento dalle etichette documento del file di etichette umane (appendice F), se fornito, abbinandole per nome del documento; altrimenti dalla sezione `documents` di `rules.yaml` applicata al nome del documento; altrimenti deve lasciarli sconosciuti
+- REQ-090 richiesto — rocket-tag: Il nome del documento deve essere il percorso del file Markdown relativo alla cartella di ingresso, con separatore `/`, oppure il nome del file quando l'ingresso è un singolo file
+- REQ-091 richiesto — rocket-tag: Ciascun classificatore deve ricevere come input obbligatori lo schema delle etichette e il testo di una singola unità, e restituire le etichette di quell'unità senza richiedere il documento intero
+- REQ-092 richiesto — rocket-tag: Lo schema deve essere fornito come input (percorso del file o oggetto già caricato) e non letto da un percorso fisso, così che lo stesso file sia condiviso con lo strumento di etichettatura
+- REQ-093 richiesto — rocket-tag: Ciascun classificatore deve accettare come input facoltativi le unità vicine e il contesto (percorso dei titoli, clausola, tipo di unità, lato e tipo del documento) e funzionare anche quando mancano
+- REQ-094 richiesto — rocket-tag: Il classificatore LLM deve includere nel prompt le unità vicine quando sono fornite
+- REQ-095 richiesto — rocket-tag: Il pacchetto deve ricavare dallo schema fornito (appendice B) faccette, valori ammessi, descrizioni, valori proposti (`x-default`) e vincoli per lato documento (`x-fixedWhen`), senza valori di faccetta scritti nel codice
+- REQ-096 richiesto — rocket-tag: Il pacchetto deve applicare i vincoli `x-fixedWhen` a ogni uscita (es. `required_action = none` per i documenti `supplier`)
+- REQ-097 richiesto — rocket-tag: Una modifica dello schema non deve richiedere modifiche al codice del classificatore LLM, dell'iteratore né della valutazione
+- REQ-098 richiesto — rocket-tag: Il pacchetto deve controllare lo schema all'avvio e fermarsi con un messaggio che indica l'errore quando non è conforme all'appendice B
+- REQ-099 richiesto — rocket-tag: Il classificatore a regole deve leggere le regole da un file `rules.yaml` fornito come input (appendice C), come dati e non come codice
+- REQ-100 richiesto — rocket-tag: Le regole devono supportare le modalità `first` (vince la prima regola che corrisponde), `score` (vince il valore con più corrispondenze), `multi` (faccette a scelta multipla) e la mappatura da un'altra faccetta (`then_map`)
+- REQ-101 richiesto — rocket-tag: Le regole devono poter porre condizioni sul testo (`any`, `all`, `unless`, `count_min`, `min_len`, `max_len`, `case`), sul contesto (`side`, `doc_type`, `kind`, `heading`) e sulle faccette già decise
+- REQ-102 richiesto — rocket-tag: Le espressioni regolari di `rules.yaml` devono usare la sintassi del crate Rust `regex`; il controllo delle regole deve segnalare come errore ogni espressione non compilabile
+- REQ-103 richiesto — rocket-tag: Il classificatore a regole deve offrire un controllo di `rules.yaml` contro lo schema che blocca l'esecuzione per faccette o valori inesistenti ed espressioni non valide, e segnala come avvisi i valori mai prodotti, i valori non mappati in `then_map` e le faccette senza regole
+- REQ-104 richiesto — rocket-tag: Il classificatore a regole deve omettere una faccetta (astensione) quando nessuna regola si applica e non è definito un valore predefinito
+- REQ-105 richiesto — rocket-tag: Il classificatore a regole deve registrare per ogni faccetta la regola che l'ha decisa (`rule_ids`) e una confidenza, secondo l'appendice C
+- REQ-106 richiesto — rocket-tag: Il classificatore LLM deve funzionare con qualsiasi server locale compatibile con l'API OpenAI chat completions, con URL, modello e chiave facoltativa configurabili
+- REQ-107 richiesto — rocket-tag: Il classificatore LLM deve vincolare la risposta al formato delle faccette derivato dallo schema (appendice D), con modalità `json_schema`, `guided_json` o `json_object` selezionabile
+- REQ-108 richiesto — rocket-tag: Il classificatore LLM deve costruire il prompt secondo l'appendice D da `prompt_guide.md`, dalle descrizioni dello schema e da `guide_examples.json`, ignorando negli esempi le faccette e i valori assenti dallo schema corrente
+- REQ-109 richiesto — rocket-tag: Il classificatore LLM deve validare ogni risposta contro lo schema, ritentare una volta in caso di risposta non valida e, al secondo fallimento, scartare l'unità registrandola tra le scartate con il motivo
+- REQ-110 richiesto — rocket-tag: L'esecuzione con il classificatore LLM deve poter riprendere dopo un'interruzione, saltando le unità già presenti nel file di uscita con la stessa versione dello schema, lo stesso `prompt_id` e lo stesso `text_hash`
+- REQ-111 richiesto — rocket-tag: Il classificatore LLM deve fermarsi con un messaggio chiaro quando il server non risponde (5 errori di connessione senza alcun successo)
+- REQ-112 richiesto — rocket-tag: L'esecuzione con il classificatore LLM deve supportare un numero configurabile di richieste parallele e un limite al numero di unità
+- REQ-113 richiesto — rocket-tag: Se riceve il file di uscita del classificatore a regole, il classificatore LLM deve assegnare a ogni faccetta confidenza 0,9 se concorda con le regole sulla stessa unità e 0,5 se non concorda; senza quel file, 0,7
+- REQ-114 richiesto — rocket-tag: Ogni esecuzione di un classificatore deve scrivere un file JSON nel formato dell'appendice E
+- REQ-115 richiesto — rocket-tag: Ogni elemento dell'uscita deve contenere il nome del documento, la riga iniziale e la riga finale dell'unità nel file Markdown e le etichette assegnate, un valore per faccetta
+- REQ-116 richiesto — rocket-tag: Ogni elemento dell'uscita deve contenere anche tipo di unità, `text_hash`, confidenza per faccetta e confidenza dell'unità, pari al minimo delle confidenze per faccetta; il file deve riportare classificatore e versione dello schema
+- REQ-117 richiesto — rocket-tag: Il file di uscita deve restare un JSON valido anche se l'esecuzione si interrompe (scrittura su file temporaneo e rinomina)
+- REQ-118 richiesto — rocket-tag: La valutazione deve abbinare un file di uscita e un file di etichette umane (appendice F) per nome del documento, riga iniziale e riga finale; se entrambi hanno `text_hash` e differiscono, l'etichetta deve essere esclusa e contata come non allineata
+- REQ-119 richiesto — rocket-tag: La valutazione deve calcolare per ogni faccetta accuratezza, macro-F1, copertura, precisione e richiamo per valore, confusioni più frequenti e accuratezza per fascia di confidenza (appendice G)
+- REQ-120 richiesto — rocket-tag: La valutazione deve escludere e contare le etichette umane non valide per lo schema corrente
+- REQ-121 richiesto — rocket-tag: La valutazione deve produrre un report Markdown e aggiungere una riga di metriche a uno storico JSONL (appendice G)
+- REQ-122 richiesto — rocket-tag: Il pacchetto deve offrire un rapporto d'impatto di una modifica dello schema: differenze tra due versioni (faccette e valori aggiunti o rimossi, obbligatorietà), etichette umane da rivedere e incoerenze di `rules.yaml`
+- REQ-123 richiesto — rocket-tag: Il pacchetto deve offrire la migrazione di un file di etichette umane a una nuova versione dello schema con una mappa di rinomina di faccette e valori ed eliminazione di faccette; le etichette valide passano alla nuova versione, le altre restano alla vecchia
+- REQ-124 richiesto — rocket-tag: Il repository deve conservare in `classifier-handoff/` il pacchetto di passaggio del classificatore, senza modifiche: `requirements.md` e `CHANGELOG.md` con gli ID locali originali e, in `reference/`, i file di riferimento dell'appendice I
+
 ## 2026-10-25
 - REQ-068 richiesto — search-rm3: opzione --heading-weight, maggiore di 1, predefinita 3
 - REQ-067 implementato — BM25F: frequenze e lunghezze con i token dell'intestazione pesati 3 volte (`search/search-rm3/src/bm25.rs`, `search/search-rm3/src/index.rs`, `search/search-rm3/src/rm3.rs`, `search/search-rm3/src/section.rs`, `search/search-rm3/tests/query.rs`)

@@ -2,7 +2,7 @@
 
 ## Requisiti
 
-Requisiti di progetto. I requisiti dei singoli tool sono in [`doc-ripper/REQUIREMENTS.md`](doc-ripper/REQUIREMENTS.md), [`gui/REQUIREMENTS.md`](gui/REQUIREMENTS.md) e [`search/REQUIREMENTS.md`](search/REQUIREMENTS.md), con i sotto-tool in [`search/search-rm3/REQUIREMENTS.md`](search/search-rm3/REQUIREMENTS.md).
+Requisiti di progetto. I requisiti dei singoli tool sono in [`doc-ripper/REQUIREMENTS.md`](doc-ripper/REQUIREMENTS.md), [`gui/REQUIREMENTS.md`](gui/REQUIREMENTS.md), [`rocket-tag/REQUIREMENTS.md`](rocket-tag/REQUIREMENTS.md) e [`search/REQUIREMENTS.md`](search/REQUIREMENTS.md), con i sotto-tool in [`search/search-rm3/REQUIREMENTS.md`](search/search-rm3/REQUIREMENTS.md).
 
 | ID | Requisito | Stato | File impattati |
 |----|-----------|-------|----------------|
