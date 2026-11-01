@@ -153,6 +153,54 @@ fn chiave_dalla_variabile_d_ambiente() {
     assert!(!rejected.status.success(), "nessuna opzione da riga di comando");
 }
 
+/// Una risposta non valida si ritenta una volta; al secondo fallimento l'unità è scartata con il
+/// motivo (REQ-109).
+#[test]
+fn risposta_non_valida_ritentata_poi_scartata() {
+    let bad = json!({"nature": "inventata"}).to_string();
+    let wrong = bad.clone();
+    let server = serve(move |body, _| {
+        let user = body["messages"][1]["content"].as_str().unwrap();
+        if user.contains("UNIT TO LABEL: Sempre") { (200, wrong.clone()) } else { (200, labels()) }
+    });
+    let (_dir, docs, out) = workspace("Giusta.\n\nSempre sbagliata.\n");
+    run(&mut llm(&docs, &out, &server.url));
+    assert_eq!(server.requests().len(), 3);
+    let result = saved(&out);
+    assert_eq!(result["items"].as_array().unwrap().len(), 1);
+    let skipped = &result["skipped"][0];
+    assert_eq!((skipped["document"].as_str(), skipped["line_start"].as_u64()), (Some("a.md"), Some(3)));
+    assert!(skipped["error"].as_str().unwrap().contains("nature: valore non ammesso"), "{skipped}");
+}
+
+#[test]
+fn la_seconda_risposta_puo_essere_valida() {
+    let server = serve(|_, number| if number == 1 { (200, "non json".to_string()) } else { (200, labels()) });
+    let (_dir, docs, out) = workspace("Testo.\n");
+    run(&mut llm(&docs, &out, &server.url));
+    let result = saved(&out);
+    assert_eq!(result["items"].as_array().unwrap().len(), 1);
+    assert_eq!(result["skipped"], json!([]));
+}
+
+/// Prima della validazione valgono i vincoli dello schema e il default delle faccette multiple.
+#[test]
+fn vincoli_e_default_prima_della_validazione() {
+    let server = serve(|_, _| {
+        (200, json!({"nature": "commitment", "domain": "technical", "destination": "P",
+                     "required_action": "quote", "extraction_quality": "ok"}).to_string())
+    });
+    let (dir, docs, out) = workspace("Testo.\n");
+    std::fs::rename(docs.join("a.md"), docs.join("[TD] a.md")).unwrap();
+    let rules = dir.path().join("rules.yaml");
+    std::fs::write(&rules, "version: \"1\"\ndocuments:\n  - {match: 'TD', side: supplier, doc_type: technical_description}\n").unwrap();
+    run(llm(&docs, &out, &server.url).arg("--rules").arg(&rules));
+    let labels = &saved(&out)["items"][0]["labels"];
+    assert_eq!(labels["required_action"], "none");
+    assert_eq!(labels["flags"], json!([]));
+    assert_eq!(saved(&out)["skipped"], json!([]));
+}
+
 /// La risposta può arrivare dentro un blocco di codice o con testo attorno.
 #[test]
 fn accetta_il_json_dentro_un_blocco_di_codice() {

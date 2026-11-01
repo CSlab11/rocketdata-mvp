@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-use serde_json::Value;
+use serde_json::{Map, Value};
 
 /// Valore obbligato quando il documento ha un certo lato (`x-fixedWhen`).
 #[derive(Debug, Clone, PartialEq)]
@@ -92,6 +92,42 @@ impl Schema {
         Ok(())
     }
 
+    /// Errori di un insieme di etichette rispetto allo schema: faccette obbligatorie mancanti,
+    /// valori non ammessi, faccette in più e vincoli per il lato del documento.
+    pub fn label_errors(&self, labels: &Map<String, Value>, side: Option<&str>) -> Vec<String> {
+        let mut errors = Vec::new();
+        for facet in &self.facets {
+            let Some(value) = labels.get(&facet.name).filter(|v| !v.is_null()) else {
+                if facet.required {
+                    errors.push(format!("{}: mancante", facet.name));
+                }
+                continue;
+            };
+            let values = match (facet.multi, value) {
+                (true, Value::Array(values)) => values.iter().collect(),
+                (true, _) => {
+                    errors.push(format!("{}: deve essere una lista", facet.name));
+                    continue;
+                }
+                (false, value) => vec![value],
+            };
+            for value in values {
+                if !value.as_str().is_some_and(|v| facet.values.iter().any(|allowed| allowed == v)) {
+                    errors.push(format!("{}: valore non ammesso {value}", facet.name));
+                }
+            }
+            if let Some(fixed) = facet.fixed.as_ref().filter(|f| Some(f.side.as_str()) == side) {
+                if value.as_str() != Some(fixed.value.as_str()) {
+                    errors.push(format!("{}: per side={} deve essere '{}'", facet.name, fixed.side, fixed.value));
+                }
+            }
+        }
+        for name in labels.keys().filter(|name| self.facet(name).is_none()) {
+            errors.push(format!("faccetta non prevista: {name}"));
+        }
+        errors
+    }
+
     pub fn facet(&self, name: &str) -> Option<&Facet> {
         self.facets.iter().find(|f| f.name == name)
     }
@@ -173,6 +209,26 @@ mod tests {
         assert!(broken("\"side\": \"supplier\",\n            \"value\": \"none\"", "\"side\": \"altro\",\n            \"value\": \"none\"").contains("lato non ammesso"));
         assert!(broken("\"side\": \"supplier\",\n            \"value\": \"none\"", "\"side\": \"supplier\",\n            \"value\": \"mai\"").contains("valore non ammesso"));
         assert!(broken("\"x-default\": \"ok\"", "\"x-default\": \"mai\"").contains("x-default"));
+    }
+
+    #[test]
+    fn errori_delle_etichette() {
+        let schema = Schema::parse(SCHEMA).unwrap();
+        let good = serde_json::json!({"nature": "requirement", "domain": "technical", "destination": "P",
+            "required_action": "declare_compliance", "extraction_quality": "ok", "flags": ["multiple_requirements"]});
+        let labels = |change: &dyn Fn(&mut Value)| {
+            let mut value = good.clone();
+            change(&mut value);
+            value.as_object().unwrap().clone()
+        };
+        let errors = |change: &dyn Fn(&mut Value), side| schema.label_errors(&labels(change), side);
+        assert!(errors(&|_| {}, None).is_empty());
+        assert_eq!(errors(&|v| { v.as_object_mut().unwrap().remove("nature"); }, None), ["nature: mancante"]);
+        assert_eq!(errors(&|v| v["domain"] = "mai".into(), None), ["domain: valore non ammesso \"mai\""]);
+        assert_eq!(errors(&|v| v["flags"] = "x".into(), None), ["flags: deve essere una lista"]);
+        assert_eq!(errors(&|v| v["flags"] = serde_json::json!(["mai"]), None), ["flags: valore non ammesso \"mai\""]);
+        assert_eq!(errors(&|v| v["altra"] = 1.into(), None), ["faccetta non prevista: altra"]);
+        assert_eq!(errors(&|_| {}, Some("supplier")), ["required_action: per side=supplier deve essere 'none'"]);
     }
 
     #[test]

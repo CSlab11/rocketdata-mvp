@@ -95,11 +95,29 @@ impl Llm {
         content.map(str::to_string).ok_or_else(|| Failure::Invalid("risposta senza contenuto".to_string()))
     }
 
-    /// Etichette di un'unità.
+    /// Etichette di un'unità. Una risposta non valida si ritenta una volta (REQ-109).
     pub fn classify(&self, schema: &Schema, text: &str, context: &Context) -> Result<Decision, Failure> {
-        let labels = parse_labels(&self.complete(&user_prompt(text, context))?)?;
-        let confidence = labels.keys().map(|name| (name.clone(), json!(0.7))).collect();
-        Ok(Decision { labels, confidence, rule_ids: Map::new() }.finish(schema, context.side.as_deref()))
+        let user = user_prompt(text, context);
+        match self.attempt(schema, &user, context) {
+            Err(Failure::Invalid(_)) => self.attempt(schema, &user, context),
+            outcome => outcome,
+        }
+    }
+
+    fn attempt(&self, schema: &Schema, user: &str, context: &Context) -> Result<Decision, Failure> {
+        let side = context.side.as_deref();
+        let labels = parse_labels(&self.complete(user)?)?;
+        let mut decision = Decision { labels, ..Decision::default() }.finish(schema, side);
+        for facet in schema.facets.iter().filter(|f| f.multi) {
+            decision.labels.entry(facet.name.clone()).or_insert_with(|| json!([]));
+        }
+        let errors = schema.label_errors(&decision.labels, side);
+        if !errors.is_empty() {
+            return Err(Failure::Invalid(errors.join("; ")));
+        }
+        decision.confidence = decision.labels.keys().map(|name| (name.clone(), json!(0.7))).collect();
+        decision.rule_ids.clear();
+        Ok(decision)
     }
 }
 
