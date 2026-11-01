@@ -9,6 +9,7 @@ use serde_json::{Map, Value, json};
 use serde_yaml::{Mapping, Value as Yaml};
 
 use crate::classifier::{Context, Decision};
+use crate::markdown::Kind;
 
 #[derive(Deserialize)]
 struct RawFile {
@@ -227,13 +228,40 @@ impl FacetRules {
     }
 }
 
+impl Condition {
+    fn holds(&self, context: &Context, decided: &Map<String, Value>) -> bool {
+        let allows = |value: Option<&str>| self.allowed.iter().any(|a| a.as_deref() == value);
+        match self.key.as_str() {
+            "side" => allows(context.side.as_deref()),
+            "doc_type" => allows(context.doc_type.as_deref()),
+            "kind" => allows(context.kind.map(Kind::as_str)),
+            "heading" => {
+                let path = context.heading_path.join(" › ");
+                self.patterns.iter().any(|p| p.is_match(&path))
+            }
+            facet => match decided.get(facet) {
+                Some(Value::Array(values)) => values.iter().any(|v| allows(v.as_str())),
+                Some(value) => allows(value.as_str()),
+                None => allows(None),
+            },
+        }
+    }
+}
+
 impl Rule {
-    fn when_ok(&self, _context: &Context, _decided: &Map<String, Value>) -> bool {
-        true
+    /// Tutte le condizioni su contesto e faccette già decise (REQ-101).
+    fn when_ok(&self, context: &Context, decided: &Map<String, Value>) -> bool {
+        self.when.iter().all(|condition| condition.holds(context, decided))
     }
 
+    /// Condizioni sul testo (REQ-101).
     fn text_ok(&self, text: &str) -> bool {
-        self.any.is_empty() || self.any_hits(text) >= self.count_min
+        let length = text.chars().count();
+        self.max_len.is_none_or(|max| length <= max)
+            && self.min_len.is_none_or(|min| length >= min)
+            && !self.unless.iter().any(|p| p.is_match(text))
+            && self.all.iter().all(|p| p.is_match(text))
+            && (self.any.is_empty() || self.any_hits(text) >= self.count_min)
     }
 
     /// Occorrenze totali delle espressioni di `any`.
@@ -415,6 +443,73 @@ facets:
         assert_eq!(labels(yaml, "x")["b"], "P");
         assert_eq!(labels(yaml, "y")["b"], "Q", "valore non mappato");
         assert_eq!(labels(yaml, "x k")["b"], "diretto");
+    }
+
+    fn one_rule(rule: &str) -> RuleSet {
+        RuleSet::parse(&format!("version: \"1\"\nfacets:\n  a:\n    rules:\n      - {{value: si, {rule}}}\n")).unwrap()
+    }
+
+    fn matches(rule: &str, text: &str, context: &Context) -> bool {
+        one_rule(rule).classify(text, context).labels.contains_key("a")
+    }
+
+    #[test]
+    fn condizioni_sul_testo() {
+        let none = Context::default();
+        assert!(matches("any: ['x', 'y']", "solo y", &none));
+        assert!(!matches("all: ['x', 'y']", "solo y", &none));
+        assert!(matches("all: ['x', 'y']", "x e y", &none));
+        assert!(!matches("any: ['x'], unless: ['y']", "x e y", &none));
+        assert!(!matches("any: ['x'], count_min: 2", "x", &none));
+        assert!(matches("any: ['x', 'y'], count_min: 2", "x y", &none));
+        assert!(!matches("min_len: 5", "città", &Context { ..Context::default() }) == false, "lunghezza in caratteri");
+        assert!(!matches("max_len: 4", "città", &none));
+        assert!(matches("any: ['X']", "x", &none), "senza distinzione maiuscole");
+        assert!(!matches("any: ['X'], case: true", "x", &none));
+    }
+
+    #[test]
+    fn condizioni_sul_contesto() {
+        let context = Context {
+            side: Some("prime".into()),
+            doc_type: Some("pa_plan".into()),
+            kind: Some(Kind::TableRow),
+            heading_path: vec!["4 Verification".into(), "Thermal Tests".into()],
+            ..Context::default()
+        };
+        assert!(matches("when: {side: [prime]}", "t", &context));
+        assert!(!matches("when: {side: [supplier]}", "t", &context));
+        assert!(!matches("when: {side: [prime]}", "t", &Context::default()));
+        assert!(matches("when: {side: [prime, null]}", "t", &Context::default()), "null = lato sconosciuto");
+        assert!(matches("when: {doc_type: [pa_plan]}", "t", &context));
+        assert!(matches("when: {kind: [table_row]}", "t", &context));
+        assert!(!matches("when: {kind: [paragraph]}", "t", &context));
+        assert!(matches("when: {heading: ['thermal tests']}", "t", &context));
+        assert!(matches("when: {heading: ['Verification › Thermal']}", "t", &context));
+        assert!(!matches("when: {heading: ['glossary']}", "t", &context));
+    }
+
+    #[test]
+    fn condizioni_sulle_faccette_gia_decise() {
+        let yaml = r#"
+version: "1"
+facets:
+  a:
+    rules:
+      - {value: uno, any: ['x']}
+  b:
+    mode: multi
+    rules:
+      - {value: flag, any: ['y']}
+  c:
+    rules:
+      - {value: da-a, when: {a: [uno]}}
+      - {value: da-b, when: {b: [flag]}}
+      - {value: sconosciuta, when: {a: [null]}}
+"#;
+        assert_eq!(labels(yaml, "x")["c"], "da-a");
+        assert_eq!(labels(yaml, "y")["c"], "da-b");
+        assert_eq!(labels(yaml, "z")["c"], "sconosciuta");
     }
 
     #[test]
