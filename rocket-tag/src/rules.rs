@@ -10,7 +10,10 @@ use serde_yaml::{Mapping, Value as Yaml};
 
 use crate::classifier::{Context, Decision};
 use crate::markdown::Kind;
-use crate::schema::Schema;
+use crate::schema::{Facet, Schema};
+
+/// Chiavi di `when` che non sono faccette.
+const CONTEXT_KEYS: [&str; 4] = ["side", "doc_type", "kind", "heading"];
 
 #[derive(Deserialize)]
 struct RawFile {
@@ -153,6 +156,31 @@ impl RuleSet {
         Ok(RuleSet { version: yaml_string(&raw.version).unwrap_or_else(|| "0".to_string()), documents, facets })
     }
 
+    /// Controllo delle regole contro lo schema (REQ-103).
+    pub fn check(&self, schema: &Schema) -> Check {
+        let mut check = Check::default();
+        for rules in &self.facets {
+            match schema.facet(&rules.name) {
+                Some(facet) => rules.check(facet, schema, &mut check),
+                None => check.errors.push(format!("rules.yaml: faccetta '{}' non esiste nello schema", rules.name)),
+            }
+        }
+        for facet in &schema.facets {
+            if !self.facets.iter().any(|f| f.name == facet.name) {
+                check.warnings.push(format!("faccetta '{}' senza regole: le regole si astengono", facet.name));
+            }
+        }
+        for document in &self.documents {
+            if !schema.sides.contains(&document.side) {
+                check.errors.push(format!("documents: side '{}' non valido", document.side));
+            }
+            if !schema.doc_types.contains(&document.doc_type) {
+                check.errors.push(format!("documents: doc_type '{}' non valido", document.doc_type));
+            }
+        }
+        check
+    }
+
     /// Etichette di un'unità, con i vincoli dello schema applicati (REQ-096).
     pub fn classify(&self, schema: &Schema, text: &str, context: &Context) -> Decision {
         self.apply(text, context).finish(schema, context.side.as_deref())
@@ -172,10 +200,59 @@ impl RuleSet {
     }
 }
 
+/// Esito del controllo: gli errori bloccano l'esecuzione, gli avvisi no.
+#[derive(Debug, Default, PartialEq)]
+pub struct Check {
+    pub errors: Vec<String>,
+    pub warnings: Vec<String>,
+}
+
 /// Valore, confidenza e motivo di una faccetta.
 type Decided = (Value, f64, Value);
 
 impl FacetRules {
+    fn check(&self, facet: &Facet, schema: &Schema, check: &mut Check) {
+        let name = &self.name;
+        let mut produced: Vec<&str> = self.rules.iter().map(|r| r.value.as_str()).collect();
+        produced.extend(self.default.as_deref());
+        if let Some(map) = &self.then_map {
+            produced.extend(map.map.iter().map(|(_, value)| value.as_str()));
+            match schema.facet(&map.from) {
+                Some(source) => {
+                    let missing: Vec<&str> =
+                        source.values.iter().map(String::as_str).filter(|v| !map.map.iter().any(|(k, _)| k == v)).collect();
+                    if !missing.is_empty() {
+                        check.warnings.push(format!("{name}.then_map: valori di {} non mappati {missing:?}", map.from));
+                    }
+                }
+                None => check.errors.push(format!("{name}.then_map.from: faccetta '{}' non esiste", map.from)),
+            }
+        }
+        for value in &produced {
+            if !facet.values.iter().any(|v| v == value) {
+                check.errors.push(format!("{name}: valore '{value}' non esiste nello schema"));
+            }
+        }
+        for rule in &self.rules {
+            for condition in rule.when.iter().filter(|c| !CONTEXT_KEYS.contains(&c.key.as_str())) {
+                match schema.facet(&condition.key) {
+                    Some(source) => {
+                        for value in condition.allowed.iter().flatten() {
+                            if !source.values.contains(value) {
+                                check.errors.push(format!("{name}/{}: when.{} valore sconosciuto '{value}'", rule.id, condition.key));
+                            }
+                        }
+                    }
+                    None => check.errors.push(format!("{name}/{}: when.{} non è una faccetta", rule.id, condition.key)),
+                }
+            }
+        }
+        let unused: Vec<&str> = facet.values.iter().map(String::as_str).filter(|v| !produced.contains(v)).collect();
+        if !unused.is_empty() {
+            check.warnings.push(format!("{name}: valori mai prodotti dalle regole {unused:?}"));
+        }
+    }
+
     fn decide(&self, text: &str, context: &Context, decided: &Map<String, Value>) -> Option<Decided> {
         match self.mode {
             Mode::First => self.first(text, context, decided).or_else(|| self.mapped(decided)).or_else(|| self.fallback()),
@@ -581,6 +658,70 @@ facets:
 
         let plain = RuleSet::parse(yaml).unwrap().apply("j", &Context::default());
         assert_eq!((&plain.confidence["regola"], &plain.rule_ids["regola"]), (&json!(0.5), &json!("regola#1")));
+    }
+
+    const SCHEMA: &str = include_str!("../config/label_schema.json");
+
+    fn check(yaml: &str) -> Check {
+        RuleSet::parse(yaml).unwrap().check(&Schema::parse(SCHEMA).unwrap())
+    }
+
+    #[test]
+    fn le_regole_attuali_sono_coerenti_con_lo_schema() {
+        let result = check(RULES);
+        assert!(result.errors.is_empty(), "{:?}", result.errors);
+    }
+
+    #[test]
+    fn il_controllo_blocca_faccette_e_valori_inesistenti() {
+        let errors = check(
+            r#"
+version: "1"
+documents:
+  - {match: 'x', side: altro, doc_type: pa_plan}
+  - {match: 'y', side: prime, doc_type: boh}
+facets:
+  inventata:
+    rules:
+      - {value: x}
+  nature:
+    rules:
+      - {value: mai, when: {domain: [mai], inesistente: [x]}}
+    then_map: {from: manca, map: {x: requirement}}
+"#,
+        )
+        .errors;
+        let expected = [
+            "faccetta 'inventata' non esiste",
+            "side 'altro' non valido",
+            "doc_type 'boh' non valido",
+            "nature: valore 'mai' non esiste",
+            "when.domain valore sconosciuto 'mai'",
+            "when.inesistente non è una faccetta",
+            "then_map.from: faccetta 'manca' non esiste",
+        ];
+        for text in expected {
+            assert!(errors.iter().any(|e| e.contains(text)), "{text}: {errors:?}");
+        }
+    }
+
+    #[test]
+    fn il_controllo_avvisa_senza_bloccare() {
+        let result = check(
+            r#"
+version: "1"
+facets:
+  destination:
+    rules:
+      - {value: P}
+    then_map: {from: domain, map: {technical: P}}
+"#,
+        );
+        assert!(result.errors.is_empty(), "{:?}", result.errors);
+        let warned = |text: &str| result.warnings.iter().any(|w| w.contains(text));
+        assert!(warned("destination: valori mai prodotti"), "{:?}", result.warnings);
+        assert!(warned("destination.then_map: valori di domain non mappati"));
+        assert!(warned("faccetta 'nature' senza regole"));
     }
 
     #[test]
