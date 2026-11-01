@@ -106,7 +106,8 @@ Provengono da [`classifier-handoff/requirements.md`](../../classifier-handoff/re
 
 | ID | Requisito | Stato | File impattati |
 | --- | --- | --- | --- |
-| REQ-124 | Il repository deve conservare in `classifier-handoff/` il pacchetto di passaggio del classificatore, senza modifiche: `requirements.md` e `CHANGELOG.md` con gli ID locali originali e, in `reference/`, i file di riferimento dell'appendice I. | aperto | — |
+| REQ-124 | Il repository deve conservare in `classifier-handoff/` il pacchetto di passaggio del classificatore, senza modifiche: `requirements.md` e `CHANGELOG.md` con gli ID locali originali e, in `reference/`, i file di riferimento dell'appendice I. (sostituito da REQ-126) | annullato | — |
+| REQ-126 | Il branch di lavoro di `rocket-tag` deve contenere `classifier-handoff/` finché i requisiti del tool non sono implementati; prima del merge in `main` la cartella deve essere rimossa, dopo aver portato in `rocket-tag/` i file di riferimento che servono al tool e aver tolto da questo documento i rimandi alla cartella, così che `main` non la contenga. (sostituisce REQ-124) | aperto | — |
 
 ---
 
