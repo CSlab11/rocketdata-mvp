@@ -1,10 +1,14 @@
 //! Classificatore LLM: prompt, formato di uscita e chiamate al server locale (appendice D).
 
-use serde_json::{Value, json};
+use std::time::Duration;
+
+use serde_json::{Map, Value, json};
 use sha1::{Digest, Sha1};
 
-use crate::classifier::Context;
+use crate::classifier::{Context, Decision};
+use crate::iterate::Job;
 use crate::markdown::Kind;
+use crate::output::{Item, Output, Skipped};
 use crate::schema::Schema;
 
 /// Lunghezza massima in caratteri del contesto e dell'unità nel messaggio utente.
@@ -18,6 +22,108 @@ pub enum Format {
     JsonSchema,
     GuidedJson,
     JsonObject,
+}
+
+/// Server e modello da usare (REQ-106).
+#[derive(Debug, Clone)]
+pub struct Settings {
+    pub base_url: String,
+    pub model: String,
+    pub api_key: Option<String>,
+    pub format: Format,
+    pub temperature: f64,
+    pub timeout: Duration,
+}
+
+/// Perché un'unità non ha ricevuto etichette.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Failure {
+    /// Il server non ha risposto.
+    Server(String),
+    /// La risposta non è valida.
+    Invalid(String),
+}
+
+impl Failure {
+    pub fn message(&self) -> &str {
+        match self {
+            Failure::Server(message) | Failure::Invalid(message) => message,
+        }
+    }
+}
+
+/// Client di un server compatibile con l'API OpenAI chat completions (REQ-106).
+pub struct Llm {
+    agent: ureq::Agent,
+    settings: Settings,
+    system: String,
+    output: Value,
+    pub prompt_id: String,
+}
+
+impl Llm {
+    pub fn new(schema: &Schema, guide: &str, examples: &[Value], settings: Settings) -> Llm {
+        let system = system_prompt(schema, guide, examples);
+        let output = output_format(schema);
+        let prompt_id = prompt_id(&system, &output, &settings.model);
+        let config = ureq::Agent::config_builder().timeout_global(Some(settings.timeout)).proxy(None).build();
+        Llm { agent: config.into(), settings, system, output, prompt_id }
+    }
+
+    pub fn classifier_name(&self) -> String {
+        format!("llm:{}", self.settings.model)
+    }
+
+    fn complete(&self, user: &str) -> Result<String, Failure> {
+        let mut body = json!({
+            "model": self.settings.model,
+            "temperature": self.settings.temperature,
+            "messages": [{"role": "system", "content": self.system}, {"role": "user", "content": user}],
+        });
+        let (field, value) = constraint(self.settings.format, &self.output);
+        body[field] = value;
+        let url = format!("{}/chat/completions", self.settings.base_url.trim_end_matches('/'));
+        let mut request = self.agent.post(&url).header("Content-Type", "application/json");
+        if let Some(key) = &self.settings.api_key {
+            request = request.header("Authorization", format!("Bearer {key}"));
+        }
+        let server = |e: ureq::Error| Failure::Server(format!("server: {e}"));
+        let mut response = request.send(body.to_string().as_str()).map_err(server)?;
+        let text = response.body_mut().read_to_string().map_err(server)?;
+        let data: Value = serde_json::from_str(&text).map_err(|e| Failure::Invalid(format!("risposta non JSON: {e}")))?;
+        let content = data["choices"][0]["message"]["content"].as_str();
+        content.map(str::to_string).ok_or_else(|| Failure::Invalid("risposta senza contenuto".to_string()))
+    }
+
+    /// Etichette di un'unità.
+    pub fn classify(&self, schema: &Schema, text: &str, context: &Context) -> Result<Decision, Failure> {
+        let labels = parse_labels(&self.complete(&user_prompt(text, context))?)?;
+        let confidence = labels.keys().map(|name| (name.clone(), json!(0.7))).collect();
+        Ok(Decision { labels, confidence, rule_ids: Map::new() }.finish(schema, context.side.as_deref()))
+    }
+}
+
+/// L'oggetto JSON nella risposta del modello, anche se circondato da altro testo.
+fn parse_labels(content: &str) -> Result<Map<String, Value>, Failure> {
+    let invalid = |message: String| Failure::Invalid(format!("risposta non JSON: {message}"));
+    let (start, end) = content.find('{').zip(content.rfind('}')).ok_or_else(|| invalid("nessun oggetto".to_string()))?;
+    serde_json::from_str(&content[start..=end]).map_err(|e| invalid(e.to_string()))
+}
+
+/// Classifica le unità una alla volta e aggiunge gli esiti a `result`.
+pub fn classify_all(llm: &Llm, schema: &Schema, jobs: &[Job], result: &mut Output) {
+    for (index, job) in jobs.iter().enumerate() {
+        match llm.classify(schema, &job.unit.text, &job.context()) {
+            Ok(decision) => result.items.push(Item::new(job, decision)),
+            Err(failure) => result.skipped.push(Skipped {
+                document: job.document.clone(),
+                line_start: job.unit.line_start,
+                line_end: job.unit.line_end,
+                error: failure.message().to_string(),
+            }),
+        }
+        println!("[{}/{}] {}", index + 1, jobs.len(), job.document);
+    }
 }
 
 /// Formato delle faccette derivato dallo schema, con gli enum in linea (REQ-107).
@@ -80,11 +186,11 @@ pub fn system_prompt(schema: &Schema, guide: &str, examples: &[Value]) -> String
 }
 
 /// Messaggio utente, con le unità vicine quando sono fornite (REQ-094).
-pub fn user_prompt(document: &str, text: &str, context: &Context) -> String {
+pub fn user_prompt(text: &str, context: &Context) -> String {
     let unknown = |value: &Option<String>| value.clone().unwrap_or_else(|| "unknown".to_string());
     let headings = if context.heading_path.is_empty() { "(none)".to_string() } else { context.heading_path.join(" > ") };
     let mut lines = vec![
-        format!("Document: {document}"),
+        format!("Document: {}", unknown(&context.document)),
         format!("Document side: {}; type: {}", unknown(&context.side), unknown(&context.doc_type)),
         format!("Heading path: {headings}"),
         format!("Unit kind: {}", context.kind.map_or("unknown", Kind::as_str)),
@@ -152,6 +258,7 @@ mod tests {
     #[test]
     fn messaggio_utente_con_le_unita_vicine() {
         let context = Context {
+            document: Some("a.md".into()),
             side: Some("prime".into()),
             doc_type: Some("pa_plan".into()),
             kind: Some(Kind::TableRow),
@@ -160,7 +267,7 @@ mod tests {
             next: Some("dopo".into()),
             ..Context::default()
         };
-        let user = user_prompt("a.md", "testo", &context);
+        let user = user_prompt("testo", &context);
         assert_eq!(
             user.lines().collect::<Vec<_>>(),
             [
@@ -178,8 +285,9 @@ mod tests {
     #[test]
     fn messaggio_utente_senza_contesto_e_con_testo_lungo() {
         let long = "è".repeat(3000);
-        let user = user_prompt("a.md", &long, &Context { prev: Some(long.clone()), ..Context::default() });
+        let user = user_prompt(&long, &Context { prev: Some(long.clone()), ..Context::default() });
         let lines: Vec<_> = user.lines().collect();
+        assert_eq!(lines[0], "Document: unknown");
         assert_eq!(lines[1], "Document side: unknown; type: unknown");
         assert_eq!(lines[2], "Heading path: (none)");
         assert_eq!(lines[3], "Unit kind: unknown");

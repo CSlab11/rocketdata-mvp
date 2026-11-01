@@ -15,6 +15,7 @@ pub struct DocInfo {
 /// Contesto facoltativo di un'unità.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Context {
+    pub document: Option<String>,
     pub side: Option<String>,
     pub doc_type: Option<String>,
     pub kind: Option<Kind>,

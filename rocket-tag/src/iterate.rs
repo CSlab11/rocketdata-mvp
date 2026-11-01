@@ -29,6 +29,7 @@ pub struct Job {
 impl Job {
     pub fn context(&self) -> Context {
         Context {
+            document: Some(self.document.clone()),
             kind: Some(self.unit.kind),
             heading_path: self.unit.heading_path.clone(),
             clause: self.unit.clause.clone(),
