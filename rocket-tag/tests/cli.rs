@@ -118,6 +118,31 @@ fn lato_del_documento() {
     assert_eq!(action(&saved, 0), "declare_compliance", "le etichette umane vincono su rules.yaml");
 }
 
+/// `--exclude` è ripetibile e vale per file e cartelle (REQ-128).
+#[test]
+fn opzione_exclude() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir(dir.path().join(".index")).unwrap();
+    std::fs::write(dir.path().join("index.md"), "Indice.\n").unwrap();
+    std::fs::write(dir.path().join(".index/x.md"), "Interno.\n").unwrap();
+    std::fs::write(dir.path().join("a.md"), "Testo.\n").unwrap();
+    let out = dir.path().join("rules.json");
+    let run = rocket_tag()
+        .args(["classify", "rules"])
+        .arg(dir.path())
+        .arg("-o")
+        .arg(&out)
+        .args(["--schema", "config/label_schema.json", "--rules", "config/rules.yaml"])
+        .args(["--exclude", "index.md", "--exclude", ".index"])
+        .output()
+        .unwrap();
+    assert!(run.status.success(), "{}", String::from_utf8_lossy(&run.stderr));
+    let saved: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&out).unwrap()).unwrap();
+    let items = saved["items"].as_array().unwrap();
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0]["document"], "a.md");
+}
+
 /// Il crate si compila e si esegue da solo, senza gli altri tool (REQ-079).
 #[test]
 fn si_esegue_da_solo() {

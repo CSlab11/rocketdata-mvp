@@ -51,6 +51,9 @@ enum ClassifyCommand {
         /// Etichette umane da cui ricavare lato e tipo dei documenti
         #[arg(long, value_name = "FILE")]
         labels: Option<PathBuf>,
+        /// File o cartella da non leggere, relativo all'ingresso (ripetibile)
+        #[arg(long, value_name = "PERCORSO")]
+        exclude: Vec<String>,
     },
 }
 
@@ -69,8 +72,8 @@ enum RulesCommand {
 
 fn main() -> ExitCode {
     let result = match Args::parse().command {
-        Command::Classify { command: ClassifyCommand::Rules { input, output, schema, rules, labels } } => {
-            run_classify_rules(&input, &output, &schema, &rules, labels.as_deref())
+        Command::Classify { command: ClassifyCommand::Rules { input, output, schema, rules, labels, exclude } } => {
+            run_classify_rules(&input, &output, &schema, &rules, labels.as_deref(), &exclude)
         }
         Command::Rules { command: RulesCommand::Check { schema, rules } } => run_rules_check(&schema, &rules),
     };
@@ -105,14 +108,21 @@ fn known_documents(labels: Option<&Path>) -> Result<HashMap<String, DocInfo>, St
 }
 
 /// Classifica le unità con le regole e scrive il file di uscita (REQ-114).
-fn run_classify_rules(input: &Path, output: &Path, schema: &Path, rules: &Path, labels: Option<&Path>) -> Result<(), String> {
+fn run_classify_rules(
+    input: &Path,
+    output: &Path,
+    schema: &Path,
+    rules: &Path,
+    labels: Option<&Path>,
+    exclude: &[String],
+) -> Result<(), String> {
     let schema = Schema::load(schema)?;
     let rules = checked_rules(&schema, rules)?;
     let known = known_documents(labels)?;
     let info = |document: &str| {
         known.get(document).cloned().or_else(|| rules.document_info(document)).unwrap_or_default()
     };
-    let jobs = iterate::jobs(&iterate::documents(input)?, &info)?;
+    let jobs = iterate::jobs(&iterate::documents(input, exclude)?, &info)?;
     let mut result = Output::new(&schema.version, format!("rules-v{}", rules.version));
     for job in &jobs {
         let decision = rules.classify(&schema, &job.unit.text, &job.context());

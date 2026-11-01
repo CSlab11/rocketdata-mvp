@@ -40,8 +40,9 @@ impl Job {
     }
 }
 
-/// Il file indicato, o i file `*.md` della cartella e delle sottocartelle (REQ-085).
-pub fn documents(input: &Path) -> Result<Vec<Document>, String> {
+/// Il file indicato, o i file `*.md` della cartella e delle sottocartelle (REQ-085), tolti i file
+/// e le cartelle di `exclude`, percorsi relativi alla cartella (REQ-128).
+pub fn documents(input: &Path, exclude: &[String]) -> Result<Vec<Document>, String> {
     if input.is_file() {
         let name = input.file_name().map_or_else(|| input.display().to_string(), |n| n.to_string_lossy().into_owned());
         return Ok(vec![Document { name, path: input.to_path_buf() }]);
@@ -54,10 +55,23 @@ pub fn documents(input: &Path) -> Result<Vec<Document>, String> {
         let entry = entry.map_err(|e| format!("impossibile leggere {}: {e}", input.display()))?;
         let is_md = entry.path().extension().is_some_and(|ext| ext.eq_ignore_ascii_case("md"));
         if entry.file_type().is_file() && is_md {
-            documents.push(Document { name: relative_name(input, entry.path()), path: entry.into_path() });
+            let name = relative_name(input, entry.path());
+            if !excluded(&name, exclude) {
+                documents.push(Document { name, path: entry.into_path() });
+            }
         }
     }
     Ok(documents)
+}
+
+/// Il file è uno di quelli esclusi o sta in una cartella esclusa, senza distinguere maiuscole e
+/// minuscole come il file system di Windows.
+fn excluded(name: &str, exclude: &[String]) -> bool {
+    let name = name.to_lowercase();
+    exclude.iter().any(|path| {
+        let path = path.replace('\\', "/").trim_matches('/').to_lowercase();
+        name == path || name.starts_with(&format!("{path}/"))
+    })
 }
 
 /// Percorso relativo alla cartella di ingresso con separatore `/` (REQ-090).
@@ -109,7 +123,7 @@ mod tests {
     #[test]
     fn legge_ricorsivamente_i_file_md() {
         let dir = folder(&[("a.md", "uno\n"), ("sotto/b.MD", "due\n\ntre\n"), ("c.txt", "no\n")]);
-        let found = documents(dir.path()).unwrap();
+        let found = documents(dir.path(), &[]).unwrap();
         assert_eq!(found.len(), 2);
         let texts: Vec<_> = jobs(&found, &unknown).unwrap().into_iter().map(|j| j.unit.text).collect();
         assert_eq!(texts, ["uno", "due", "tre"]);
@@ -118,13 +132,13 @@ mod tests {
     #[test]
     fn accetta_un_singolo_file() {
         let dir = folder(&[("a.md", "uno\n")]);
-        assert_eq!(documents(&dir.path().join("a.md")).unwrap().len(), 1);
+        assert_eq!(documents(&dir.path().join("a.md"), &[]).unwrap().len(), 1);
     }
 
     #[test]
     fn unita_vicine_dello_stesso_file() {
         let dir = folder(&[("a.md", "uno\n\ntitolo\n\n- due\n"), ("b.md", "tre\n")]);
-        let found = jobs(&documents(dir.path()).unwrap(), &unknown).unwrap();
+        let found = jobs(&documents(dir.path(), &[]).unwrap(), &unknown).unwrap();
         let near: Vec<_> = found.iter().map(|j| (j.prev.as_deref(), j.next.as_deref())).collect();
         assert_eq!(near[0], (None, Some("titolo")));
         assert_eq!(near[1], (Some("uno"), Some("due")));
@@ -136,7 +150,7 @@ mod tests {
     fn lato_e_tipo_passati_al_classificatore() {
         let dir = folder(&[("a.md", "uno\n")]);
         let info = |name: &str| DocInfo { side: Some(format!("lato di {name}")), doc_type: None };
-        let context = jobs(&documents(dir.path()).unwrap(), &info).unwrap()[0].context();
+        let context = jobs(&documents(dir.path(), &[]).unwrap(), &info).unwrap()[0].context();
         assert_eq!(context.side.as_deref(), Some("lato di a.md"));
         assert_eq!(context.doc_type, None);
     }
@@ -144,14 +158,37 @@ mod tests {
     #[test]
     fn nome_del_documento_relativo_con_barra() {
         let dir = folder(&[("a.md", "uno\n"), ("sotto/piano/b.md", "due\n")]);
-        let names: Vec<_> = documents(dir.path()).unwrap().into_iter().map(|d| d.name).collect();
+        let names: Vec<_> = documents(dir.path(), &[]).unwrap().into_iter().map(|d| d.name).collect();
         assert_eq!(names, ["a.md", "sotto/piano/b.md"]);
-        assert_eq!(documents(&dir.path().join("sotto/piano/b.md")).unwrap()[0].name, "b.md");
+        assert_eq!(documents(&dir.path().join("sotto/piano/b.md"), &[]).unwrap()[0].name, "b.md");
     }
 
     #[test]
     fn ingresso_inesistente_e_un_errore() {
         let dir = tempfile::tempdir().unwrap();
-        assert!(documents(&dir.path().join("manca")).unwrap_err().contains("ingresso non trovato"));
+        assert!(documents(&dir.path().join("manca"), &[]).unwrap_err().contains("ingresso non trovato"));
+    }
+
+    #[test]
+    fn esclude_file_e_cartelle() {
+        let dir = folder(&[
+            ("index.md", "x\n"),
+            ("a.md", "x\n"),
+            (".index/b.md", "x\n"),
+            (".index/sotto/c.md", "x\n"),
+            ("sotto/index.md", "x\n"),
+            (".indexato/d.md", "x\n"),
+        ]);
+        let exclude = ["INDEX.md".to_string(), r"\.index\".replace('\\', "")];
+        let names: Vec<_> = documents(dir.path(), &exclude).unwrap().into_iter().map(|d| d.name).collect();
+        assert_eq!(names, [".indexato/d.md", "a.md", "sotto/index.md"], "solo i percorsi indicati, dalla radice");
+    }
+
+    #[test]
+    fn esclusione_con_barra_rovesciata() {
+        let dir = folder(&[("sotto/a.md", "x\n"), ("b.md", "x\n")]);
+        let found = documents(dir.path(), &["sotto\\a.md".to_string()]).unwrap();
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].name, "b.md");
     }
 }
