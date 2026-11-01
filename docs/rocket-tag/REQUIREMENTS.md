@@ -70,7 +70,7 @@ Provengono da [`classifier-handoff/requirements.md`](../../classifier-handoff/re
 | ID | Requisito | Stato | File impattati |
 | --- | --- | --- | --- |
 | REQ-106 | Il classificatore LLM deve funzionare con qualsiasi server locale compatibile con l'API OpenAI chat completions, con URL, modello e chiave facoltativa configurabili. | aperto | — |
-| REQ-107 | Il classificatore LLM deve vincolare la risposta al formato delle faccette derivato dallo schema (appendice D), con modalità `json_schema`, `guided_json` o `json_object` selezionabile. | aperto | — |
+| REQ-107 | Il classificatore LLM deve vincolare la risposta al formato delle faccette derivato dallo schema (appendice D), con modalità `json_schema`, `guided_json` o `json_object` selezionabile. | implementato | `rocket-tag/src/llm.rs` |
 | REQ-108 | Il classificatore LLM deve costruire il prompt secondo l'appendice D da `prompt_guide.md`, dalle descrizioni dello schema e da `guide_examples.json`, ignorando negli esempi le faccette e i valori assenti dallo schema corrente. | implementato | `rocket-tag/config/prompt_guide.md`, `rocket-tag/src/lib.rs`, `rocket-tag/src/llm.rs` |
 | REQ-109 | Il classificatore LLM deve validare ogni risposta contro lo schema, ritentare una volta in caso di risposta non valida e, al secondo fallimento, scartare l'unità registrandola tra le scartate con il motivo. | aperto | — |
 | REQ-110 | L'esecuzione con il classificatore LLM deve poter riprendere dopo un'interruzione, saltando le unità già presenti nel file di uscita con la stessa versione dello schema, lo stesso `prompt_id` e lo stesso `text_hash`. | aperto | — |

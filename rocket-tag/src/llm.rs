@@ -1,6 +1,7 @@
 //! Classificatore LLM: prompt, formato di uscita e chiamate al server locale (appendice D).
 
-use serde_json::Value;
+use serde_json::{Value, json};
+use sha1::{Digest, Sha1};
 
 use crate::classifier::Context;
 use crate::markdown::Kind;
@@ -9,6 +10,45 @@ use crate::schema::Schema;
 /// Lunghezza massima in caratteri del contesto e dell'unità nel messaggio utente.
 const CONTEXT_CHARS: usize = 400;
 const UNIT_CHARS: usize = 2500;
+
+/// Modo in cui si vincola la risposta del modello (REQ-107).
+#[derive(Debug, Clone, Copy, PartialEq, clap::ValueEnum)]
+#[value(rename_all = "snake_case")]
+pub enum Format {
+    JsonSchema,
+    GuidedJson,
+    JsonObject,
+}
+
+/// Formato delle faccette derivato dallo schema, con gli enum in linea (REQ-107).
+pub fn output_format(schema: &Schema) -> Value {
+    let mut properties = serde_json::Map::new();
+    for facet in &schema.facets {
+        let values = json!({"type": "string", "enum": facet.values});
+        let property = if facet.multi { json!({"type": "array", "items": values, "uniqueItems": true}) } else { values };
+        properties.insert(facet.name.clone(), property);
+    }
+    let required: Vec<&str> = schema.facets.iter().filter(|f| f.required).map(|f| f.name.as_str()).collect();
+    json!({"type": "object", "properties": properties, "required": required, "additionalProperties": false})
+}
+
+/// Campi della richiesta che vincolano la risposta (appendice D).
+fn constraint(format: Format, output: &Value) -> (&'static str, Value) {
+    match format {
+        Format::JsonSchema => (
+            "response_format",
+            json!({"type": "json_schema", "json_schema": {"name": "facets", "strict": true, "schema": output}}),
+        ),
+        Format::GuidedJson => ("guided_json", output.clone()),
+        Format::JsonObject => ("response_format", json!({"type": "json_object"})),
+    }
+}
+
+/// Primi 10 caratteri esadecimali dello SHA-1 di prompt, formato e modello (appendice D).
+pub fn prompt_id(system: &str, output: &Value, model: &str) -> String {
+    let digest = Sha1::digest(format!("{system}{output}{model}").as_bytes());
+    digest.iter().take(5).map(|byte| format!("{byte:02x}")).collect()
+}
 
 /// Messaggio di sistema, ricavato dallo schema, da `prompt_guide.md` e da `guide_examples.json`
 /// (REQ-108).
@@ -146,6 +186,42 @@ mod tests {
         assert_eq!(lines[4].chars().count(), "Previous unit (context): ".len() + 400);
         assert_eq!(lines[5].chars().count(), "UNIT TO LABEL: ".len() + 2500);
         assert_eq!(lines.len(), 6);
+    }
+
+    #[test]
+    fn formato_vincolato_dallo_schema() {
+        let output = output_format(&schema());
+        assert_eq!(output["type"], "object");
+        assert_eq!(output["additionalProperties"], false);
+        assert_eq!(output["required"].as_array().unwrap().len(), 6);
+        assert_eq!(output["properties"]["nature"]["type"], "string");
+        assert_eq!(output["properties"]["nature"]["enum"][0], "requirement");
+        assert_eq!(output["properties"]["flags"]["type"], "array");
+        assert_eq!(output["properties"]["flags"]["uniqueItems"], true);
+        assert_eq!(output["properties"]["flags"]["items"]["enum"][0], "multiple_requirements");
+        assert!(!output.to_string().contains("$ref"));
+    }
+
+    #[test]
+    fn modalita_del_vincolo() {
+        let output = json!({"type": "object"});
+        let (field, value) = constraint(Format::JsonSchema, &output);
+        assert_eq!(field, "response_format");
+        assert_eq!(value["json_schema"]["name"], "facets");
+        assert_eq!(value["json_schema"]["strict"], true);
+        assert_eq!(value["json_schema"]["schema"], output);
+        assert_eq!(constraint(Format::GuidedJson, &output), ("guided_json", output.clone()));
+        assert_eq!(constraint(Format::JsonObject, &output), ("response_format", json!({"type": "json_object"})));
+    }
+
+    #[test]
+    fn prompt_id_dipende_da_prompt_formato_e_modello() {
+        let output = json!({"a": 1});
+        let id = prompt_id("s", &output, "m");
+        assert_eq!(id.len(), 10);
+        assert_ne!(id, prompt_id("s2", &output, "m"));
+        assert_ne!(id, prompt_id("s", &json!({"a": 2}), "m"));
+        assert_ne!(id, prompt_id("s", &output, "m2"));
     }
 
     #[test]
