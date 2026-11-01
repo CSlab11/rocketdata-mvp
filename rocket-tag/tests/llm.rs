@@ -10,6 +10,7 @@ use std::time::Duration;
 
 use rocket_tag::classifier::Context;
 use rocket_tag::llm::{Format, Llm, Settings};
+use rocket_tag::markdown::Kind;
 use rocket_tag::schema::Schema;
 use serde_json::{Value, json};
 
@@ -393,6 +394,30 @@ fn l_llm_bastano_schema_e_testo() {
     let (schema, llm) = client(&server.url);
     let decision = llm.classify(&schema, "Testo.", &Context::default(), None).unwrap();
     assert_eq!(decision.labels["nature"], "requirement");
+}
+
+/// Unità vicine e contesto sono facoltativi: con e senza, il classificatore funziona (REQ-093).
+#[test]
+fn contesto_facoltativo() {
+    let server = serve(|_, _| (200, labels()));
+    let (schema, llm) = client(&server.url);
+    let context = Context {
+        heading_path: vec!["4 Verification".to_string()],
+        clause: Some("4".to_string()),
+        kind: Some(Kind::Paragraph),
+        side: Some("prime".to_string()),
+        doc_type: Some("statement_of_work".to_string()),
+        prev: Some("Prima.".to_string()),
+        next: Some("Dopo.".to_string()),
+        ..Context::default()
+    };
+    assert!(llm.classify(&schema, "Testo.", &context, None).is_ok());
+    assert!(llm.classify(&schema, "Testo.", &Context::default(), None).is_ok());
+    let requests = server.requests();
+    let user = |index: usize| requests[index].body["messages"][1]["content"].as_str().unwrap().to_string();
+    assert!(user(0).contains("Heading path: 4 Verification"));
+    assert!(user(0).contains("Document side: prime; type: statement_of_work"));
+    assert!(user(1).contains("Heading path: (none)"));
 }
 
 /// La risposta può arrivare dentro un blocco di codice o con testo attorno.

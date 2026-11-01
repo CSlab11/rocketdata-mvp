@@ -116,6 +116,7 @@
 - REQ-131 implementato — File di uscita dell'LLM aggiornato almeno ogni 20 unità (`rocket-tag/src/llm.rs`, `rocket-tag/src/main.rs`, `rocket-tag/tests/llm.rs`)
 - REQ-084 implementato — Iteratore separato dai classificatori: funzione di libreria per unità e comando classify one (`rocket-tag/src/main.rs`, `rocket-tag/tests/cli.rs`, `rocket-tag/tests/llm.rs`)
 - REQ-091 implementato — Classificatori con soli schema e testo dell'unità come ingressi obbligatori (`rocket-tag/tests/llm.rs`, `rocket-tag/tests/reference.rs`)
+- REQ-093 implementato — Unità vicine e contesto facoltativi per entrambi i classificatori (`rocket-tag/tests/llm.rs`, `rocket-tag/tests/reference.rs`)
 
 ## 2026-10-25
 - REQ-068 richiesto — search-rm3: opzione --heading-weight, maggiore di 1, predefinita 3

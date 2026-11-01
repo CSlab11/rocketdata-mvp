@@ -1,6 +1,7 @@
 //! Casi di prova di riferimento (appendice I).
 
 use rocket_tag::classifier::Context;
+use rocket_tag::markdown::Kind;
 use rocket_tag::rules::RuleSet;
 use rocket_tag::schema::Schema;
 use serde_json::Value;
@@ -38,6 +39,22 @@ fn le_regole_bastano_schema_e_testo() {
     let decision = rules.classify(&schema, "The unit shall operate.", &Context::default());
     assert_eq!(decision.labels["nature"], "requirement");
     assert_eq!(decision.labels.len(), 6);
+}
+
+/// Il contesto, quando c'è, entra nelle regole; senza, si applicano le altre (REQ-093).
+#[test]
+fn contesto_facoltativo_per_le_regole() {
+    let schema = Schema::parse(SCHEMA).unwrap();
+    let rules = RuleSet::parse(RULES).unwrap();
+    let context = Context {
+        kind: Some(Kind::TableRow),
+        heading_path: vec!["2 Applicable documents".to_string()],
+        side: Some("prime".to_string()),
+        ..Context::default()
+    };
+    let text = "AD-1; ECSS-Q-ST-30C";
+    assert_eq!(rules.classify(&schema, text, &context).labels["nature"], "reference");
+    assert_eq!(rules.classify(&schema, text, &Context::default()).labels["nature"], "description");
 }
 
 #[test]
