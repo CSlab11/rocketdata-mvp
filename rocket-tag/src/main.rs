@@ -221,7 +221,7 @@ fn run_classify_llm(args: &LlmArgs) -> Result<(), String> {
     result.prompt_id = Some(llm.prompt_id.clone());
     let from_rules = args.rules_out.as_deref().map(Output::read).transpose()?.as_ref().map(llm::rule_labels);
     let run = Run { llm: &llm, schema: &schema, rules: from_rules.as_ref(), workers: args.workers };
-    run.classify_all(&jobs, &mut result);
+    run.classify_all(&jobs, &mut result)?;
     result.write(&args.output)
 }
 

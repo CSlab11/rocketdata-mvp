@@ -19,6 +19,9 @@ use crate::schema::Schema;
 const CONTEXT_CHARS: usize = 400;
 const UNIT_CHARS: usize = 2500;
 
+/// Errori di connessione senza alcun successo oltre i quali ci si ferma (REQ-111).
+const MAX_SERVER_ERRORS: usize = 5;
+
 /// Modo in cui si vincola la risposta del modello (REQ-107).
 #[derive(Debug, Clone, Copy, PartialEq, clap::ValueEnum)]
 #[value(rename_all = "snake_case")]
@@ -167,15 +170,20 @@ pub struct Run<'a> {
 }
 
 impl Run<'_> {
-    /// Classifica le unità con `workers` richieste parallele e aggiunge gli esiti a `result`.
-    pub fn classify_all(&self, jobs: &[Job], result: &mut Output) {
+    /// Classifica le unità con `workers` richieste parallele e aggiunge gli esiti a `result`. Si
+    /// ferma con un errore se il server non risponde (REQ-111).
+    pub fn classify_all(&self, jobs: &[Job], result: &mut Output) -> Result<(), String> {
         let next = AtomicUsize::new(0);
         let done = Mutex::new((result, 0));
+        let server = Mutex::new(ServerState::default());
         thread::scope(|scope| {
             for _ in 0..self.workers.max(1) {
                 scope.spawn(|| {
                     while let Some(job) = jobs.get(next.fetch_add(1, Ordering::SeqCst)) {
                         let outcome = self.classify_job(job);
+                        if !server.lock().unwrap().record(&outcome) {
+                            break;
+                        }
                         let mut done = done.lock().unwrap();
                         let (result, count) = &mut *done;
                         match outcome {
@@ -188,12 +196,40 @@ impl Run<'_> {
                 });
             }
         });
+        let server = server.into_inner().unwrap();
+        match server.last_error {
+            Some(error) if server.successes == 0 => Err(format!("il server LLM non risponde ({error})")),
+            _ => Ok(()),
+        }
     }
 
     fn classify_job(&self, job: &Job) -> Result<Decision, Failure> {
         let key = (job.document.clone(), job.unit.line_start, job.unit.line_end);
         let from_rules = self.rules.and_then(|labels| labels.get(&key));
         self.llm.classify(self.schema, &job.unit.text, &job.context(), from_rules)
+    }
+}
+
+/// Errori di connessione e successi dell'esecuzione.
+#[derive(Default)]
+struct ServerState {
+    errors: usize,
+    successes: usize,
+    last_error: Option<String>,
+}
+
+impl ServerState {
+    /// Registra un esito; `false` quando l'esecuzione deve fermarsi.
+    fn record(&mut self, outcome: &Result<Decision, Failure>) -> bool {
+        match outcome {
+            Err(Failure::Server(error)) => {
+                self.errors += 1;
+                self.last_error = Some(error.clone());
+            }
+            Ok(_) => self.successes += 1,
+            Err(Failure::Invalid(_)) => {}
+        }
+        self.successes > 0 || self.errors < MAX_SERVER_ERRORS
     }
 }
 

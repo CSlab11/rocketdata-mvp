@@ -254,6 +254,37 @@ fn richieste_parallele_e_limite() {
     assert_eq!(String::from_utf8_lossy(&limited.stdout).lines().last(), Some("[2/2] a.md"));
 }
 
+/// 5 errori di connessione senza alcun successo fermano l'esecuzione con un messaggio (REQ-111).
+#[test]
+fn si_ferma_se_il_server_non_risponde() {
+    let server = serve(|_, _| (500, "guasto".to_string()));
+    let (_dir, docs, out) = workspace("Uno.\n\nDue.\n\nTre.\n\nQuattro.\n\nCinque.\n\nSei.\n\nSette.\n");
+    let failed = llm(&docs, &out, &server.url).args(["--workers", "1"]).output().unwrap();
+    assert!(!failed.status.success());
+    assert!(String::from_utf8_lossy(&failed.stderr).contains("il server LLM non risponde"));
+    assert_eq!(server.requests().len(), 5);
+
+    let closed = TcpListener::bind("127.0.0.1:0").unwrap();
+    let url = format!("http://{}/v1", closed.local_addr().unwrap());
+    drop(closed);
+    let (_dir, docs, out) = workspace("Unica.\n");
+    let failed = llm(&docs, &out, &url).output().unwrap();
+    assert!(!failed.status.success(), "anche con meno di 5 unità, se nessuna è riuscita");
+    assert!(!out.exists());
+}
+
+/// Dopo almeno un successo gli errori del server scartano solo le unità coinvolte.
+#[test]
+fn dopo_un_successo_gli_errori_scartano_le_unita() {
+    let server = serve(|_, number| if number == 1 { (200, labels()) } else { (500, "guasto".to_string()) });
+    let (_dir, docs, out) = workspace("Uno.\n\nDue.\n\nTre.\n\nQuattro.\n\nCinque.\n\nSei.\n\nSette.\n");
+    run(llm(&docs, &out, &server.url).args(["--workers", "1"]));
+    let result = saved(&out);
+    assert_eq!(result["items"].as_array().unwrap().len(), 1);
+    assert_eq!(result["skipped"].as_array().unwrap().len(), 6);
+    assert!(result["skipped"][0]["error"].as_str().unwrap().starts_with("server:"));
+}
+
 /// La risposta può arrivare dentro un blocco di codice o con testo attorno.
 #[test]
 fn accetta_il_json_dentro_un_blocco_di_codice() {

@@ -111,6 +111,7 @@
 - REQ-109 implementato — Risposte LLM validate contro lo schema, ritentate una volta e poi scartate con il motivo (`rocket-tag/src/llm.rs`, `rocket-tag/src/schema.rs`, `rocket-tag/tests/llm.rs`)
 - REQ-113 implementato — Confidenze dell'LLM dall'accordo con il file di uscita delle regole (`rocket-tag/src/llm.rs`, `rocket-tag/src/main.rs`, `rocket-tag/tests/llm.rs`)
 - REQ-112 implementato — Richieste parallele configurabili e limite al numero di unità (`rocket-tag/src/llm.rs`, `rocket-tag/src/main.rs`, `rocket-tag/tests/llm.rs`)
+- REQ-111 implementato — Arresto con messaggio chiaro quando il server LLM non risponde (`rocket-tag/src/llm.rs`, `rocket-tag/src/main.rs`, `rocket-tag/tests/llm.rs`)
 
 ## 2026-10-25
 - REQ-068 richiesto — search-rm3: opzione --heading-weight, maggiore di 1, predefinita 3
