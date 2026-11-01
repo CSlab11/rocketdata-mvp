@@ -63,7 +63,7 @@ Provengono da [`classifier-handoff/requirements.md`](../../classifier-handoff/re
 | REQ-102 | Le espressioni regolari di `rules.yaml` devono usare la sintassi del crate Rust `regex`; il controllo delle regole deve segnalare come errore ogni espressione non compilabile. | aperto | — |
 | REQ-103 | Il classificatore a regole deve offrire un controllo di `rules.yaml` contro lo schema che blocca l'esecuzione per faccette o valori inesistenti ed espressioni non valide, e segnala come avvisi i valori mai prodotti, i valori non mappati in `then_map` e le faccette senza regole. | aperto | — |
 | REQ-104 | Il classificatore a regole deve omettere una faccetta (astensione) quando nessuna regola si applica e non è definito un valore predefinito. | implementato | `rocket-tag/src/rules.rs` |
-| REQ-105 | Il classificatore a regole deve registrare per ogni faccetta la regola che l'ha decisa (`rule_ids`) e una confidenza, secondo l'appendice C. | aperto | — |
+| REQ-105 | Il classificatore a regole deve registrare per ogni faccetta la regola che l'ha decisa (`rule_ids`) e una confidenza, secondo l'appendice C. | implementato | `rocket-tag/src/rules.rs` |
 
 ## Classificatore LLM
 

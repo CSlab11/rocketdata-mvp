@@ -524,6 +524,60 @@ facets:
     }
 
     #[test]
+    fn registra_regola_e_confidenza_di_ogni_faccetta() {
+        let yaml = r#"
+version: "1"
+facets:
+  regola:
+    rules:
+      - {id: mia, value: x, any: ['k'], confidence: 0.8}
+      - {value: y, any: ['j']}
+  predefinito:
+    rules:
+      - {value: x, any: ['mai']}
+    default: z
+    default_confidence: 0.4
+  senza_conf:
+    rules:
+      - {value: x, any: ['mai']}
+    default: z
+  mappa:
+    rules:
+      - {value: x, any: ['mai']}
+    then_map: {from: regola, map: {x: P}, confidence: 0.6}
+  punteggio:
+    mode: score
+    rules:
+      - {value: a, any: ['k']}
+      - {value: b, any: ['p', 'q']}
+  multipla:
+    mode: multi
+    rules:
+      - {id: m1, value: u, any: ['k'], confidence: 0.7}
+      - {id: m2, value: v, any: ['p'], confidence: 0.6}
+  multipla_vuota:
+    mode: multi
+    rules:
+      - {value: u, any: ['mai']}
+    default_confidence: 0.2
+"#;
+        let decision = RuleSet::parse(yaml).unwrap().classify("k p q", &Context::default());
+        let (confidence, why) = (&decision.confidence, &decision.rule_ids);
+        assert_eq!((&confidence["regola"], &why["regola"]), (&json!(0.8), &json!("mia")));
+        assert_eq!((&confidence["predefinito"], &why["predefinito"]), (&json!(0.4), &json!("default")));
+        assert_eq!(confidence["senza_conf"], json!(0.3));
+        assert_eq!((&confidence["mappa"], &why["mappa"]), (&json!(0.6), &json!("map regola")));
+        assert_eq!(decision.labels["punteggio"], "b");
+        assert_eq!(confidence["punteggio"], json!(0.73), "0,4 + 0,5 × 2 ÷ 3");
+        assert_eq!(why["punteggio"], "score {a: 1, b: 2}");
+        assert_eq!((&confidence["multipla"], &why["multipla"]), (&json!(0.6), &json!(["m1", "m2"])));
+        assert_eq!(confidence["multipla_vuota"], json!(0.2));
+
+        let plain = RuleSet::parse(yaml).unwrap().classify("j", &Context::default());
+        assert_eq!((&plain.confidence["regola"], &plain.rule_ids["regola"]), (&json!(0.5), &json!("regola#1")));
+    }
+
+    #[test]
     fn modalita_sconosciuta() {
         let error = RuleSet::parse("version: \"1\"\nfacets:\n  a:\n    mode: boh\n").unwrap_err();
         assert!(error.contains("modalità sconosciuta"));
