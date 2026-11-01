@@ -342,6 +342,17 @@ fn segnala_i_file_modificati_dopo_i_risultati() {
     assert!(dom.contains("File Markdown modificati dopo questi risultati: 2."), "{dom}");
 }
 
+/// Le faccette restano nell'ordine del file di uscita, non in ordine alfabetico (BUG-003).
+#[test]
+fn faccette_nell_ordine_del_file_di_uscita() {
+    let (_dir, exe) = install_with_fake_tag();
+    let gui = Gui::start(&exe);
+    let _folder = classified_folder(&gui);
+    let dom = dump_dom(&gui.url("/#classify"));
+    let (tono, temi) = (dom.find("<li>tono: formale</li>").expect("tono"), dom.find("<li>temi: spazio, mare</li>").expect("temi"));
+    assert!(tono < temi, "il file di uscita ha prima tono, poi temi");
+}
+
 /// Niente nomi di faccette o valori nel codice di gui (REQ-142).
 #[test]
 fn nessuna_faccetta_nel_codice() {

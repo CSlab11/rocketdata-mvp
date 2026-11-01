@@ -148,6 +148,7 @@
 - REQ-145 implementato — Segnalazione dei Markdown modificati dopo il file di uscita (`gui/src/classify.rs`, `gui/src/server.rs`, `gui/tests/classify.rs`, `gui/web/app.js`)
 - REQ-127 implementato — package.ps1 con rocket-tag disponibile per la gui e rocket-tag-config in dist (`README.md`, `package.ps1`)
 - BUG-003 segnalato — gui: faccette in ordine alfabetico invece che nell'ordine del file di uscita (`gui/Cargo.toml`, `gui/Cargo.lock`)
+- BUG-003 risolto — Abilitata preserve_order di serde_json in gui: le faccette restano nell'ordine del file di uscita (`gui/Cargo.lock`, `gui/Cargo.toml`, `gui/tests/classify.rs`)
 
 ## 2026-10-25
 - REQ-068 richiesto — search-rm3: opzione --heading-weight, maggiore di 1, predefinita 3
