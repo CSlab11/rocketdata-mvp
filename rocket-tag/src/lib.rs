@@ -8,3 +8,4 @@ pub mod rules;
 pub mod classifier;
 pub mod output;
 pub mod llm;
+pub mod evaluate;

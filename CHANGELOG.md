@@ -121,6 +121,7 @@
 - REQ-083 implementato — Classificatore LLM indipendente dal codice delle regole (`rocket-tag/src/llm.rs`)
 - REQ-081 implementato — Esecuzione in locale: il testo dei documenti va solo al server LLM configurato (`rocket-tag/tests/llm.rs`)
 - REQ-130 implementato — Codice di uscita 0 o diverso da 0 con il messaggio di errore su stderr (`rocket-tag/tests/cli.rs`)
+- REQ-118 implementato — Abbinamento tra file di uscita ed etichette umane per documento e righe, con controllo di text_hash (`rocket-tag/src/evaluate.rs`, `rocket-tag/src/lib.rs`)
 
 ## 2026-10-25
 - REQ-068 richiesto — search-rm3: opzione --heading-weight, maggiore di 1, predefinita 3
