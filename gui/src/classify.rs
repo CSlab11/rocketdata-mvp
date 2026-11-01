@@ -61,6 +61,13 @@ pub fn arguments(classifier: Classifier, src: &Path, config: &Config, server: Op
     args.extend(["--schema".into(), config.schema.clone().into(), "--rules".into(), config.rules.clone().into()]);
     // L'indice di doc-ripper e l'indice di search-rm3 non sono documenti da classificare.
     args.extend(["--exclude".into(), "index.md".into(), "--exclude".into(), ".index".into()]);
+    if classifier == Classifier::Llm {
+        // Con il file delle regole valgono le confidenze per accordo (REQ-139).
+        let rules = output_file(src, Classifier::Rules);
+        if rules.is_file() {
+            args.extend(["--rules-out".into(), rules.into()]);
+        }
+    }
     if let Some(server) = server {
         args.extend(["--guide".into(), config.guide.clone().into(), "--examples".into(), config.examples.clone().into()]);
         args.extend(["--base-url".into(), server.base_url.clone().into(), "--model".into(), server.model.clone().into()]);

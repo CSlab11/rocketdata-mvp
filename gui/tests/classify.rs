@@ -87,6 +87,29 @@ fn file_di_uscita_ed_esclusioni() {
     assert!(args.windows(2).any(|w| w == ["--exclude", ".index"]));
 }
 
+/// `classify llm` riceve `rules.json` solo se esiste (REQ-139).
+#[test]
+fn passa_le_regole_all_llm_se_esistono() {
+    let (_dir, exe) = install_with_fake_tag();
+    let gui = Gui::start(&exe);
+    let folder = markdown_folder();
+    let src = folder.path().to_str().unwrap();
+    let llm = json!({"src": src, "classifier": "llm", "base_url": "http://x/v1", "model": "m"});
+    let args = || read_json(&folder.path().join(".classify/llm.json.args.json"))["args"].clone();
+    assert_eq!(post_json(&gui, "/api/classify/run", &llm).0, 202);
+    wait_end(&gui);
+    assert!(!args().as_array().unwrap().contains(&json!("--rules-out")));
+
+    assert_eq!(post_json(&gui, "/api/classify/run", &json!({"src": src, "classifier": "rules"})).0, 202);
+    wait_end(&gui);
+    assert_eq!(post_json(&gui, "/api/classify/run", &llm).0, 202);
+    wait_end(&gui);
+    let args = args();
+    let args = args.as_array().unwrap();
+    let position = args.iter().position(|a| a == "--rules-out").expect("--rules-out");
+    assert!(args[position + 1].as_str().unwrap().ends_with(r".classify\rules.json"));
+}
+
 #[test]
 fn richieste_non_valide() {
     let (_dir, exe) = install_with_fake_tag();

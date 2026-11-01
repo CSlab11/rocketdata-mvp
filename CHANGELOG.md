@@ -134,6 +134,7 @@
 - REQ-135 implementato — Ultima destinazione di doc-ripper proposta come cartella da classificare, modificabile con Sfoglia (`gui/tests/classify.rs`, `gui/web/app.js`)
 - REQ-136 implementato — File di uscita in .classify ed esclusione di index.md e .index (`gui/src/classify.rs`, `gui/src/server.rs`, `gui/tests/classify.rs`)
 - REQ-137 implementato — Classificazione in background con barra di avanzamento, Annulla ed esito (`gui/src/server.rs`, `gui/tests/classify.rs`, `gui/web/app.js`)
+- REQ-139 implementato — rules.json passato a classify llm quando esiste (`gui/src/classify.rs`, `gui/tests/classify.rs`)
 
 ## 2026-10-25
 - REQ-068 richiesto — search-rm3: opzione --heading-weight, maggiore di 1, predefinita 3
