@@ -213,13 +213,15 @@ fn run_classify_llm(args: &LlmArgs) -> Result<(), String> {
         let from_rules = || rules.as_ref().and_then(|r| r.document_info(document));
         known.get(document).cloned().or_else(from_rules).unwrap_or_default()
     };
-    let mut jobs = iterate::jobs(&iterate::documents(&args.input, &args.exclude)?, &info)?;
+    let jobs = iterate::jobs(&iterate::documents(&args.input, &args.exclude)?, &info)?;
+    let from_rules = args.rules_out.as_deref().map(Output::read).transpose()?.as_ref().map(llm::rule_labels);
+    let (items, mut jobs) = llm::resume(&args.output, &schema, &llm.prompt_id, from_rules.as_ref(), jobs);
     if let Some(limit) = args.limit {
         jobs.truncate(limit);
     }
     let mut result = Output::new(&schema.version, llm.classifier_name());
     result.prompt_id = Some(llm.prompt_id.clone());
-    let from_rules = args.rules_out.as_deref().map(Output::read).transpose()?.as_ref().map(llm::rule_labels);
+    result.items = items;
     let run = Run { llm: &llm, schema: &schema, rules: from_rules.as_ref(), workers: args.workers };
     run.classify_all(&jobs, &mut result)?;
     result.write(&args.output)

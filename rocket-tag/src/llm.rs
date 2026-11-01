@@ -1,6 +1,7 @@
 //! Classificatore LLM: prompt, formato di uscita e chiamate al server locale (appendice D).
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::path::Path;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
@@ -11,7 +12,7 @@ use sha1::{Digest, Sha1};
 
 use crate::classifier::{Context, Decision};
 use crate::iterate::Job;
-use crate::markdown::Kind;
+use crate::markdown::{self, Kind};
 use crate::output::{Item, Output, Skipped};
 use crate::schema::Schema;
 
@@ -116,7 +117,7 @@ impl Llm {
             Err(Failure::Invalid(_)) => self.attempt(schema, &user, context),
             outcome => outcome,
         }?;
-        decision.confidence = decision.labels.iter().map(|(name, value)| (name.clone(), json!(agreement(name, value, rules)))).collect();
+        decision.confidence = confidences(&decision.labels, rules);
         Ok(decision)
     }
 
@@ -134,6 +135,10 @@ impl Llm {
         decision.rule_ids.clear();
         Ok(decision)
     }
+}
+
+fn confidences(labels: &Map<String, Value>, rules: Option<&Map<String, Value>>) -> Map<String, Value> {
+    labels.iter().map(|(name, value)| (name.clone(), json!(agreement(name, value, rules)))).collect()
 }
 
 /// 0,9 se concorda con le regole, 0,5 se non concorda, 0,7 senza etichette delle regole (REQ-113).
@@ -160,6 +165,39 @@ fn parse_labels(content: &str) -> Result<Map<String, Value>, Failure> {
     serde_json::from_str(&content[start..=end]).map_err(|e| invalid(e.to_string()))
 }
 
+/// Unità già classificate in un file di uscita con la stessa versione dello schema e lo stesso
+/// `prompt_id`, e unità ancora da fare: si riprende confrontando documento, righe e `text_hash`
+/// (REQ-110). Le confidenze si ricalcolano, perché le regole possono essere cambiate (REQ-113).
+pub fn resume(
+    path: &Path,
+    schema: &Schema,
+    prompt_id: &str,
+    rules: Option<&RuleLabels>,
+    jobs: Vec<Job>,
+) -> (Vec<Item>, Vec<Job>) {
+    let previous = Output::read(path).ok().filter(|output| {
+        output.schema_version == schema.version && output.prompt_id.as_deref() == Some(prompt_id)
+    });
+    let Some(previous) = previous else { return (Vec::new(), jobs) };
+    let wanted: HashSet<_> = jobs.iter().map(unit_key).collect();
+    let mut items: Vec<Item> = previous
+        .items
+        .into_iter()
+        .filter(|i| wanted.contains(&(i.document.clone(), i.line_start, i.line_end, i.text_hash.clone())))
+        .collect();
+    for item in &mut items {
+        let from_rules = rules.and_then(|labels| labels.get(&(item.document.clone(), item.line_start, item.line_end)));
+        item.confidence = confidences(&item.labels, from_rules);
+        item.unit_confidence = item.confidence.values().filter_map(Value::as_f64).reduce(f64::min).unwrap_or(0.0);
+    }
+    let done: HashSet<_> = items.iter().map(|i| (i.document.clone(), i.line_start, i.line_end, i.text_hash.clone())).collect();
+    (items, jobs.into_iter().filter(|job| !done.contains(&unit_key(job))).collect())
+}
+
+fn unit_key(job: &Job) -> (String, usize, usize, String) {
+    (job.document.clone(), job.unit.line_start, job.unit.line_end, markdown::text_hash(&job.unit.text))
+}
+
 /// Una esecuzione del classificatore su più unità.
 pub struct Run<'a> {
     pub llm: &'a Llm,
@@ -174,7 +212,9 @@ impl Run<'_> {
     /// ferma con un errore se il server non risponde (REQ-111).
     pub fn classify_all(&self, jobs: &[Job], result: &mut Output) -> Result<(), String> {
         let next = AtomicUsize::new(0);
-        let done = Mutex::new((result, 0));
+        let resumed = result.items.len();
+        let total = resumed + jobs.len();
+        let done = Mutex::new((result, resumed));
         let server = Mutex::new(ServerState::default());
         thread::scope(|scope| {
             for _ in 0..self.workers.max(1) {
@@ -191,7 +231,7 @@ impl Run<'_> {
                             Err(failure) => result.skipped.push(skipped(job, &failure)),
                         }
                         *count += 1;
-                        println!("[{count}/{}] {}", jobs.len(), job.document);
+                        println!("[{count}/{total}] {}", job.document);
                     }
                 });
             }

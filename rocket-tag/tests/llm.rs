@@ -85,6 +85,10 @@ fn labels() -> String {
 }
 
 fn llm(input: &Path, out: &Path, url: &str) -> Command {
+    with_model(input, out, url, "modello")
+}
+
+fn with_model(input: &Path, out: &Path, url: &str, model: &str) -> Command {
     let mut command = Command::new(env!("CARGO_BIN_EXE_rocket-tag"));
     command
         .args(["classify", "llm"])
@@ -92,7 +96,7 @@ fn llm(input: &Path, out: &Path, url: &str) -> Command {
         .arg("-o")
         .arg(out)
         .args(["--schema", "config/label_schema.json", "--guide", "config/prompt_guide.md"])
-        .args(["--examples", "config/guide_examples.json", "--base-url", url, "--model", "modello"]);
+        .args(["--examples", "config/guide_examples.json", "--base-url", url, "--model", model]);
     command
 }
 
@@ -222,7 +226,9 @@ fn confidenza_dall_accordo_con_le_regole() {
         .output()
         .unwrap();
     assert!(rules.status.success());
+    let requests = server.requests().len();
     run(llm(&docs, &out, &server.url).arg("--rules-out").arg(&rules_out));
+    assert_eq!(server.requests().len(), requests, "alla ripresa si ricalcolano solo le confidenze");
     let with = &saved(&out)["items"][0];
     assert_eq!(with["confidence"]["nature"], 0.9, "regole: requirement");
     assert_eq!(with["confidence"]["required_action"], 0.5, "regole: none; LLM: declare_compliance");
@@ -247,11 +253,44 @@ fn richieste_parallele_e_limite() {
     let lines: Vec<_> = saved(&out)["items"].as_array().unwrap().iter().map(|i| i["line_start"].as_u64().unwrap()).collect();
     assert_eq!(lines, [1, 3, 5, 7, 9, 11], "in ordine di documento e riga");
 
+    let (_dir, docs, out) = workspace("Uno.\n\nDue.\n\nTre.\n");
     let requests = server.requests().len();
     let limited = run(llm(&docs, &out, &server.url).args(["--limit", "2"]));
     assert_eq!(server.requests().len() - requests, 2);
     assert_eq!(saved(&out)["items"].as_array().unwrap().len(), 2);
     assert_eq!(String::from_utf8_lossy(&limited.stdout).lines().last(), Some("[2/2] a.md"));
+}
+
+/// La ripresa salta le unità con stessa versione dello schema, `prompt_id` e `text_hash` (REQ-110).
+#[test]
+fn riprende_dopo_un_interruzione() {
+    let server = serve(|_, _| (200, labels()));
+    let (_dir, docs, out) = workspace("Uno.\n\nDue.\n\nTre.\n");
+    run(llm(&docs, &out, &server.url).args(["--limit", "2"]));
+    assert_eq!(server.requests().len(), 2);
+
+    let resumed = run(&mut llm(&docs, &out, &server.url));
+    assert_eq!(server.requests().len(), 3, "solo l'unità mancante");
+    assert_eq!(saved(&out)["items"].as_array().unwrap().len(), 3);
+    assert_eq!(String::from_utf8_lossy(&resumed.stdout).trim(), "[3/3] a.md");
+
+    std::fs::write(docs.join("a.md"), "Uno.\n\nDue cambiato.\n\nTre.\n").unwrap();
+    run(&mut llm(&docs, &out, &server.url));
+    assert_eq!(server.requests().len(), 4, "testo cambiato: si rifà solo quell'unità");
+
+    run(&mut with_model(&docs, &out, &server.url, "altro"));
+    assert_eq!(server.requests().len(), 7, "prompt_id diverso: si rifà tutto");
+}
+
+#[test]
+fn le_unita_sparite_non_restano_nel_file() {
+    let server = serve(|_, _| (200, labels()));
+    let (_dir, docs, out) = workspace("Uno.\n\nDue.\n");
+    run(&mut llm(&docs, &out, &server.url));
+    std::fs::write(docs.join("a.md"), "Uno.\n").unwrap();
+    run(&mut llm(&docs, &out, &server.url));
+    assert_eq!(saved(&out)["items"].as_array().unwrap().len(), 1);
+    assert_eq!(server.requests().len(), 2);
 }
 
 /// 5 errori di connessione senza alcun successo fermano l'esecuzione con un messaggio (REQ-111).
