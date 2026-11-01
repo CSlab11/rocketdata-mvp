@@ -131,6 +131,8 @@ pub struct RuleSet {
     pub documents: Vec<DocumentRule>,
     /// Nell'ordine del file, che è l'ordine di valutazione.
     pub facets: Vec<FacetRules>,
+    /// Espressioni che il crate `regex` non compila, tutte, per il controllo (REQ-102).
+    pub pattern_errors: Vec<String>,
 }
 
 impl RuleSet {
@@ -142,23 +144,26 @@ impl RuleSet {
 
     pub fn parse(text: &str) -> Result<RuleSet, String> {
         let raw: RawFile = serde_yaml::from_str(text).map_err(|e| format!("rules.yaml: {e}"))?;
+        let mut pattern_errors = Vec::new();
         let mut documents = Vec::new();
         for document in raw.documents {
-            let pattern = compile(&document.pattern, false).map_err(|e| format!("rules.yaml: documents: {e}"))?;
-            documents.push(DocumentRule { pattern, side: document.side, doc_type: document.doc_type });
+            match compile(&document.pattern, false) {
+                Ok(pattern) => documents.push(DocumentRule { pattern, side: document.side, doc_type: document.doc_type }),
+                Err(error) => pattern_errors.push(format!("documents: {error}")),
+            }
         }
         let mut facets = Vec::new();
         for (name, spec) in raw.facets {
             let name = name.as_str().ok_or("rules.yaml: nome di faccetta non valido")?.to_string();
             let spec: RawFacet = serde_yaml::from_value(spec).map_err(|e| format!("rules.yaml: {name}: {e}"))?;
-            facets.push(facet_rules(name, spec)?);
+            facets.push(facet_rules(name, spec, &mut pattern_errors)?);
         }
-        Ok(RuleSet { version: yaml_string(&raw.version).unwrap_or_else(|| "0".to_string()), documents, facets })
+        Ok(RuleSet { version: yaml_string(&raw.version).unwrap_or_else(|| "0".to_string()), documents, facets, pattern_errors })
     }
 
     /// Controllo delle regole contro lo schema (REQ-103).
     pub fn check(&self, schema: &Schema) -> Check {
-        let mut check = Check::default();
+        let mut check = Check { errors: self.pattern_errors.clone(), warnings: Vec::new() };
         for rules in &self.facets {
             match schema.facet(&rules.name) {
                 Some(facet) => rules.check(facet, schema, &mut check),
@@ -353,7 +358,7 @@ impl Rule {
     }
 }
 
-fn facet_rules(name: String, spec: RawFacet) -> Result<FacetRules, String> {
+fn facet_rules(name: String, spec: RawFacet, errors: &mut Vec<String>) -> Result<FacetRules, String> {
     let mode = match spec.mode.as_deref() {
         None | Some("first") => Mode::First,
         Some("score") => Mode::Score,
@@ -363,7 +368,7 @@ fn facet_rules(name: String, spec: RawFacet) -> Result<FacetRules, String> {
     let mut rules = Vec::new();
     for (index, rule) in spec.rules.into_iter().enumerate() {
         let id = rule.id.clone().unwrap_or_else(|| format!("{name}#{index}"));
-        rules.push(compile_rule(id, rule).map_err(|e| format!("rules.yaml: {name}: {e}"))?);
+        rules.push(compile_rule(&name, id, rule, errors));
     }
     let then_map = spec.then_map.map(|m| ThenMap {
         from: m.from,
@@ -373,26 +378,31 @@ fn facet_rules(name: String, spec: RawFacet) -> Result<FacetRules, String> {
     Ok(FacetRules { name, mode, rules, then_map, default: spec.default, default_confidence: spec.default_confidence })
 }
 
-fn compile_rule(id: String, rule: RawRule) -> Result<Rule, String> {
-    let list = |patterns: &[String]| patterns.iter().map(|p| compile(p, rule.case)).collect::<Result<Vec<_>, _>>();
+fn compile_rule(facet: &str, id: String, rule: RawRule, errors: &mut Vec<String>) -> Rule {
+    let mut list = |patterns: &[String], case: bool| -> Vec<Regex> {
+        let mut compiled = Vec::new();
+        for pattern in patterns {
+            match compile(pattern, case) {
+                Ok(regex) => compiled.push(regex),
+                Err(error) => errors.push(format!("{facet}/{id}: {error}")),
+            }
+        }
+        compiled
+    };
     let mut when = Vec::new();
     for (key, values) in &rule.when {
-        let key = yaml_string(key).ok_or("when: chiave non valida")?;
+        let Some(key) = yaml_string(key) else { continue };
         let allowed: Vec<Option<String>> = match values {
             Yaml::Sequence(values) => values.iter().map(yaml_string).collect(),
             value => vec![yaml_string(value)],
         };
-        let patterns = if key == "heading" {
-            allowed.iter().flatten().map(|p| compile(p, false)).collect::<Result<Vec<_>, _>>()?
-        } else {
-            Vec::new()
-        };
-        when.push(Condition { key, allowed, patterns });
+        let headings: Vec<String> = if key == "heading" { allowed.iter().flatten().cloned().collect() } else { Vec::new() };
+        when.push(Condition { key, allowed, patterns: list(&headings, false) });
     }
-    Ok(Rule {
-        any: list(&rule.any)?,
-        all: list(&rule.all)?,
-        unless: list(&rule.unless)?,
+    Rule {
+        any: list(&rule.any, rule.case),
+        all: list(&rule.all, rule.case),
+        unless: list(&rule.unless, rule.case),
         id,
         value: rule.value,
         count_min: rule.count_min.unwrap_or(1),
@@ -400,7 +410,7 @@ fn compile_rule(id: String, rule: RawRule) -> Result<Rule, String> {
         max_len: rule.max_len,
         when,
         confidence: rule.confidence.unwrap_or(0.5),
-    })
+    }
 }
 
 /// Le espressioni non distinguono maiuscole e minuscole, salvo `case: true`.
@@ -722,6 +732,28 @@ facets:
         assert!(warned("destination: valori mai prodotti"), "{:?}", result.warnings);
         assert!(warned("destination.then_map: valori di domain non mappati"));
         assert!(warned("faccetta 'nature' senza regole"));
+    }
+
+    #[test]
+    fn segnala_ogni_espressione_non_compilabile() {
+        let errors = check(
+            r#"
+version: "1"
+documents:
+  - {match: '[', side: prime, doc_type: pa_plan}
+facets:
+  nature:
+    rules:
+      - {id: guarda, value: requirement, any: ['(?=shall)x']}
+      - {id: gruppo, value: option, unless: ['(aperta'], when: {heading: ['*']}}
+"#,
+        )
+        .errors;
+        assert_eq!(errors.len(), 4, "{errors:?}");
+        assert!(errors.iter().any(|e| e.starts_with("documents: espressione non valida '['")));
+        assert!(errors.iter().any(|e| e.starts_with("nature/guarda: espressione non valida '(?=shall)x'")));
+        assert!(errors.iter().any(|e| e.starts_with("nature/gruppo: espressione non valida '(aperta'")));
+        assert!(errors.iter().any(|e| e.starts_with("nature/gruppo: espressione non valida '*'")));
     }
 
     #[test]
