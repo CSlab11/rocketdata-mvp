@@ -444,6 +444,34 @@ fn classificatori_indipendenti_con_file_propri() {
     assert_eq!(saved(&out)["classifier"], "llm:modello");
 }
 
+/// Il testo dei documenti va solo al server configurato, anche con un proxy nell'ambiente (REQ-081).
+#[test]
+fn nessun_invio_a_servizi_diversi_dal_server_configurato() {
+    let proxy = serve(|_, _| (200, labels()));
+    let server = serve(|_, _| (200, labels()));
+    let (_dir, docs, out) = workspace("Testo riservato.\n");
+    let address = proxy.url.trim_end_matches("/v1").to_string();
+    run(llm(&docs, &out, &server.url).env("HTTP_PROXY", &address).env("http_proxy", &address).env("ALL_PROXY", &address));
+    assert_eq!(server.requests().len(), 1);
+    assert!(proxy.requests().is_empty());
+}
+
+/// La rete serve solo al client LLM.
+#[test]
+fn solo_il_client_llm_usa_la_rete() {
+    for source in [
+        include_str!("../src/classifier.rs"),
+        include_str!("../src/iterate.rs"),
+        include_str!("../src/labels.rs"),
+        include_str!("../src/markdown.rs"),
+        include_str!("../src/output.rs"),
+        include_str!("../src/rules.rs"),
+        include_str!("../src/schema.rs"),
+    ] {
+        assert!(!source.contains("ureq") && !source.contains("TcpStream"));
+    }
+}
+
 /// La risposta può arrivare dentro un blocco di codice o con testo attorno.
 #[test]
 fn accetta_il_json_dentro_un_blocco_di_codice() {

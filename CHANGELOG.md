@@ -119,6 +119,7 @@
 - REQ-093 implementato — Unità vicine e contesto facoltativi per entrambi i classificatori (`rocket-tag/tests/llm.rs`, `rocket-tag/tests/reference.rs`)
 - REQ-082 implementato — Classificatore a regole e LLM eseguibili separatamente, ciascuno con il proprio file di uscita (`rocket-tag/tests/llm.rs`)
 - REQ-083 implementato — Classificatore LLM indipendente dal codice delle regole (`rocket-tag/src/llm.rs`)
+- REQ-081 implementato — Esecuzione in locale: il testo dei documenti va solo al server LLM configurato (`rocket-tag/tests/llm.rs`)
 
 ## 2026-10-25
 - REQ-068 richiesto — search-rm3: opzione --heading-weight, maggiore di 1, predefinita 3
