@@ -28,7 +28,7 @@ Provengono da [`classifier-handoff/requirements.md`](../../classifier-handoff/re
 | ID | Requisito | Stato | File impattati |
 | --- | --- | --- | --- |
 | REQ-085 | L'iteratore deve ricevere un file Markdown oppure una cartella, di cui legge ricorsivamente i file `*.md`, e chiamare il classificatore scelto per ogni unità. | aperto | — |
-| REQ-086 | L'iteratore deve scomporre il Markdown in unità (paragrafi, voci di elenco, righe dati di tabella) secondo l'appendice A, usare i titoli solo per percorso dei titoli e clausola, ed escludere blocchi di codice, immagini, commenti HTML, separatori e righe vuote. | aperto | — |
+| REQ-086 | L'iteratore deve scomporre il Markdown in unità (paragrafi, voci di elenco, righe dati di tabella) secondo l'appendice A, usare i titoli solo per percorso dei titoli e clausola, ed escludere blocchi di codice, immagini, commenti HTML, separatori e righe vuote. | implementato | `rocket-tag/Cargo.lock`, `rocket-tag/Cargo.toml`, `rocket-tag/src/lib.rs`, `rocket-tag/src/markdown.rs` |
 | REQ-087 | Per ogni unità l'iteratore deve determinare la riga iniziale e la riga finale nel file Markdown, numerate da 1 e incluse. | aperto | — |
 | REQ-088 | Per ogni unità l'iteratore deve passare al classificatore testo, testo dell'unità precedente e successiva dello stesso file, percorso dei titoli, clausola, tipo di unità, lato e tipo del documento. | aperto | — |
 | REQ-089 | L'iteratore deve ricavare lato e tipo del documento dalle etichette documento del file di etichette umane (appendice F), se fornito, abbinandole per nome del documento; altrimenti dalla sezione `documents` di `rules.yaml` applicata al nome del documento; altrimenti deve lasciarli sconosciuti. | aperto | — |
