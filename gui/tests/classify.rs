@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 
 use serde_json::{Value, json};
 
-use common::{Gui, dump_dom, install_with_fake_tag, post_json};
+use common::{Gui, dump_dom, gui_exe, install_with_fake_tag, post_json};
 
 /// Cartella di Markdown con il testo delle unità restituite dal rocket-tag finto.
 fn markdown_folder() -> tempfile::TempDir {
@@ -167,6 +167,35 @@ fn file_di_configurazione_modificabili_e_ricordati() {
     let dom = dump_dom(&gui.url("/#classify"));
     assert!(dom.contains(r#"value="D:\mio\regole.yaml""#), "{dom}");
     assert!(dom.contains(r#"placeholder=""#) && dom.contains(r"rocket-tag-config\prompt_guide.md"), "{dom}");
+}
+
+/// Conversione e classificazione non girano insieme sulla stessa cartella (REQ-147).
+#[test]
+fn conversione_e_classificazione_si_escludono() {
+    let (dir, exe) = install_with_fake_tag();
+    fs::copy(gui_exe().parent().unwrap().join("examples/fake_doc_ripper.exe"), dir.path().join("doc-ripper.exe")).unwrap();
+    let gui = Gui::start(&exe);
+    let folder = markdown_folder();
+    fs::write(folder.path().join("lento"), "").unwrap();
+    let dst = folder.path().to_str().unwrap();
+    let other = tempfile::tempdir().unwrap();
+    let classify = json!({"src": dst, "classifier": "rules"});
+
+    assert_eq!(post_json(&gui, "/api/classify/run", &classify).0, 202);
+    let same = json!({"src": dst, "dst": dst.to_uppercase()});
+    let (status, message) = post_json(&gui, "/api/doc-ripper/run", &same);
+    assert_eq!(status, 409);
+    assert!(message.contains("in corso una classificazione"), "{message}");
+    assert_eq!(post_json(&gui, "/api/doc-ripper/run", &json!({"src": dst, "dst": other.path().to_str().unwrap()})).0, 202, "altra cartella");
+    assert_eq!(post_json(&gui, "/api/doc-ripper/cancel", &json!({})).0, 202);
+    wait_end(&gui);
+    common::wait_output(&gui);
+
+    assert_eq!(post_json(&gui, "/api/doc-ripper/run", &json!({"src": dst, "dst": dst})).0, 202);
+    let (status, message) = post_json(&gui, "/api/classify/run", &classify);
+    assert_eq!(status, 409);
+    assert!(message.contains("in corso una conversione"), "{message}");
+    assert_eq!(post_json(&gui, "/api/doc-ripper/cancel", &json!({})).0, 202);
 }
 
 #[test]

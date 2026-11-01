@@ -58,6 +58,7 @@ async fn main() {
         last_search: Default::default(),
         runner: Default::default(),
         classifier: Arc::new(runner::Runner::new("rocket-tag")),
+        starting: Default::default(),
         shutdown: Arc::clone(&shutdown),
         folder_picker: dialogs::system_folder_picker(),
         picking: Default::default(),

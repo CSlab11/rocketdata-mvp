@@ -41,7 +41,7 @@ pub struct ConfigPaths {
 
 /// Chiave di confronto di una cartella: senza distinzione tra maiuscole e minuscole, con `/`
 /// uguale a `\` e senza barra finale.
-fn folder_key(folder: &str) -> String {
+pub fn folder_key(folder: &str) -> String {
     folder.trim().replace('/', "\\").trim_end_matches('\\').to_lowercase()
 }
 

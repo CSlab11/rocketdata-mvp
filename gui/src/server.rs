@@ -41,6 +41,8 @@ pub struct AppState {
     pub runner: Arc<Runner>,
     /// Esecuzioni di rocket-tag (REQ-133).
     pub classifier: Arc<Runner>,
+    /// Controllo e avvio di conversione e classificazione sono un passo unico (REQ-147).
+    pub starting: std::sync::Mutex<()>,
     /// Segnala al server di spegnersi (REQ-039).
     pub shutdown: Arc<tokio::sync::Notify>,
     /// Selettore di cartelle (REQ-030); sostituibile nei test.
@@ -123,7 +125,13 @@ async fn doc_ripper_run(
     }
     let (src, dst) = (request.src.trim(), request.dst.trim());
     let args = ["--src".into(), src.into(), "--dst".into(), dst.into()];
-    state.runner.start(exe, &args, &[], dst).map_err(|e| (StatusCode::CONFLICT, e))?;
+    {
+        let _starting = state.starting.lock().unwrap();
+        if same_folder_running(&state.classifier, dst) {
+            return Err((StatusCode::CONFLICT, "su questa cartella è in corso una classificazione: attendere la fine o annullarla".into()));
+        }
+        state.runner.start(exe, &args, &[], dst).map_err(|e| (StatusCode::CONFLICT, e))?;
+    }
     // Ultime cartelle usate, riproposte ai prossimi avvii (REQ-035).
     if let Some(path) = &state.settings_path {
         let change = |s: &mut Settings| {
@@ -205,7 +213,13 @@ async fn classify_run(
     let args = classify::arguments(request.classifier, folder, &config, server.as_ref());
     let key = request.api_key.as_deref().map(str::trim).filter(|key| !key.is_empty());
     let envs: Vec<(&str, String)> = key.map(|key| ("ROCKET_TAG_API_KEY", key.to_string())).into_iter().collect();
-    state.classifier.start(exe, &args, &envs, src).map_err(|e| (StatusCode::CONFLICT, e))?;
+    {
+        let _starting = state.starting.lock().unwrap();
+        if same_folder_running(&state.runner, src) {
+            return Err((StatusCode::CONFLICT, "su questa cartella è in corso una conversione: attendere la fine o annullarla".into()));
+        }
+        state.classifier.start(exe, &args, &envs, src).map_err(|e| (StatusCode::CONFLICT, e))?;
+    }
     // Ultimi percorsi, URL e modello, riproposti ai prossimi avvii (REQ-140, REQ-141).
     if let Some(path) = &state.settings_path {
         let change = |s: &mut Settings| {
@@ -220,6 +234,13 @@ async fn classify_run(
         }
     }
     Ok(StatusCode::ACCEPTED)
+}
+
+/// L'altro tool sta lavorando su questa cartella: i numeri di riga non sarebbero più validi
+/// (REQ-147).
+fn same_folder_running(other: &Runner, folder: &str) -> bool {
+    let snapshot = other.snapshot();
+    snapshot.running && snapshot.dst.is_some_and(|dst| settings::folder_key(&dst) == settings::folder_key(folder))
 }
 
 fn llm_server(request: &ClassifyRequest) -> Result<Server, (StatusCode, String)> {
@@ -574,6 +595,7 @@ mod tests {
             last_search: Default::default(),
             runner: Arc::default(),
             classifier: Arc::default(),
+            starting: Default::default(),
             shutdown: Arc::default(),
             folder_picker,
             picking: AtomicBool::new(false),
