@@ -54,6 +54,8 @@
 - REQ-172 implementato — La riga con l'ID più alto resta anche se annullata (`req-annullati.ps1`)
 - REQ-170 implementato — Citazioni rimaste degli ID tolti marcate con `(annullato)`, qualificate negli altri file per un tool (`req-annullati.ps1`)
 - REQ-171 implementato — Anteprima con `-WhatIf`: righe e citazioni elencate senza modificare file (`req-annullati.ps1`)
+- REQ-175 richiesto — Skill di tracciabilità versionate in `.claude/skills/` come skill di progetto e versione di riferimento
+- REQ-173 implementato — Task VS Code per ogni cartella di tool, con scelta anteprima/applica (`.vscode/tasks.json`)
 
 ## 2026-11-01
 - REQ-079 richiesto — rocket-tag: Il pacchetto deve essere implementato in Rust come parte del progetto `rocketdata-mvp`, in un crate dedicato compilabile ed eseguibile senza le altre parti della pipeline

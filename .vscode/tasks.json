@@ -1,0 +1,107 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Requisiti annullati: doc-ripper",
+            "detail": "req-annullati.ps1 su doc-ripper/docs/REQUIREMENTS.md (REQ-173)",
+            "type": "process",
+            "command": "powershell",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                "& '${workspaceFolder}/req-annullati.ps1' -Path '${workspaceFolder}/doc-ripper' -WhatIf:${input:reqAnnullatiModo}"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Requisiti annullati: gui",
+            "detail": "req-annullati.ps1 su gui/docs/REQUIREMENTS.md (REQ-173)",
+            "type": "process",
+            "command": "powershell",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                "& '${workspaceFolder}/req-annullati.ps1' -Path '${workspaceFolder}/gui' -WhatIf:${input:reqAnnullatiModo}"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Requisiti annullati: rocket-tag",
+            "detail": "req-annullati.ps1 su rocket-tag/docs/REQUIREMENTS.md (REQ-173)",
+            "type": "process",
+            "command": "powershell",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                "& '${workspaceFolder}/req-annullati.ps1' -Path '${workspaceFolder}/rocket-tag' -WhatIf:${input:reqAnnullatiModo}"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Requisiti annullati: search",
+            "detail": "req-annullati.ps1 su search/docs/REQUIREMENTS.md (REQ-173)",
+            "type": "process",
+            "command": "powershell",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                "& '${workspaceFolder}/req-annullati.ps1' -Path '${workspaceFolder}/search' -WhatIf:${input:reqAnnullatiModo}"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Requisiti annullati: search/search-rm3",
+            "detail": "req-annullati.ps1 su search/search-rm3/docs/REQUIREMENTS.md (REQ-173)",
+            "type": "process",
+            "command": "powershell",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                "& '${workspaceFolder}/req-annullati.ps1' -Path '${workspaceFolder}/search/search-rm3' -WhatIf:${input:reqAnnullatiModo}"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Requisiti annullati: thin-decoder",
+            "detail": "req-annullati.ps1 su thin-decoder/docs/REQUIREMENTS.md (REQ-173)",
+            "type": "process",
+            "command": "powershell",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                "& '${workspaceFolder}/req-annullati.ps1' -Path '${workspaceFolder}/thin-decoder' -WhatIf:${input:reqAnnullatiModo}"
+            ],
+            "problemMatcher": []
+        }
+    ],
+    "inputs": [
+        {
+            "id": "reqAnnullatiModo",
+            "type": "pickString",
+            "description": "Anteprima (nessun file modificato) o applica le modifiche",
+            "options": [
+                {
+                    "label": "anteprima",
+                    "value": "$true"
+                },
+                {
+                    "label": "applica",
+                    "value": "$false"
+                }
+            ],
+            "default": "$true"
+        }
+    ]
+}
