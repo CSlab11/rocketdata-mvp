@@ -12,6 +12,9 @@ Percorsi di "File impattati": in docs/REQUIREMENTS.md dalla radice del repositor
 file di parte dalla cartella della parte, salvo che la sua introduzione contenga la riga
 "Percorsi dei file: dalla radice del repository."
 
+Una parte con percorsi dalla propria cartella e' autonoma: dal primo commit della parte
+che tocca <cartella>/CHANGELOG.md, i commit dei suoi ID toccano solo file della sua cartella.
+
 Numerazione degli ID: ogni file dei requisiti ha la propria. Dentro il file gli ID sono
 REQ-NNN / BUG-NNN; fuori, gli ID di una parte sono qualificati con il nome della
 cartella che contiene docs/ (<parte>_REQ-NNN), quelli di progetto restano senza prefisso.
@@ -261,8 +264,12 @@ def main():
     errors, warnings, review = [], [], []
     files = req_files(root)
     items = []
+    autonomous = {}  # parte -> cartella, per le parti con percorsi dalla propria cartella
     for name in files:
-        items += parse_items((root / name).read_text(encoding="utf-8"), errors, name)
+        text = (root / name).read_text(encoding="utf-8")
+        items += parse_items(text, errors, name)
+        if path_base(name, text):
+            autonomous[part_of(name)] = part_dir(name)
     by_id = {}
     for it in items:
         if it["id"] in by_id:
@@ -385,6 +392,22 @@ def main():
                 if f in c["files"] and ident not in c["ids"]:
                     who = ", ".join(sorted(c["ids"])) or "senza ID"
                     review.append((ident, "%s modificato dopo da %s (%s)" % (f, c["hash"], who)))
+
+    # Parti autonome: i commit dei loro ID toccano solo la cartella della parte, a partire dal
+    # primo commit della parte che usa il proprio changelog (<cartella>/CHANGELOG.md).
+    for part, pdir in sorted(autonomous.items()):
+        own = [i for i, c in enumerate(commits)
+               if any(by_id.get(x, {}).get("part") == part for x in c["ids"])]
+        started = [i for i in own if pdir + LOG_FILE in commits[i]["files"]]
+        if not started:
+            continue
+        for i in own:
+            if i > max(started):
+                continue
+            c = commits[i]
+            for f in c["files"]:
+                if not f.startswith(pdir):
+                    errors.append((c["hash"], "commit di %s tocca un file fuori da %s: %s" % (part, pdir, f)))
 
     # Commit senza ID, a partire dall'introduzione della tabella
     with_table = [i for i, c in enumerate(commits) if any(is_trace(f) and f != LOG_FILE for f in c["files"])]

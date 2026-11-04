@@ -99,6 +99,7 @@ Data più recente in alto; dentro la stessa data le righe si aggiungono in fondo
 Per un ID di una parte si usa l'ID qualificato: `feat(thin-decoder_REQ-001): …`, `fix(thin-decoder_BUG-002): …`.
 
 - In `impl` e `bugfix`: un commit per ID, che contiene insieme codice, riga della tabella e riga del changelog.
+- I commit di un ID di una parte autonoma (percorsi dalla propria cartella, vedi "File impattati") toccano solo file dentro la cartella della parte, compresi i suoi file di tracciabilità; le modifiche fuori dalla cartella vanno in un requisito o bug di progetto. `check_trace.py` lo controlla dal primo commit della parte che tocca il suo `CHANGELOG.md`.
 - `git add` solo dei file di quel passo, per percorso esplicito.
 - Niente `--amend`, rebase o force push; niente push se non richiesto. Si committa sul branch corrente.
 - Se il progetto ha già una propria convenzione per i messaggi, rispettala ma mantieni l'ID nell'oggetto del messaggio: è l'ID che regge la tracciabilità.
