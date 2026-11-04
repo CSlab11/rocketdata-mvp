@@ -8,6 +8,10 @@ cartella docs/, compresi i vecchi docs/<tool>/REQUIREMENTS.md. Un ID che corregg
 testo di un REQUIREMENTS.md (introduzione, note, appendici) puo' elencarlo tra i file
 impattati: per quell'ID il file conta come contenuto.
 
+Percorsi di "File impattati": in docs/REQUIREMENTS.md dalla radice del repository; in un
+file di parte dalla cartella della parte, salvo che la sua introduzione contenga la riga
+"Percorsi dei file: dalla radice del repository."
+
 Numerazione degli ID: ogni file dei requisiti ha la propria. Dentro il file gli ID sono
 REQ-NNN / BUG-NNN; fuori, gli ID di una parte sono qualificati con il nome della
 cartella che contiene docs/ (<parte>_REQ-NNN), quelli di progetto restano senza prefisso.
@@ -46,11 +50,23 @@ REVIEW_PREFIX = "review:"
 ATTR_RE = re.compile(r"^- ([0-9a-f]{7,40}) attribuito a ((?:[A-Za-z0-9][A-Za-z0-9.-]*_)?(?:REQ|BUG)-\d{3,})\b",
                      re.M)
 DATE_RE = re.compile(r"^##\s+(\d{4}-\d{2}-\d{2})\b")
+# Riga dell'introduzione con cui un file di parte dichiara i percorsi dalla radice del repository.
+ROOT_PATHS_RE = re.compile(r"^Percorsi dei file: dalla radice del repository\.?\s*$", re.M)
 
 
 def part_of(name):
     """Nome della parte di un file dei requisiti: '' per il progetto, altrimenti la cartella che contiene docs/."""
     return "" if name == REQ_FILE else name.split("/")[-3]
+
+
+def part_dir(name):
+    """Cartella della parte ('thin-decoder/', 'search/search-rm3/'); '' per il progetto."""
+    return "" if name == REQ_FILE else name[:-len(REQ_FILE)]
+
+
+def path_base(name, text):
+    """Prefisso dei percorsi di "File impattati": la cartella della parte, salvo dichiarazione contraria."""
+    return "" if ROOT_PATHS_RE.search(text) else part_dir(name)
 
 
 def qualify(part, local):
@@ -110,6 +126,7 @@ def req_files(root):
 def parse_items(text, errors, name):
     """Legge le righe delle tabelle il cui header contiene la colonna ID; l'ID e' qualificato con la parte."""
     part = part_of(name)
+    base = path_base(name, text)
     items, header = [], None
     for n, line in enumerate(text.splitlines(), 1):
         if not line.lstrip().startswith("|"):
@@ -140,7 +157,8 @@ def parse_items(text, errors, name):
             "file": name,
             "kind": local.split("-")[0],
             "state": row.get("stato", "").strip().lower(),
-            "files": parse_files(row.get("file impattati", "")),
+            # Percorsi riportati alla radice del repository per i confronti con file e commit.
+            "files": [base + f for f in parse_files(row.get("file impattati", ""))],
             "ref": "" if ref in EMPTY else ref,
         })
     return items

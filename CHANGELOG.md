@@ -68,6 +68,7 @@
 - REQ-177 richiesto — Commit dei requisiti e bug di un tool (tranne `gui`) limitati alla cartella del tool
 - REQ-178 richiesto — `CHANGELOG.md` proprio per ogni tool tranne `gui`, voci dei tool tolte dal changelog della radice
 - REQ-175 implementato — Skill di tracciabilità copiate in `.claude/skills/` (`req`, `arc`, `impl`, `bugtext`, `bugfix`, `checkreq`)
+- REQ-176 implementato — Percorsi dei file di tool dalla cartella del tool, `gui` con dichiarazione dei percorsi dalla radice; `check_trace.py` e convenzioni aggiornati (`.claude/skills/checkreq/scripts/check_trace.py`, `.claude/skills/req/conventions.md`)
 
 ## 2026-11-01
 - REQ-079 richiesto — rocket-tag: Il pacchetto deve essere implementato in Rust come parte del progetto `rocketdata-mvp`, in un crate dedicato compilabile ed eseguibile senza le altre parti della pipeline

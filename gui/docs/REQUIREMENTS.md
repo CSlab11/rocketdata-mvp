@@ -2,6 +2,8 @@
 
 Requisiti del tool `gui`. I requisiti di progetto e la tabella dei bug sono in [`docs/REQUIREMENTS.md`](../../docs/REQUIREMENTS.md); gli ID `REQ-NNN` sono unici in tutto il repository.
 
+Percorsi dei file: dalla radice del repository.
+
 ## Requisiti
 
 | ID | Requisito | Stato | File impattati |

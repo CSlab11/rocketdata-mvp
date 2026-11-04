@@ -65,7 +65,7 @@ Regole delle celle:
 - **Stato bug**: `aperto`, `risolto`.
 - **Req** (solo bug): il requisito violato, oppure `—`. Senza prefisso se sta nello stesso file o nel progetto, qualificato se sta nel file di un'altra parte.
 - **Rimandi nel testo**: come per Req, un ID di un altro file di parte si scrive qualificato.
-- **File impattati**: percorsi relativi alla radice del repository, con `/`, ciascuno tra backtick, separati da virgola; `—` se nessuno. Sono i file realmente toccati dai commit dell'ID (da `git diff --cached --name-only`), non quelli previsti. Non elencare `CHANGELOG.md`, né i file `REQUIREMENTS.md` toccati solo per aggiornare le tabelle; elenca un `REQUIREMENTS.md` solo quando l'ID ne corregge il testo (introduzione, note, appendici), ad esempio un bug in un rimando.
+- **File impattati**: percorsi con `/`, relativi alla radice del repository in `docs/REQUIREMENTS.md` e alla cartella della parte (quella che contiene `docs/`) in `<cartella>/docs/REQUIREMENTS.md`, così che la parte resti autonoma: `src/main.rs`, non `thin-decoder/src/main.rs`. Una parte che integra le altre e tocca file fuori dalla sua cartella dichiara nell'introduzione del suo file la riga `Percorsi dei file: dalla radice del repository.` e usa percorsi dalla radice; ciascuno tra backtick, separati da virgola; `—` se nessuno. Sono i file realmente toccati dai commit dell'ID (da `git diff --cached --name-only`), non quelli previsti. Non elencare `CHANGELOG.md`, né i file `REQUIREMENTS.md` toccati solo per aggiornare le tabelle; elenca un `REQUIREMENTS.md` solo quando l'ID ne corregge il testo (introduzione, note, appendici), ad esempio un bug in un rimando.
 - Nessun carattere `|` dentro le celle.
 
 ### Modello di `CHANGELOG.md`

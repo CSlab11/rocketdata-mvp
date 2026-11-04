@@ -16,96 +16,96 @@ Provengono dal pacchetto di passaggio del classificatore, che conserva gli ID lo
 
 | ID | Requisito | Stato | File impattati |
 | --- | --- | --- | --- |
-| REQ-079 | Il pacchetto deve essere implementato in Rust come parte del progetto `rocketdata-mvp`, in un crate dedicato compilabile ed eseguibile senza le altre parti della pipeline. | implementato | `rocket-tag/.gitignore`, `rocket-tag/Cargo.lock`, `rocket-tag/Cargo.toml`, `rocket-tag/src/lib.rs`, `rocket-tag/src/main.rs`, `rocket-tag/tests/cli.rs` |
-| REQ-080 | Il pacchetto deve presupporre che i file Markdown esistano già e non deve convertire, pulire o estrarre documenti. | implementato | `rocket-tag/tests/cli.rs` |
-| REQ-081 | Il pacchetto deve funzionare interamente in locale e non deve inviare il contenuto dei documenti a servizi diversi dal server LLM configurato dall'utente. | implementato | `rocket-tag/tests/llm.rs` |
-| REQ-082 | Il classificatore a regole e il classificatore LLM devono essere componenti separati, eseguibili in modo indipendente, ciascuno con il proprio file di uscita. | implementato | `rocket-tag/tests/llm.rs` |
-| REQ-083 | Il classificatore LLM non deve dipendere dal codice del classificatore a regole; può usarne l'uscita solo come file in ingresso facoltativo. | implementato | `rocket-tag/src/llm.rs` |
-| REQ-084 | L'iteratore deve essere separato dai classificatori: ciascun classificatore deve esporre una funzione di libreria che classifica una singola unità e un comando che classifica un testo passato da riga di comando. | implementato | `rocket-tag/src/main.rs`, `rocket-tag/tests/cli.rs`, `rocket-tag/tests/llm.rs` |
+| REQ-079 | Il pacchetto deve essere implementato in Rust come parte del progetto `rocketdata-mvp`, in un crate dedicato compilabile ed eseguibile senza le altre parti della pipeline. | implementato | `.gitignore`, `Cargo.lock`, `Cargo.toml`, `src/lib.rs`, `src/main.rs`, `tests/cli.rs` |
+| REQ-080 | Il pacchetto deve presupporre che i file Markdown esistano già e non deve convertire, pulire o estrarre documenti. | implementato | `tests/cli.rs` |
+| REQ-081 | Il pacchetto deve funzionare interamente in locale e non deve inviare il contenuto dei documenti a servizi diversi dal server LLM configurato dall'utente. | implementato | `tests/llm.rs` |
+| REQ-082 | Il classificatore a regole e il classificatore LLM devono essere componenti separati, eseguibili in modo indipendente, ciascuno con il proprio file di uscita. | implementato | `tests/llm.rs` |
+| REQ-083 | Il classificatore LLM non deve dipendere dal codice del classificatore a regole; può usarne l'uscita solo come file in ingresso facoltativo. | implementato | `src/llm.rs` |
+| REQ-084 | L'iteratore deve essere separato dai classificatori: ciascun classificatore deve esporre una funzione di libreria che classifica una singola unità e un comando che classifica un testo passato da riga di comando. | implementato | `src/main.rs`, `tests/cli.rs`, `tests/llm.rs` |
 
 ## Iteratore sul Markdown
 
 | ID | Requisito | Stato | File impattati |
 | --- | --- | --- | --- |
-| REQ-085 | L'iteratore deve ricevere un file Markdown oppure una cartella, di cui legge ricorsivamente i file `*.md`, e chiamare il classificatore scelto per ogni unità. | implementato | `rocket-tag/Cargo.lock`, `rocket-tag/Cargo.toml`, `rocket-tag/src/iterate.rs`, `rocket-tag/src/lib.rs` |
-| REQ-086 | L'iteratore deve scomporre il Markdown in unità (paragrafi, voci di elenco, righe dati di tabella) secondo l'appendice A, usare i titoli solo per percorso dei titoli e clausola, ed escludere blocchi di codice, immagini, commenti HTML, separatori e righe vuote. | implementato | `rocket-tag/Cargo.lock`, `rocket-tag/Cargo.toml`, `rocket-tag/src/lib.rs`, `rocket-tag/src/markdown.rs` |
-| REQ-087 | Per ogni unità l'iteratore deve determinare la riga iniziale e la riga finale nel file Markdown, numerate da 1 e incluse. | implementato | `rocket-tag/src/markdown.rs` |
-| REQ-088 | Per ogni unità l'iteratore deve passare al classificatore testo, testo dell'unità precedente e successiva dello stesso file, percorso dei titoli, clausola, tipo di unità, lato e tipo del documento. | implementato | `rocket-tag/src/iterate.rs` |
-| REQ-089 | L'iteratore deve ricavare lato e tipo del documento dalle etichette documento del file di etichette umane (appendice F), se fornito, abbinandole per nome del documento; altrimenti dalla sezione `documents` di `rules.yaml` applicata al nome del documento; altrimenti deve lasciarli sconosciuti. | implementato | `rocket-tag/src/classifier.rs`, `rocket-tag/src/iterate.rs`, `rocket-tag/src/labels.rs`, `rocket-tag/src/lib.rs`, `rocket-tag/src/main.rs`, `rocket-tag/src/rules.rs`, `rocket-tag/tests/cli.rs` |
-| REQ-090 | Il nome del documento deve essere il percorso del file Markdown relativo alla cartella di ingresso, con separatore `/`, oppure il nome del file quando l'ingresso è un singolo file. | implementato | `rocket-tag/src/iterate.rs` |
-| REQ-128 | I comandi che classificano un file o una cartella devono accettare un'opzione `--exclude <percorso>`, ripetibile, con un percorso relativo alla cartella di ingresso: il file indicato, o la cartella indicata con tutto il suo contenuto, non viene letto dall'iteratore. Il pacchetto non deve contenere nomi di esclusioni predefiniti legati ad altri tool. | implementato | `rocket-tag/src/iterate.rs`, `rocket-tag/src/main.rs`, `rocket-tag/tests/cli.rs` |
+| REQ-085 | L'iteratore deve ricevere un file Markdown oppure una cartella, di cui legge ricorsivamente i file `*.md`, e chiamare il classificatore scelto per ogni unità. | implementato | `Cargo.lock`, `Cargo.toml`, `src/iterate.rs`, `src/lib.rs` |
+| REQ-086 | L'iteratore deve scomporre il Markdown in unità (paragrafi, voci di elenco, righe dati di tabella) secondo l'appendice A, usare i titoli solo per percorso dei titoli e clausola, ed escludere blocchi di codice, immagini, commenti HTML, separatori e righe vuote. | implementato | `Cargo.lock`, `Cargo.toml`, `src/lib.rs`, `src/markdown.rs` |
+| REQ-087 | Per ogni unità l'iteratore deve determinare la riga iniziale e la riga finale nel file Markdown, numerate da 1 e incluse. | implementato | `src/markdown.rs` |
+| REQ-088 | Per ogni unità l'iteratore deve passare al classificatore testo, testo dell'unità precedente e successiva dello stesso file, percorso dei titoli, clausola, tipo di unità, lato e tipo del documento. | implementato | `src/iterate.rs` |
+| REQ-089 | L'iteratore deve ricavare lato e tipo del documento dalle etichette documento del file di etichette umane (appendice F), se fornito, abbinandole per nome del documento; altrimenti dalla sezione `documents` di `rules.yaml` applicata al nome del documento; altrimenti deve lasciarli sconosciuti. | implementato | `src/classifier.rs`, `src/iterate.rs`, `src/labels.rs`, `src/lib.rs`, `src/main.rs`, `src/rules.rs`, `tests/cli.rs` |
+| REQ-090 | Il nome del documento deve essere il percorso del file Markdown relativo alla cartella di ingresso, con separatore `/`, oppure il nome del file quando l'ingresso è un singolo file. | implementato | `src/iterate.rs` |
+| REQ-128 | I comandi che classificano un file o una cartella devono accettare un'opzione `--exclude <percorso>`, ripetibile, con un percorso relativo alla cartella di ingresso: il file indicato, o la cartella indicata con tutto il suo contenuto, non viene letto dall'iteratore. Il pacchetto non deve contenere nomi di esclusioni predefiniti legati ad altri tool. | implementato | `src/iterate.rs`, `src/main.rs`, `tests/cli.rs` |
 
 ## Ingresso dei classificatori
 
 | ID | Requisito | Stato | File impattati |
 | --- | --- | --- | --- |
-| REQ-091 | Ciascun classificatore deve ricevere come input obbligatori lo schema delle etichette e il testo di una singola unità, e restituire le etichette di quell'unità senza richiedere il documento intero. | implementato | `rocket-tag/tests/llm.rs`, `rocket-tag/tests/reference.rs` |
-| REQ-092 | Lo schema deve essere fornito come input (percorso del file o oggetto già caricato) e non letto da un percorso fisso, così che lo stesso file sia condiviso con lo strumento di etichettatura. | implementato | `rocket-tag/src/schema.rs` |
-| REQ-093 | Ciascun classificatore deve accettare come input facoltativi le unità vicine e il contesto (percorso dei titoli, clausola, tipo di unità, lato e tipo del documento) e funzionare anche quando mancano. | implementato | `rocket-tag/tests/llm.rs`, `rocket-tag/tests/reference.rs` |
-| REQ-094 | Il classificatore LLM deve includere nel prompt le unità vicine quando sono fornite. | implementato | `rocket-tag/src/llm.rs` |
+| REQ-091 | Ciascun classificatore deve ricevere come input obbligatori lo schema delle etichette e il testo di una singola unità, e restituire le etichette di quell'unità senza richiedere il documento intero. | implementato | `tests/llm.rs`, `tests/reference.rs` |
+| REQ-092 | Lo schema deve essere fornito come input (percorso del file o oggetto già caricato) e non letto da un percorso fisso, così che lo stesso file sia condiviso con lo strumento di etichettatura. | implementato | `src/schema.rs` |
+| REQ-093 | Ciascun classificatore deve accettare come input facoltativi le unità vicine e il contesto (percorso dei titoli, clausola, tipo di unità, lato e tipo del documento) e funzionare anche quando mancano. | implementato | `tests/llm.rs`, `tests/reference.rs` |
+| REQ-094 | Il classificatore LLM deve includere nel prompt le unità vicine quando sono fornite. | implementato | `src/llm.rs` |
 
 ## Schema delle etichette
 
 | ID | Requisito | Stato | File impattati |
 | --- | --- | --- | --- |
-| REQ-095 | Il pacchetto deve ricavare dallo schema fornito (appendice B) faccette, valori ammessi, descrizioni, valori proposti (`x-default`) e vincoli per lato documento (`x-fixedWhen`), senza valori di faccetta scritti nel codice. | implementato | `rocket-tag/Cargo.lock`, `rocket-tag/Cargo.toml`, `rocket-tag/config/label_schema.json`, `rocket-tag/src/lib.rs`, `rocket-tag/src/schema.rs` |
-| REQ-096 | Il pacchetto deve applicare i vincoli `x-fixedWhen` a ogni uscita (es. `required_action = none` per i documenti `supplier`). | implementato | `rocket-tag/config/guide_examples.json`, `rocket-tag/src/classifier.rs`, `rocket-tag/src/rules.rs`, `rocket-tag/tests/reference.rs` |
-| REQ-097 | Una modifica dello schema non deve richiedere modifiche al codice del classificatore LLM, dell'iteratore né della valutazione. | implementato | `rocket-tag/tests/llm.rs` |
-| REQ-098 | Il pacchetto deve controllare lo schema all'avvio e fermarsi con un messaggio che indica l'errore quando non è conforme all'appendice B. | implementato | `rocket-tag/src/schema.rs` |
+| REQ-095 | Il pacchetto deve ricavare dallo schema fornito (appendice B) faccette, valori ammessi, descrizioni, valori proposti (`x-default`) e vincoli per lato documento (`x-fixedWhen`), senza valori di faccetta scritti nel codice. | implementato | `Cargo.lock`, `Cargo.toml`, `config/label_schema.json`, `src/lib.rs`, `src/schema.rs` |
+| REQ-096 | Il pacchetto deve applicare i vincoli `x-fixedWhen` a ogni uscita (es. `required_action = none` per i documenti `supplier`). | implementato | `config/guide_examples.json`, `src/classifier.rs`, `src/rules.rs`, `tests/reference.rs` |
+| REQ-097 | Una modifica dello schema non deve richiedere modifiche al codice del classificatore LLM, dell'iteratore né della valutazione. | implementato | `tests/llm.rs` |
+| REQ-098 | Il pacchetto deve controllare lo schema all'avvio e fermarsi con un messaggio che indica l'errore quando non è conforme all'appendice B. | implementato | `src/schema.rs` |
 
 ## Classificatore a regole
 
 | ID | Requisito | Stato | File impattati |
 | --- | --- | --- | --- |
-| REQ-099 | Il classificatore a regole deve leggere le regole da un file `rules.yaml` fornito come input (appendice C), come dati e non come codice. | implementato | `rocket-tag/Cargo.lock`, `rocket-tag/Cargo.toml`, `rocket-tag/config/rules.yaml`, `rocket-tag/src/lib.rs`, `rocket-tag/src/rules.rs` |
-| REQ-100 | Le regole devono supportare le modalità `first` (vince la prima regola che corrisponde), `score` (vince il valore con più corrispondenze), `multi` (faccette a scelta multipla) e la mappatura da un'altra faccetta (`then_map`). | implementato | `rocket-tag/src/classifier.rs`, `rocket-tag/src/lib.rs`, `rocket-tag/src/rules.rs` |
-| REQ-101 | Le regole devono poter porre condizioni sul testo (`any`, `all`, `unless`, `count_min`, `min_len`, `max_len`, `case`), sul contesto (`side`, `doc_type`, `kind`, `heading`) e sulle faccette già decise. | implementato | `rocket-tag/src/rules.rs` |
-| REQ-102 | Le espressioni regolari di `rules.yaml` devono usare la sintassi del crate Rust `regex`; il controllo delle regole deve segnalare come errore ogni espressione non compilabile. | implementato | `rocket-tag/src/rules.rs` |
-| REQ-103 | Il classificatore a regole deve offrire un controllo di `rules.yaml` contro lo schema che blocca l'esecuzione per faccette o valori inesistenti ed espressioni non valide, e segnala come avvisi i valori mai prodotti, i valori non mappati in `then_map` e le faccette senza regole. | implementato | `rocket-tag/src/main.rs`, `rocket-tag/src/rules.rs`, `rocket-tag/tests/cli.rs` |
-| REQ-104 | Il classificatore a regole deve omettere una faccetta (astensione) quando nessuna regola si applica e non è definito un valore predefinito. | implementato | `rocket-tag/src/rules.rs` |
-| REQ-105 | Il classificatore a regole deve registrare per ogni faccetta la regola che l'ha decisa (`rule_ids`) e una confidenza, secondo l'appendice C. | implementato | `rocket-tag/src/rules.rs` |
+| REQ-099 | Il classificatore a regole deve leggere le regole da un file `rules.yaml` fornito come input (appendice C), come dati e non come codice. | implementato | `Cargo.lock`, `Cargo.toml`, `config/rules.yaml`, `src/lib.rs`, `src/rules.rs` |
+| REQ-100 | Le regole devono supportare le modalità `first` (vince la prima regola che corrisponde), `score` (vince il valore con più corrispondenze), `multi` (faccette a scelta multipla) e la mappatura da un'altra faccetta (`then_map`). | implementato | `src/classifier.rs`, `src/lib.rs`, `src/rules.rs` |
+| REQ-101 | Le regole devono poter porre condizioni sul testo (`any`, `all`, `unless`, `count_min`, `min_len`, `max_len`, `case`), sul contesto (`side`, `doc_type`, `kind`, `heading`) e sulle faccette già decise. | implementato | `src/rules.rs` |
+| REQ-102 | Le espressioni regolari di `rules.yaml` devono usare la sintassi del crate Rust `regex`; il controllo delle regole deve segnalare come errore ogni espressione non compilabile. | implementato | `src/rules.rs` |
+| REQ-103 | Il classificatore a regole deve offrire un controllo di `rules.yaml` contro lo schema che blocca l'esecuzione per faccette o valori inesistenti ed espressioni non valide, e segnala come avvisi i valori mai prodotti, i valori non mappati in `then_map` e le faccette senza regole. | implementato | `src/main.rs`, `src/rules.rs`, `tests/cli.rs` |
+| REQ-104 | Il classificatore a regole deve omettere una faccetta (astensione) quando nessuna regola si applica e non è definito un valore predefinito. | implementato | `src/rules.rs` |
+| REQ-105 | Il classificatore a regole deve registrare per ogni faccetta la regola che l'ha decisa (`rule_ids`) e una confidenza, secondo l'appendice C. | implementato | `src/rules.rs` |
 
 ## Classificatore LLM
 
 | ID | Requisito | Stato | File impattati |
 | --- | --- | --- | --- |
-| REQ-106 | Il classificatore LLM deve funzionare con qualsiasi server locale compatibile con l'API OpenAI chat completions, con URL, modello e chiave facoltativa configurabili. | implementato | `rocket-tag/Cargo.lock`, `rocket-tag/Cargo.toml`, `rocket-tag/src/classifier.rs`, `rocket-tag/src/iterate.rs`, `rocket-tag/src/llm.rs`, `rocket-tag/src/main.rs`, `rocket-tag/tests/llm.rs` |
-| REQ-107 | Il classificatore LLM deve vincolare la risposta al formato delle faccette derivato dallo schema (appendice D), con modalità `json_schema`, `guided_json` o `json_object` selezionabile. | implementato | `rocket-tag/src/llm.rs` |
-| REQ-108 | Il classificatore LLM deve costruire il prompt secondo l'appendice D da `prompt_guide.md`, dalle descrizioni dello schema e da `guide_examples.json`, ignorando negli esempi le faccette e i valori assenti dallo schema corrente. | implementato | `rocket-tag/config/prompt_guide.md`, `rocket-tag/src/lib.rs`, `rocket-tag/src/llm.rs` |
-| REQ-109 | Il classificatore LLM deve validare ogni risposta contro lo schema, ritentare una volta in caso di risposta non valida e, al secondo fallimento, scartare l'unità registrandola tra le scartate con il motivo. | implementato | `rocket-tag/src/llm.rs`, `rocket-tag/src/schema.rs`, `rocket-tag/tests/llm.rs` |
-| REQ-110 | L'esecuzione con il classificatore LLM deve poter riprendere dopo un'interruzione, saltando le unità già presenti nel file di uscita con la stessa versione dello schema, lo stesso `prompt_id` e lo stesso `text_hash`. | implementato | `rocket-tag/src/llm.rs`, `rocket-tag/src/main.rs`, `rocket-tag/tests/llm.rs` |
-| REQ-111 | Il classificatore LLM deve fermarsi con un messaggio chiaro quando il server non risponde (5 errori di connessione senza alcun successo). | implementato | `rocket-tag/src/llm.rs`, `rocket-tag/src/main.rs`, `rocket-tag/tests/llm.rs` |
-| REQ-112 | L'esecuzione con il classificatore LLM deve supportare un numero configurabile di richieste parallele e un limite al numero di unità. | implementato | `rocket-tag/src/llm.rs`, `rocket-tag/src/main.rs`, `rocket-tag/tests/llm.rs` |
-| REQ-113 | Se riceve il file di uscita del classificatore a regole, il classificatore LLM deve assegnare a ogni faccetta confidenza 0,9 se concorda con le regole sulla stessa unità e 0,5 se non concorda; senza quel file, 0,7. | implementato | `rocket-tag/src/llm.rs`, `rocket-tag/src/main.rs`, `rocket-tag/tests/llm.rs` |
-| REQ-132 | Il classificatore LLM deve leggere la chiave facoltativa del server (REQ-106) dalla variabile d'ambiente `ROCKET_TAG_API_KEY` e non deve richiederla come argomento da riga di comando. | implementato | `rocket-tag/src/main.rs`, `rocket-tag/tests/llm.rs` |
+| REQ-106 | Il classificatore LLM deve funzionare con qualsiasi server locale compatibile con l'API OpenAI chat completions, con URL, modello e chiave facoltativa configurabili. | implementato | `Cargo.lock`, `Cargo.toml`, `src/classifier.rs`, `src/iterate.rs`, `src/llm.rs`, `src/main.rs`, `tests/llm.rs` |
+| REQ-107 | Il classificatore LLM deve vincolare la risposta al formato delle faccette derivato dallo schema (appendice D), con modalità `json_schema`, `guided_json` o `json_object` selezionabile. | implementato | `src/llm.rs` |
+| REQ-108 | Il classificatore LLM deve costruire il prompt secondo l'appendice D da `prompt_guide.md`, dalle descrizioni dello schema e da `guide_examples.json`, ignorando negli esempi le faccette e i valori assenti dallo schema corrente. | implementato | `config/prompt_guide.md`, `src/lib.rs`, `src/llm.rs` |
+| REQ-109 | Il classificatore LLM deve validare ogni risposta contro lo schema, ritentare una volta in caso di risposta non valida e, al secondo fallimento, scartare l'unità registrandola tra le scartate con il motivo. | implementato | `src/llm.rs`, `src/schema.rs`, `tests/llm.rs` |
+| REQ-110 | L'esecuzione con il classificatore LLM deve poter riprendere dopo un'interruzione, saltando le unità già presenti nel file di uscita con la stessa versione dello schema, lo stesso `prompt_id` e lo stesso `text_hash`. | implementato | `src/llm.rs`, `src/main.rs`, `tests/llm.rs` |
+| REQ-111 | Il classificatore LLM deve fermarsi con un messaggio chiaro quando il server non risponde (5 errori di connessione senza alcun successo). | implementato | `src/llm.rs`, `src/main.rs`, `tests/llm.rs` |
+| REQ-112 | L'esecuzione con il classificatore LLM deve supportare un numero configurabile di richieste parallele e un limite al numero di unità. | implementato | `src/llm.rs`, `src/main.rs`, `tests/llm.rs` |
+| REQ-113 | Se riceve il file di uscita del classificatore a regole, il classificatore LLM deve assegnare a ogni faccetta confidenza 0,9 se concorda con le regole sulla stessa unità e 0,5 se non concorda; senza quel file, 0,7. | implementato | `src/llm.rs`, `src/main.rs`, `tests/llm.rs` |
+| REQ-132 | Il classificatore LLM deve leggere la chiave facoltativa del server (REQ-106) dalla variabile d'ambiente `ROCKET_TAG_API_KEY` e non deve richiederla come argomento da riga di comando. | implementato | `src/main.rs`, `tests/llm.rs` |
 
 ## Uscita
 
 | ID | Requisito | Stato | File impattati |
 | --- | --- | --- | --- |
-| REQ-114 | Ogni esecuzione di un classificatore deve scrivere un file JSON nel formato dell'appendice E. | implementato | `rocket-tag/Cargo.lock`, `rocket-tag/Cargo.toml`, `rocket-tag/src/lib.rs`, `rocket-tag/src/main.rs`, `rocket-tag/src/output.rs`, `rocket-tag/tests/cli.rs` |
-| REQ-115 | Ogni elemento dell'uscita deve contenere il nome del documento, la riga iniziale e la riga finale dell'unità nel file Markdown e le etichette assegnate, un valore per faccetta. | implementato | `rocket-tag/src/iterate.rs`, `rocket-tag/src/main.rs`, `rocket-tag/src/output.rs`, `rocket-tag/tests/cli.rs` |
-| REQ-116 | Ogni elemento dell'uscita deve contenere anche tipo di unità, `text_hash`, confidenza per faccetta e confidenza dell'unità, pari al minimo delle confidenze per faccetta; il file deve riportare classificatore e versione dello schema. | implementato | `rocket-tag/Cargo.lock`, `rocket-tag/Cargo.toml`, `rocket-tag/src/markdown.rs`, `rocket-tag/src/output.rs`, `rocket-tag/tests/cli.rs` |
-| REQ-117 | Il file di uscita deve restare un JSON valido anche se l'esecuzione si interrompe (scrittura su file temporaneo e rinomina). | implementato | `rocket-tag/src/output.rs` |
-| REQ-129 | I comandi che classificano un file o una cartella devono scrivere su stdout una riga `[<unità elaborate>/<unità totali>] <documento>` per ogni unità elaborata, così che chi li esegue possa seguirne l'avanzamento. | implementato | `rocket-tag/src/iterate.rs`, `rocket-tag/src/main.rs`, `rocket-tag/tests/cli.rs` |
-| REQ-130 | Ogni comando del pacchetto deve terminare con codice di uscita 0 se riesce e diverso da 0 in caso di errore, con il messaggio di errore su stderr; le unità scartate (REQ-109) non sono un errore del comando. | implementato | `rocket-tag/tests/cli.rs` |
-| REQ-131 | Durante l'esecuzione il classificatore LLM deve aggiornare il file di uscita almeno ogni 20 unità elaborate, con la scrittura di REQ-117, così che dopo un'interruzione forzata del processo la ripresa (REQ-110) trovi le unità già classificate. | implementato | `rocket-tag/src/llm.rs`, `rocket-tag/src/main.rs`, `rocket-tag/tests/llm.rs` |
+| REQ-114 | Ogni esecuzione di un classificatore deve scrivere un file JSON nel formato dell'appendice E. | implementato | `Cargo.lock`, `Cargo.toml`, `src/lib.rs`, `src/main.rs`, `src/output.rs`, `tests/cli.rs` |
+| REQ-115 | Ogni elemento dell'uscita deve contenere il nome del documento, la riga iniziale e la riga finale dell'unità nel file Markdown e le etichette assegnate, un valore per faccetta. | implementato | `src/iterate.rs`, `src/main.rs`, `src/output.rs`, `tests/cli.rs` |
+| REQ-116 | Ogni elemento dell'uscita deve contenere anche tipo di unità, `text_hash`, confidenza per faccetta e confidenza dell'unità, pari al minimo delle confidenze per faccetta; il file deve riportare classificatore e versione dello schema. | implementato | `Cargo.lock`, `Cargo.toml`, `src/markdown.rs`, `src/output.rs`, `tests/cli.rs` |
+| REQ-117 | Il file di uscita deve restare un JSON valido anche se l'esecuzione si interrompe (scrittura su file temporaneo e rinomina). | implementato | `src/output.rs` |
+| REQ-129 | I comandi che classificano un file o una cartella devono scrivere su stdout una riga `[<unità elaborate>/<unità totali>] <documento>` per ogni unità elaborata, così che chi li esegue possa seguirne l'avanzamento. | implementato | `src/iterate.rs`, `src/main.rs`, `tests/cli.rs` |
+| REQ-130 | Ogni comando del pacchetto deve terminare con codice di uscita 0 se riesce e diverso da 0 in caso di errore, con il messaggio di errore su stderr; le unità scartate (REQ-109) non sono un errore del comando. | implementato | `tests/cli.rs` |
+| REQ-131 | Durante l'esecuzione il classificatore LLM deve aggiornare il file di uscita almeno ogni 20 unità elaborate, con la scrittura di REQ-117, così che dopo un'interruzione forzata del processo la ripresa (REQ-110) trovi le unità già classificate. | implementato | `src/llm.rs`, `src/main.rs`, `tests/llm.rs` |
 
 ## Valutazione
 
 | ID | Requisito | Stato | File impattati |
 | --- | --- | --- | --- |
-| REQ-118 | La valutazione deve abbinare un file di uscita e un file di etichette umane (appendice F) per nome del documento, riga iniziale e riga finale; se entrambi hanno `text_hash` e differiscono, l'etichetta deve essere esclusa e contata come non allineata. | implementato | `rocket-tag/src/evaluate.rs`, `rocket-tag/src/lib.rs` |
-| REQ-119 | La valutazione deve calcolare per ogni faccetta accuratezza, macro-F1, copertura, precisione e richiamo per valore, confusioni più frequenti e accuratezza per fascia di confidenza (appendice G). | implementato | `rocket-tag/src/evaluate.rs` |
-| REQ-120 | La valutazione deve escludere e contare le etichette umane non valide per lo schema corrente. | implementato | `rocket-tag/src/evaluate.rs` |
-| REQ-121 | La valutazione deve produrre un report Markdown e aggiungere una riga di metriche a uno storico JSONL (appendice G). | implementato | `rocket-tag/src/evaluate.rs`, `rocket-tag/src/main.rs`, `rocket-tag/tests/cli.rs` |
+| REQ-118 | La valutazione deve abbinare un file di uscita e un file di etichette umane (appendice F) per nome del documento, riga iniziale e riga finale; se entrambi hanno `text_hash` e differiscono, l'etichetta deve essere esclusa e contata come non allineata. | implementato | `src/evaluate.rs`, `src/lib.rs` |
+| REQ-119 | La valutazione deve calcolare per ogni faccetta accuratezza, macro-F1, copertura, precisione e richiamo per valore, confusioni più frequenti e accuratezza per fascia di confidenza (appendice G). | implementato | `src/evaluate.rs` |
+| REQ-120 | La valutazione deve escludere e contare le etichette umane non valide per lo schema corrente. | implementato | `src/evaluate.rs` |
+| REQ-121 | La valutazione deve produrre un report Markdown e aggiungere una riga di metriche a uno storico JSONL (appendice G). | implementato | `src/evaluate.rs`, `src/main.rs`, `tests/cli.rs` |
 
 ## Manutenzione dello schema
 
 | ID | Requisito | Stato | File impattati |
 | --- | --- | --- | --- |
-| REQ-122 | Il pacchetto deve offrire un rapporto d'impatto di una modifica dello schema: differenze tra due versioni (faccette e valori aggiunti o rimossi, obbligatorietà), etichette umane da rivedere e incoerenze di `rules.yaml`. | implementato | `rocket-tag/src/lib.rs`, `rocket-tag/src/main.rs`, `rocket-tag/src/schema_tool.rs`, `rocket-tag/tests/cli.rs` |
-| REQ-123 | Il pacchetto deve offrire la migrazione di un file di etichette umane a una nuova versione dello schema con una mappa di rinomina di faccette e valori ed eliminazione di faccette; le etichette valide passano alla nuova versione, le altre restano alla vecchia. | implementato | `rocket-tag/src/main.rs`, `rocket-tag/src/schema_tool.rs`, `rocket-tag/tests/cli.rs` |
+| REQ-122 | Il pacchetto deve offrire un rapporto d'impatto di una modifica dello schema: differenze tra due versioni (faccette e valori aggiunti o rimossi, obbligatorietà), etichette umane da rivedere e incoerenze di `rules.yaml`. | implementato | `src/lib.rs`, `src/main.rs`, `src/schema_tool.rs`, `tests/cli.rs` |
+| REQ-123 | Il pacchetto deve offrire la migrazione di un file di etichette umane a una nuova versione dello schema con una mappa di rinomina di faccette e valori ed eliminazione di faccette; le etichette valide passano alla nuova versione, le altre restano alla vecchia. | implementato | `src/main.rs`, `src/schema_tool.rs`, `tests/cli.rs` |
 
 ## Materiale di riferimento
 
