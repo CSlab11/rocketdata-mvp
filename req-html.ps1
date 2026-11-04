@@ -1,5 +1,6 @@
 ﻿# Genera l'ipertesto HTML dei requisiti di una repository (REQ-154), da aprire nel browser senza server né Internet:
-#   una pagina per il progetto e per ogni tool o sotto-tool (REQ-155, REQ-156).
+#   una pagina per il progetto e per ogni tool o sotto-tool (REQ-155, REQ-156), index.html con i collegamenti fra
+#   le pagine (REQ-157).
 # Funziona su qualunque repository con la struttura di REQ-151: docs\REQUIREMENTS.md nella radice per il progetto,
 # <cartella>\docs\REQUIREMENTS.md per ogni tool. Lo script non appartiene a nessun tool (REQ-005).
 # Uso: .\req-html.ps1 -Repo <radice della repository>   (pagine in <Repo>\docs\html)
@@ -36,6 +37,7 @@ $Pages = @(foreach ($Dir in Find-ReqDirs $Repo) {
     [pscustomobject]@{
         Rel = $Rel; Label = $Label; Page = $Page; File = $File
         Lines = [IO.File]::ReadAllLines($File, $Utf8)
+        Counts = [ordered]@{}
     }
 })
 
@@ -125,6 +127,7 @@ function Convert-Body($P) {
             foreach ($c in $Head) { [void]$sb.Append('<th>' + (Format-Inline $c $Src) + '</th>') }
             [void]$sb.Append("</tr></thead><tbody>`n")
             foreach ($r in $Rows) {
+                if ($St -ge 0 -and $St -lt $r.Count -and $r[0] -match '^REQ-\d+$') { $P.Counts[$r[$St]] = 1 + $P.Counts[$r[$St]] }
                 [void]$sb.Append('<tr>')
                 for ($c = 0; $c -lt $Head.Count; $c++) {
                     $v = ''; if ($c -lt $r.Count) { $v = $r[$c] }
@@ -175,6 +178,8 @@ $Css = @'
 @media (prefers-color-scheme:dark){:root{--bg:#15181e;--fg:#e3e7ee;--muted:#9aa3b2;--line:#2e3440;--head:#1e232b;--link:#7fb0ff;--hl:#4a3f12;--ok:#5fcf86;--open:#f0a851;--off:#8b929c}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+nav{position:sticky;top:0;z-index:3;display:flex;flex-wrap:wrap;gap:4px 16px;padding:10px 16px;background:var(--head);border-bottom:1px solid var(--line);font-size:14px}
+nav .here{font-weight:600}
 main{max-width:1400px;margin:0 auto;padding:16px 16px 64px}
 a{color:var(--link)}
 h1{font-size:24px;margin:8px 0 16px}
@@ -186,15 +191,32 @@ pre code{padding:0;background:none}
 .tbl{margin:16px 0}
 table{border-collapse:collapse;width:100%}
 th,td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
-th{position:sticky;top:0;z-index:2;background:var(--head)}
+th{position:sticky;top:var(--nav,40px);z-index:2;background:var(--head)}
 td.idc,td.st{white-space:nowrap;overflow-wrap:normal}
 td.st{font-weight:600}
 .st-implementato,.st-risolto{color:var(--ok)}
 .st-aperto{color:var(--open)}
 .st-annullato{color:var(--off)}
+td.num{text-align:right}
+'@
+
+# Barra in cima a ogni pagina: indice e pagine di progetto e tool (REQ-157). L'altezza della barra serve alle
+# intestazioni fisse delle tabelle.
+$Js = @'
+(function () {
+  var nav = document.querySelector('nav');
+  function navHeight() { document.documentElement.style.setProperty('--nav', nav.offsetHeight + 'px'); }
+  navHeight(); window.addEventListener('resize', navHeight);
+})();
 '@
 
 function Write-Page([string]$Name, [string]$Title, [string]$Body) {
+    $Nav = New-Object System.Text.StringBuilder
+    $Links = @(@{ Page = 'index.html'; Label = 'Indice' }) + @($Pages | ForEach-Object { @{ Page = $_.Page; Label = $_.Label } })
+    foreach ($Link in $Links) {
+        if ($Link.Page -eq $Name) { [void]$Nav.Append('<span class="here">' + (Enc $Link.Label) + '</span>') }
+        else { [void]$Nav.Append('<a href="' + $Link.Page + '">' + (Enc $Link.Label) + '</a>') }
+    }
     $Html = @"
 <!doctype html>
 <html lang="it">
@@ -206,8 +228,11 @@ function Write-Page([string]$Name, [string]$Title, [string]$Body) {
 $Css</style>
 </head>
 <body>
+<nav>$($Nav.ToString())</nav>
 <main>
 $Body</main>
+<script>
+$Js</script>
 </body>
 </html>
 "@
@@ -220,4 +245,24 @@ foreach ($P in $Pages) {
     Write-Page $P.Page $Title (Convert-Body $P)
 }
 
-Write-Output "$($Pages.Count) pagine scritte in $Out"
+# --- Indice (REQ-157) ----------------------------------------------------------------------------------------------
+$RepoName = Split-Path $Repo -Leaf
+$States = New-Object System.Collections.Generic.List[string]
+foreach ($P in $Pages) { foreach ($s in $P.Counts.Keys) { if (-not $States.Contains($s)) { $States.Add($s) } } }
+$Idx = New-Object System.Text.StringBuilder
+[void]$Idx.Append('<h1>Requisiti — ' + (Enc $RepoName) + "</h1>`n")
+[void]$Idx.Append('<p>Generato da <code>req-html.ps1</code> il ' + (Get-Date -Format 'yyyy-MM-dd HH:mm') + ' da <code>' + (Enc $Repo) + "</code>.</p>`n")
+[void]$Idx.Append('<div class="tbl"><table><thead><tr><th>Parte</th><th>File</th>')
+foreach ($s in $States) { [void]$Idx.Append('<th>' + (Enc $s) + '</th>') }
+[void]$Idx.Append("<th>Requisiti</th></tr></thead><tbody>`n")
+foreach ($P in $Pages) {
+    $Path = 'docs/REQUIREMENTS.md'; if ($P.Rel) { $Path = $P.Rel + '/docs/REQUIREMENTS.md' }
+    [void]$Idx.Append('<tr><td><a href="' + $P.Page + '">' + (Enc $P.Label) + '</a></td><td><code>' + (Enc $Path) + '</code></td>')
+    $Tot = 0
+    foreach ($s in $States) { $c = 0 + $P.Counts[$s]; $Tot += $c; [void]$Idx.Append('<td class="num">' + $c + '</td>') }
+    [void]$Idx.Append('<td class="num">' + $Tot + "</td></tr>`n")
+}
+[void]$Idx.Append("</tbody></table></div>`n")
+Write-Page 'index.html' "Requisiti — $RepoName" $Idx.ToString()
+
+Write-Output "$($Pages.Count + 1) pagine scritte in $Out"
