@@ -46,10 +46,13 @@ pub fn never_indexed(src: &Path) -> bool {
     src.is_dir() && fs::read_dir(src.join(".index")).map_or(true, |mut entries| entries.next().is_none())
 }
 
-/// `search-rm3 index --src <src> --index <src>\.index` (REQ-069, REQ-075).
+/// `search-rm3 index --src <src> --index <src>\.index --exclude index.md --exclude .index`
+/// (REQ-069, REQ-075, REQ-153).
 pub async fn index(exe: &Path, src: &Path) -> Result<(), String> {
     let dir = index_dir(src)?;
-    run(exe, &["index".as_ref(), "--src".as_ref(), src.as_os_str(), "--index".as_ref(), dir.as_os_str()]).await?;
+    let args = ["index".as_ref(), "--src".as_ref(), src.as_os_str(), "--index".as_ref(), dir.as_os_str()];
+    let exclude = ["--exclude".as_ref(), "index.md".as_ref(), "--exclude".as_ref(), ".index".as_ref()];
+    run(exe, &[&args[..], &exclude[..]].concat()).await?;
     Ok(())
 }
 

@@ -17,7 +17,10 @@ fn indicizza_e_cerca_con_search_rm3() {
     let (status, body) = post_json(&gui, "/api/search/index", &json!({ "src": src_path }));
     assert_eq!(status, 204, "{body}");
     let args = fs::read_to_string(index.join("argomenti-index.txt")).unwrap();
-    assert_eq!(args, format!("index\n--src\n{src_path}\n--index\n{}", index.display()));
+    assert_eq!(
+        args,
+        format!("index\n--src\n{src_path}\n--index\n{}\n--exclude\nindex.md\n--exclude\n.index", index.display())
+    );
 
     let (status, body) = post_json(&gui, "/api/search/query", &json!({ "src": src_path, "q": "clock RCC" }));
     assert_eq!(status, 200, "{body}");

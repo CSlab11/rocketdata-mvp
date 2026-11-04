@@ -7,6 +7,7 @@
 - REQ-153 richiesto — gui: `index` di `search-rm3` eseguito con `--exclude index.md --exclude .index`
 - REQ-151 implementato — Requisiti dei tool spostati in `<tool>/docs/REQUIREMENTS.md`, rimandi e README aggiornati (`README.md`)
 - REQ-152 implementato — `search-rm3 index` con `--exclude` ripetibile, tolte le esclusioni fisse di `index.md` e `.index` (`search/search-rm3/src/index.rs`, `search/search-rm3/src/main.rs`, `search/search-rm3/tests/index.rs`)
+- REQ-153 implementato — `gui` esegue `search-rm3 index` con `--exclude index.md --exclude .index` (`gui/src/search.rs`, `gui/tests/search.rs`)
 - REQ-154 richiesto — Script `req-html.ps1` che genera l'ipertesto HTML dei requisiti di una repository (`-Repo`)
 - REQ-155 richiesto — `req-html.ps1`: file dei requisiti individuati con la struttura di REQ-151, senza nomi di tool nel codice
 - REQ-156 richiesto — `req-html.ps1`: una pagina HTML per progetto e per tool, con tabelle Requisiti e Bug
