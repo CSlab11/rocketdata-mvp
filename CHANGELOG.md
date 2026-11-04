@@ -29,6 +29,8 @@
 - REQ-052 annullato — sostituito da REQ-161 (percorso dei requisiti di `search` aggiornato da REQ-151)
 - REQ-162 richiesto — README: generazione dell'ipertesto dei requisiti con `req-html.ps1`
 - REQ-162 implementato — README: sezione «Consultare i requisiti» con `req-html.ps1`, `-Out`, `docs\html\` e uso su altre repository (`README.md`)
+- 7a7e1ee attribuito a REQ-051 — commit senza ID "search release": release v0.2.0 con `dist/` rigenerata (`dist/doc-ripper.exe`, `dist/gui.exe`, `dist/search-rm3.exe`)
+- ff696f1 attribuito a REQ-051 — commit senza ID "update gitignore": esclusione di `/test`, poi sostituita da `test*` nella release v0.3.0 (`.gitignore`)
 
 ## 2026-11-01
 - REQ-079 richiesto — rocket-tag: Il pacchetto deve essere implementato in Rust come parte del progetto `rocketdata-mvp`, in un crate dedicato compilabile ed eseguibile senza le altre parti della pipeline
