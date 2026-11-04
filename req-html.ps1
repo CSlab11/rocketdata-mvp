@@ -1,6 +1,6 @@
 ﻿# Genera l'ipertesto HTML dei requisiti di una repository (REQ-154), da aprire nel browser senza server né Internet:
 #   una pagina per il progetto e per ogni tool o sotto-tool (REQ-155, REQ-156), index.html con i collegamenti fra
-#   le pagine (REQ-157).
+#   le pagine (REQ-157), un collegamento per ogni ID citato (REQ-158).
 # Funziona su qualunque repository con la struttura di REQ-151: docs\REQUIREMENTS.md nella radice per il progetto,
 # <cartella>\docs\REQUIREMENTS.md per ogni tool. Lo script non appartiene a nessun tool (REQ-005).
 # Uso: .\req-html.ps1 -Repo <radice della repository>   (pagine in <Repo>\docs\html)
@@ -40,44 +40,64 @@ $Pages = @(foreach ($Dir in Find-ReqDirs $Repo) {
         Counts = [ordered]@{}
     }
 })
+$PageOfFile = @{}
+foreach ($P in $Pages) { $PageOfFile[$P.File.ToLowerInvariant()] = $P.Page }
+
+# --- Pagina di ogni ID (REQ-158) -----------------------------------------------------------------------------------
+# Un ID appartiene alla pagina della tabella in cui è nella prima colonna.
+$IdPage = @{}
+foreach ($P in $Pages) {
+    foreach ($L in $P.Lines) {
+        if ($L -match '^\s*\|\s*((?:REQ|BUG)-\d+)\s*\|' -and -not $IdPage.ContainsKey($Matches[1])) { $IdPage[$Matches[1]] = $P.Page }
+    }
+}
 
 # --- Markdown → HTML (REQ-156) -------------------------------------------------------------------------------------
 # Solo ciò che compare nei file dei requisiti: titoli, paragrafi, elenchi, tabelle GFM, blocchi di codice,
 # separatori, commenti HTML e, nel testo, codice, grassetto, corsivo e link.
 function Enc([string]$s) { [System.Net.WebUtility]::HtmlEncode($s) }
 
-# I link relativi sono ricalcolati dalla cartella di uscita, così restano validi.
+# Un link a un file dei requisiti porta alla sua pagina (REQ-158); gli altri link relativi sono ricalcolati dalla
+# cartella di uscita, così restano validi.
 function Resolve-Href([string]$Url, [string]$SrcDir) {
     if ($Url -match '^(#|[a-zA-Z][a-zA-Z0-9+.-]*:)') { return $Url }
     $Parts = $Url -split '#', 2
     $Abs = [IO.Path]::GetFullPath((Join-Path $SrcDir ([Uri]::UnescapeDataString($Parts[0]))))
-    $Href = ([Uri]"$Out\").MakeRelativeUri([Uri]$Abs).ToString()
+    $Href = $PageOfFile[$Abs.ToLowerInvariant()]
+    if (-not $Href) { $Href = ([Uri]"$Out\").MakeRelativeUri([Uri]$Abs).ToString() }
     if ($Parts.Count -gt 1) { $Href += '#' + $Parts[1] }
     $Href
 }
 
-function Format-Plain([string]$s) {
+function Format-Plain([string]$s, [bool]$Ids) {
     $s = Enc ($s -replace '\\([!-/:-@\[-`{-~])', '$1')
     $s = $s -replace '\*\*(.+?)\*\*', '<strong>$1</strong>'
     $s = $s -replace '(?<![\w*])\*(?=\S)(.+?)(?<=\S)\*(?![\w*])', '<em>$1</em>'
+    if ($Ids) {
+        $s = [regex]::Replace($s, '\b(?:REQ|BUG)-\d+\b', {
+            param($m)
+            $Target = $IdPage[$m.Value]
+            if ($Target) { '<a class="id" href="' + $Target + '#' + $m.Value + '">' + $m.Value + '</a>' } else { $m.Value }
+        })
+    }
     $s
 }
 
 $InlineTokens = '`([^`]+)`|\[((?:`[^`]*`|[^\]`])+)\]\(([^)\s]+)\)'
-function Format-Inline([string]$s, [string]$SrcDir) {
+function Format-Inline([string]$s, [string]$SrcDir, [bool]$Ids = $true) {
     $sb = New-Object System.Text.StringBuilder
     $pos = 0
     foreach ($m in [regex]::Matches($s, $InlineTokens)) {
-        [void]$sb.Append((Format-Plain $s.Substring($pos, $m.Index - $pos)))
+        [void]$sb.Append((Format-Plain $s.Substring($pos, $m.Index - $pos) $Ids))
         if ($m.Groups[1].Success) {
             [void]$sb.Append('<code>' + (Enc $m.Groups[1].Value) + '</code>')
         } else {
             $Href = Enc (Resolve-Href $m.Groups[3].Value $SrcDir)
-            [void]$sb.Append('<a href="' + $Href + '">' + (Format-Inline $m.Groups[2].Value $SrcDir) + '</a>')
+            [void]$sb.Append('<a href="' + $Href + '">' + (Format-Inline $m.Groups[2].Value $SrcDir $false) + '</a>')
         }
         $pos = $m.Index + $m.Length
     }
-    [void]$sb.Append((Format-Plain $s.Substring($pos)))
+    [void]$sb.Append((Format-Plain $s.Substring($pos) $Ids))
     $sb.ToString()
 }
 
@@ -96,6 +116,7 @@ $BlockStart = '^(#{1,6})\s|^\s*(```|~~~)|^\s*\|'
 function Convert-Body($P) {
     $L = $P.Lines; $n = $L.Count; $i = 0
     $Src = Split-Path $P.File
+    $Seen = @{}
     $sb = New-Object System.Text.StringBuilder
     while ($i -lt $n) {
         $Line = $L[$i]
@@ -127,8 +148,10 @@ function Convert-Body($P) {
             foreach ($c in $Head) { [void]$sb.Append('<th>' + (Format-Inline $c $Src) + '</th>') }
             [void]$sb.Append("</tr></thead><tbody>`n")
             foreach ($r in $Rows) {
+                $Id = ''
+                if ($r[0] -match '^(?:REQ|BUG)-\d+$' -and -not $Seen.ContainsKey($r[0])) { $Seen[$r[0]] = 1; $Id = ' id="' + $r[0] + '"' }
                 if ($St -ge 0 -and $St -lt $r.Count -and $r[0] -match '^REQ-\d+$') { $P.Counts[$r[$St]] = 1 + $P.Counts[$r[$St]] }
-                [void]$sb.Append('<tr>')
+                [void]$sb.Append("<tr$Id>")
                 for ($c = 0; $c -lt $Head.Count; $c++) {
                     $v = ''; if ($c -lt $r.Count) { $v = $r[$c] }
                     $Cls = ''
@@ -192,6 +215,8 @@ pre code{padding:0;background:none}
 table{border-collapse:collapse;width:100%}
 th,td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
 th{position:sticky;top:var(--nav,40px);z-index:2;background:var(--head)}
+tr{scroll-margin-top:calc(var(--nav,40px) + 48px)}
+tr:target td{background:var(--hl)}
 td.idc,td.st{white-space:nowrap;overflow-wrap:normal}
 td.st{font-weight:600}
 .st-implementato,.st-risolto{color:var(--ok)}
