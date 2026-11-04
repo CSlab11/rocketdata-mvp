@@ -14,6 +14,8 @@ file di parte dalla cartella della parte, salvo che la sua introduzione contenga
 
 Una parte con percorsi dalla propria cartella e' autonoma: dal primo commit della parte
 che tocca <cartella>/CHANGELOG.md, i commit dei suoi ID toccano solo file della sua cartella.
+Le voci dei suoi ID stanno in <cartella>/CHANGELOG.md, con gli ID senza prefisso, e non nel
+CHANGELOG.md della radice, che resta per il progetto e per le parti non autonome.
 
 Numerazione degli ID: ogni file dei requisiti ha la propria. Dentro il file gli ID sono
 REQ-NNN / BUG-NNN; fuori, gli ID di una parte sono qualificati con il nome della
@@ -53,6 +55,8 @@ REVIEW_PREFIX = "review:"
 ATTR_RE = re.compile(r"^- ([0-9a-f]{7,40}) attribuito a ((?:[A-Za-z0-9][A-Za-z0-9.-]*_)?(?:REQ|BUG)-\d{3,})\b",
                      re.M)
 DATE_RE = re.compile(r"^##\s+(\d{4}-\d{2}-\d{2})\b")
+# ID a cui appartiene una voce del changelog: il primo della riga, o quello di "<hash> attribuito a".
+SUBJ_RE = re.compile(r"^- (?:[0-9a-f]{7,40} attribuito a )?((?:[A-Za-z0-9][A-Za-z0-9.-]*_)?(?:REQ|BUG)-\d{3,})\b")
 # Riga dell'introduzione con cui un file di parte dichiara i percorsi dalla radice del repository.
 ROOT_PATHS_RE = re.compile(r"^Percorsi dei file: dalla radice del repository\.?\s*$", re.M)
 
@@ -110,8 +114,8 @@ def parse_files(cell):
 
 
 def is_trace(f):
-    """File di tracciabilita': CHANGELOG.md e i REQUIREMENTS.md dentro una cartella docs/."""
-    return f == LOG_FILE or bool(TRACE_RE.search(f))
+    """File di tracciabilita': i CHANGELOG.md (radice e parti) e i REQUIREMENTS.md dentro una cartella docs/."""
+    return f == LOG_FILE or f.endswith("/" + LOG_FILE) or bool(TRACE_RE.search(f))
 
 
 def is_req_doc(f):
@@ -301,34 +305,61 @@ def main():
     # Ultima revisione di merito: le modifiche precedenti sono gia' state controllate.
     last_review = next((i for i, c in enumerate(commits) if c["subject"].startswith(REVIEW_PREFIX)),
                        len(commits))
-    log_path = root / LOG_FILE
-    log_text = log_path.read_text(encoding="utf-8") if log_path.is_file() else ""
-    if not log_text:
-        errors.append((LOG_FILE, "file mancante o vuoto"))
+    # Changelog: quello della radice per il progetto e le parti non autonome, <cartella>/CHANGELOG.md
+    # per ogni parte autonoma. Nel changelog di una parte gli ID senza prefisso sono della parte.
+    logs = [("", LOG_FILE)] + [(part, pdir + LOG_FILE) for part, pdir in sorted(autonomous.items())]
+    log_of = {part: name for part, name in logs}  # changelog in cui vanno le voci di una parte
+    texts = {}
+    for part, name in logs:
+        path = root / name
+        texts[name] = path.read_text(encoding="utf-8") if path.is_file() else ""
+        if not texts[name]:
+            errors.append((name, "file mancante o vuoto"))
+
+    def resolve_in(part, ref, **kw):
+        """ID citato in un changelog: in quello di una parte il senza prefisso e' della parte."""
+        r = ID_RE.fullmatch(ref)
+        if part and not r.group(1):
+            return qualify(part, r.group(2))
+        return resolver.resolve(r.group(1), r.group(2), **kw)
+
     # Commit che non si possono riscrivere, attribuiti a un ID con una voce del changelog:
     # "- <hash> attribuito a REQ-NNN — motivo".
-    for m in ATTR_RE.finditer(log_text):
-        found = [i for i, c in enumerate(commits)
-                 if m.group(1).startswith(c["hash"]) or c["hash"].startswith(m.group(1))]
-        if found:
-            r = ID_RE.fullmatch(m.group(2))
-            ident = resolver.resolve(r.group(1), r.group(2), pos=found[0])
-            if ident:
-                commits[found[0]]["ids"].add(ident)
-        else:
-            warnings.append((m.group(1), "attribuito a %s in %s ma assente dalla storia" % (m.group(2), LOG_FILE)))
+    for part, name in logs:
+        for m in ATTR_RE.finditer(texts[name]):
+            found = [i for i, c in enumerate(commits)
+                     if m.group(1).startswith(c["hash"]) or c["hash"].startswith(m.group(1))]
+            if found:
+                ident = resolve_in(part, m.group(2), pos=found[0])
+                if ident:
+                    commits[found[0]]["ids"].add(ident)
+            else:
+                warnings.append((m.group(1), "attribuito a %s in %s ma assente dalla storia" % (m.group(2), name)))
     # Voci del changelog per ID qualificato; gli ID senza prefisso si risolvono con la data della voce.
+    # La voce di una parte autonoma sta solo nel suo changelog: nella radice e' un errore e i rimandi
+    # agli ID di una parte autonoma nelle voci della radice non contano come voci della parte.
     log_lines = {}
-    date = None
-    for ln in log_text.splitlines():
-        d = DATE_RE.match(ln)
-        if d:
-            date = d.group(1)
-            continue
-        for m in ID_RE.finditer(ln):
-            ident = resolver.resolve(m.group(1), m.group(2), date=date)
-            if ident:
-                log_lines.setdefault(ident, []).append(ln)
+    for part, name in logs:
+        date = None
+        for ln in texts[name].splitlines():
+            d = DATE_RE.match(ln)
+            if d:
+                date = d.group(1)
+                continue
+            s = SUBJ_RE.match(ln)
+            if part:
+                if s:
+                    log_lines.setdefault(resolve_in(part, s.group(1)), []).append(ln)
+                continue
+            subj = resolver.resolve(*ID_RE.fullmatch(s.group(1)).groups(), date=date) if s else None
+            if subj in by_id and by_id[subj]["part"] in autonomous:
+                errors.append((subj, "voce in %s invece che in %s: %s"
+                               % (LOG_FILE, log_of[by_id[subj]["part"]], ln.strip())))
+                continue
+            for m in ID_RE.finditer(ln):
+                ident = resolver.resolve(m.group(1), m.group(2), date=date)
+                if ident and not (ident in by_id and by_id[ident]["part"] in autonomous):
+                    log_lines.setdefault(ident, []).append(ln)
 
     # Stati, riferimenti, esistenza dei file, changelog
     for it in items:
@@ -341,7 +372,7 @@ def main():
             errors.append((ident, "stato '%s' senza file impattati" % state))
         if state != "annullato":
             for f in it["files"]:
-                if f == LOG_FILE:
+                if is_trace(f) and not is_req_doc(f):
                     warnings.append((ident, "i file di tracciabilita' non vanno elencati: %s" % f))
                 elif is_req_doc(f):
                     pass  # ammesso se l'ID ne corregge il testo: controllato con i commit, sotto
@@ -350,13 +381,14 @@ def main():
                 elif f not in tracked:
                     errors.append((ident, "file elencato non versionato: %s" % f))
         lines = log_lines.get(ident, [])
+        log_name = log_of.get(it["part"], LOG_FILE)
         if not lines:
-            errors.append((ident, "nessuna voce in %s" % LOG_FILE))
+            errors.append((ident, "nessuna voce in %s" % log_name))
         elif state in DONE and not any(DONE[state] in ln.lower() for ln in lines):
-            warnings.append((ident, "manca la voce '%s' in %s" % (DONE[state], LOG_FILE)))
+            warnings.append((ident, "manca la voce '%s' in %s" % (DONE[state], log_name)))
 
     for ident in sorted(set(log_lines) - set(by_id)):
-        warnings.append((ident, "citato in %s ma assente dalla tabella" % LOG_FILE))
+        warnings.append((ident, "citato in un changelog ma assente dalla tabella"))
 
     # Corrispondenza tra tabella e commit
     for it in items:

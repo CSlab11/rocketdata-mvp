@@ -17,7 +17,8 @@ Ogni modifica ai file del progetto appartiene a un ID (`REQ-NNN` o `BUG-NNN`; pe
 |---|---|
 | `docs/REQUIREMENTS.md` | Tabelle Requisiti e Bug di progetto: fonte di verità della tracciabilità |
 | `<cartella>/docs/REQUIREMENTS.md` | Facoltativi: tabelle Requisiti e Bug di una parte del progetto (es. un tool), nella cartella `docs/` della parte |
-| `CHANGELOG.md` | Registro cronologico delle richieste (requisiti e bug) e della loro chiusura |
+| `CHANGELOG.md` | Registro cronologico delle richieste (requisiti e bug) di progetto e delle parti non autonome, e della loro chiusura |
+| `<cartella>/CHANGELOG.md` | Registro cronologico di una parte autonoma (vedi "File impattati"), nella cartella della parte |
 
 Se mancano, creali dai modelli qui sotto.
 
@@ -28,12 +29,12 @@ Se il progetto è diviso in parti (tool, moduli) con cartelle proprie, i loro re
 - `docs/REQUIREMENTS.md` resta obbligatorio: contiene i requisiti e i bug di progetto.
 - I file `<cartella>/docs/REQUIREMENTS.md` contengono la tabella Requisiti e, se servono, la tabella Bug della parte, con le stesse colonne di `docs/REQUIREMENTS.md`. Sotto `docs/` nella radice non ci sono altri `REQUIREMENTS.md`.
 - Un nuovo requisito o bug va nel file della parte che riguarda; se riguarda più parti o nessuna, in `docs/REQUIREMENTS.md`.
-- `CHANGELOG.md` resta uno solo, nella radice. La lingua del contenuto segue quella del progetto; intestazioni di colonna e stati restano quelli indicati, perché lo script di verifica li legge.
+- Una parte autonoma (percorsi dalla propria cartella, vedi "File impattati") ha il proprio `<cartella>/CHANGELOG.md`, con le voci dei soli suoi ID scritti senza prefisso; le sue voci non stanno nel `CHANGELOG.md` della radice, che resta per il progetto e per le parti non autonome. La lingua del contenuto segue quella del progetto; intestazioni di colonna e stati restano quelli indicati, perché lo script di verifica li legge.
 
 ### Numerazione degli ID
 
 - **Numerazione per file.** Ogni file dei requisiti ha una numerazione propria, per tipo. Dentro il file gli ID si scrivono `REQ-NNN` e `BUG-NNN`, senza il nome della parte; un nuovo ID prende il numero successivo al più alto già presente nel file per quel tipo (`001` se non ce ne sono).
-- **ID qualificato.** Fuori dal proprio file (oggetto dei commit, `CHANGELOG.md`, rimandi da altri file dei requisiti) un ID di una parte si scrive `<parte>_REQ-NNN` o `<parte>_BUG-NNN`, dove `<parte>` è il nome della cartella che contiene `docs/` (es. `thin-decoder_REQ-001` per `thin-decoder/docs/REQUIREMENTS.md`, `search-rm3_REQ-001` per `search/search-rm3/docs/REQUIREMENTS.md`). Due parti non possono avere cartelle con lo stesso nome.
+- **ID qualificato.** Fuori dal proprio file (oggetto dei commit, `CHANGELOG.md` della radice, rimandi da altri file dei requisiti) un ID di una parte si scrive `<parte>_REQ-NNN` o `<parte>_BUG-NNN`, dove `<parte>` è il nome della cartella che contiene `docs/` (es. `thin-decoder_REQ-001` per `thin-decoder/docs/REQUIREMENTS.md`, `search-rm3_REQ-001` per `search/search-rm3/docs/REQUIREMENTS.md`). Due parti non possono avere cartelle con lo stesso nome.
 - **Progetto senza prefisso.** Gli ID di `docs/REQUIREMENTS.md` restano `REQ-NNN` e `BUG-NNN` ovunque. Un ID senza prefisso fuori da un file di parte indica sempre il progetto.
 - **Nessuna rinumerazione.** Gli ID già registrati non si rinumerano, nemmeno quando un progetto passa a questa numerazione. Prima la numerazione era unica nel repository: gli ID esistenti nei file delle parti mantengono il loro numero, che diventa locale al file (es. `REQ-011` di `doc-ripper/docs/REQUIREMENTS.md` è `doc-ripper_REQ-011`), e i bug già registrati in `docs/REQUIREMENTS.md` restano dove sono.
 - **ID storici.** Nei commit e nelle voci di `CHANGELOG.md` scritti con la numerazione unica, un ID senza prefisso indica l'elemento che aveva quell'ID in quel momento: quello di progetto se esiste, altrimenti quello della parte il cui file esisteva già. Commit e changelog passati non si riscrivono. Da quando un progetto adotta questa numerazione, gli ID delle parti si scrivono sempre qualificati.
@@ -83,7 +84,7 @@ Regole delle celle:
 - REQ-001 implementato — Aggiunto modulo di export (`src/export.py`, `tests/test_export.py`)
 ```
 
-Data più recente in alto; dentro la stessa data le righe si aggiungono in fondo. Le parole chiave sono `richiesto` / `implementato` / `annullato` per i requisiti e `segnalato` / `risolto` per i bug. Gli ID delle parti sono qualificati: `- thin-decoder_REQ-001 richiesto — …`.
+Data più recente in alto; dentro la stessa data le righe si aggiungono in fondo. Le parole chiave sono `richiesto` / `implementato` / `annullato` per i requisiti e `segnalato` / `risolto` per i bug. Nel `CHANGELOG.md` della radice gli ID delle parti non autonome sono qualificati (`- gui_REQ-001 richiesto — …`); nel `<cartella>/CHANGELOG.md` di una parte autonoma gli ID della parte sono senza prefisso (`- REQ-001 richiesto — …`) e i percorsi partono dalla cartella della parte.
 
 ## Commit
 
@@ -104,4 +105,4 @@ Per un ID di una parte si usa l'ID qualificato: `feat(thin-decoder_REQ-001): …
 - Niente `--amend`, rebase o force push; niente push se non richiesto. Si committa sul branch corrente.
 - Se il progetto ha già una propria convenzione per i messaggi, rispettala ma mantieni l'ID nell'oggetto del messaggio: è l'ID che regge la tracciabilità.
 - Gli ID del commit sono quelli nell'oggetto (la prima riga). Gli ID citati nel corpo sono solo rimandi e non attribuiscono il commit.
-- Un commit senza ID che non si può più riscrivere (già pubblicato o con tag) si attribuisce a un ID con una voce in `CHANGELOG.md`, sotto la data del giorno: `- <hash> attribuito a REQ-NNN — <motivo> (<file>)`, in un commit `trace(REQ-NNN): …`.
+- Un commit senza ID che non si può più riscrivere (già pubblicato o con tag) si attribuisce a un ID con una voce nel changelog in cui stanno le voci di quell'ID, sotto la data del giorno: `- <hash> attribuito a REQ-NNN — <motivo> (<file>)`, in un commit `trace(REQ-NNN): …`.

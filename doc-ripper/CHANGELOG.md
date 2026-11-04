@@ -1,0 +1,52 @@
+# Changelog
+
+## 2026-10-23
+- REQ-041 richiesto — doc-ripper: riga di avanzamento per ciascun file elaborato
+- REQ-041 annullato — sostituito da REQ-043 (avanzamento anche per pagina)
+- REQ-043 richiesto — doc-ripper: righe di avanzamento per file e per pagina dei PDF
+- REQ-043 implementato — Righe di avanzamento [n/totale] per file e per pagina dei PDF (`src/convert.rs`, `src/main.rs`, `src/pdf.rs`, `tests/cli.rs`, `tests/pdf.rs`)
+- REQ-014 annullato — sostituito da REQ-045 (link all'originale senza file://)
+- REQ-022 annullato — sostituito da REQ-046 (link all'originale senza file://)
+- REQ-045 richiesto — doc-ripper: riga Origine dei .md con percorso assoluto senza file://
+- REQ-046 richiesto — doc-ripper: index.md con link agli originali come percorso assoluto senza file://
+- REQ-047 richiesto — doc-ripper: cancella index.md all'avvio
+- REQ-045 implementato — Riga Origine dei .md con percorso assoluto codificato senza file:// (`src/link.rs`, `tests/docx.rs`, `tests/pdf.rs`)
+- REQ-046 implementato — Link agli originali in index.md come percorso assoluto senza file:// (`src/index.rs`, `tests/index.rs`)
+- REQ-047 implementato — index.md della destinazione cancellato all'avvio (`src/main.rs`, `tests/index.rs`)
+
+## 2026-10-22
+- REQ-010 implementato — Conversione PDF in Markdown con PDFium: titoli, paragrafi, elenchi e tabelle ricostruiti dal layout (`.gitignore`, `Cargo.lock`, `Cargo.toml`, `build.rs`, `scripts/fetch-pdfium.ps1`, `src/convert.rs`, `src/docx.rs`, `src/main.rs`, `src/pdf.rs`, `tests/pdf.rs`)
+- REQ-020 implementato — Immagini di docx e pdf estratte in <nome>_<ext>_img/ e richiamate dal Markdown (`Cargo.lock`, `Cargo.toml`, `src/docx.rs`, `src/images.rs`, `src/main.rs`, `src/pdf.rs`, `tests/docx.rs`, `tests/pdf.rs`)
+- REQ-013 implementato — PDF e DOCX senza testo estraibile saltati come scansionati e segnalati nel riepilogo (`src/docx.rs`, `src/pdf.rs`, `tests/docx.rs`, `tests/pdf.rs`)
+- REQ-014 implementato — Riga Origine con link file:// assoluto e codificato in testa a ogni .md (`Cargo.lock`, `Cargo.toml`, `src/docx.rs`, `src/link.rs`, `src/main.rs`, `src/pdf.rs`, `tests/docx.rs`, `tests/pdf.rs`)
+- REQ-022 implementato — index.md nella radice della destinazione con link relativi ai file generati e link file:// agli originali (`src/index.rs`, `src/main.rs`, `tests/index.rs`)
+- REQ-038 richiesto — doc-ripper: firma del codice di doc-ripper.exe e pdfium.dll
+
+## 2026-10-21
+- REQ-007 richiesto — doc-ripper: progetto Rust autonomo
+- REQ-008 richiesto — doc-ripper: nessuna dipendenza da altri tool
+- REQ-009 richiesto — doc-ripper: cartelle di origine e destinazione (`--src`, `--dst`)
+- REQ-010 richiesto — doc-ripper: conversione PDF → Markdown
+- REQ-011 richiesto — doc-ripper: conversione DOCX → Markdown
+- REQ-012 richiesto — doc-ripper: conversione Excel → CSV, un file per foglio
+- REQ-013 richiesto — doc-ripper: documenti scansionati non supportati
+- REQ-014 richiesto — doc-ripper: link navigabile al file originale
+- REQ-015 richiesto — doc-ripper: elaborazione delle sottocartelle
+- REQ-016 richiesto — doc-ripper: sovrascrittura dei file esistenti
+- REQ-017 richiesto — doc-ripper: riepilogo di fine esecuzione
+- REQ-018 richiesto — doc-ripper: gestione degli errori di conversione
+- REQ-019 richiesto — doc-ripper: file non supportati
+- REQ-020 richiesto — doc-ripper: estrazione delle immagini
+- REQ-021 richiesto — doc-ripper: formato dei CSV
+- REQ-022 richiesto — doc-ripper: indice dei file generati
+- REQ-007 implementato — Progetto Cargo autonomo di doc-ripper (`.gitignore`, `Cargo.lock`, `Cargo.toml`, `src/main.rs`)
+- REQ-008 implementato — doc-ripper è la radice del proprio workspace Cargo, senza path dependency (`Cargo.toml`)
+- REQ-009 implementato — Flag --src e --dst obbligatori; errore se l'origine non è una cartella (`Cargo.lock`, `Cargo.toml`, `src/main.rs`, `tests/cli.rs`)
+- REQ-017 implementato — Riepilogo di file convertiti, saltati con motivo e falliti con errore (`src/main.rs`, `src/report.rs`, `tests/cli.rs`)
+- REQ-018 implementato — Gli errori di conversione non interrompono l'elaborazione; codice di uscita 1 se ci sono fallimenti (`src/main.rs`, `src/run.rs`)
+- REQ-015 implementato — Scansione ricorsiva dell'origine e struttura delle cartelle replicata nella destinazione (`Cargo.lock`, `Cargo.toml`, `src/main.rs`, `src/walk.rs`, `tests/cli.rs`)
+- REQ-019 implementato — I file di tipo non supportato vengono segnalati nel riepilogo e non copiati (`src/convert.rs`, `src/main.rs`, `tests/cli.rs`)
+- REQ-016 implementato — Scrittura dei file generati con sovrascrittura di quelli esistenti (`src/main.rs`, `src/output.rs`)
+- REQ-021 implementato — CSV RFC 4180 (virgola, CRLF, UTF-8 senza BOM) con valori grezzi e date ISO 8601 (`Cargo.lock`, `Cargo.toml`, `src/csv_out.rs`, `src/main.rs`)
+- REQ-012 implementato — Conversione di .xlsx, .xls e .ods in un CSV per foglio, nascosti compresi; fogli vuoti segnalati (`Cargo.lock`, `Cargo.toml`, `src/convert.rs`, `src/excel.rs`, `src/main.rs`, `tests/excel.rs`)
+- REQ-011 implementato — Conversione DOCX in Markdown con titoli, paragrafi, elenchi, tabelle e link (`Cargo.lock`, `Cargo.toml`, `src/convert.rs`, `src/docx.rs`, `src/main.rs`, `tests/docx.rs`)
