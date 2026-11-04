@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-11-04
+- REQ-151 richiesto — Requisiti di ogni tool in `<cartella del tool>/docs/REQUIREMENTS.md`
+- REQ-152 richiesto — search: `index` con `--exclude` ripetibile e senza esclusioni predefinite legate ad altri tool
+- REQ-076 annullato — sostituito da REQ-152 (esclusioni passate con `--exclude` invece che predefinite)
+- REQ-153 richiesto — gui: `index` di `search-rm3` eseguito con `--exclude index.md --exclude .index`
+
 ## 2026-11-01
 - REQ-079 richiesto — rocket-tag: Il pacchetto deve essere implementato in Rust come parte del progetto `rocketdata-mvp`, in un crate dedicato compilabile ed eseguibile senza le altre parti della pipeline
 - REQ-080 richiesto — rocket-tag: Il pacchetto deve presupporre che i file Markdown esistano già e non deve convertire, pulire o estrarre documenti
