@@ -183,5 +183,5 @@ git push origin main vX.Y.Z
 | `rocket-tag/` | Il classificatore dei paragrafi (progetto Cargo autonomo) |
 | `dist/` | Eseguibili pronti all'uso della release corrente |
 | `package.ps1` | Compila i tool e prepara `dist\` |
-| `docs/` | Requisiti e tracciabilità (`REQUIREMENTS.md`, uno per tool) |
+| `docs/` | Requisiti di progetto e tabella dei bug (`REQUIREMENTS.md`); i requisiti di ogni tool sono in `<tool>/docs/REQUIREMENTS.md` |
 | `CHANGELOG.md` | Registro delle richieste e delle loro chiusure |

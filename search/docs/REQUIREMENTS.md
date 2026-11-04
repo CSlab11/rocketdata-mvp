@@ -1,6 +1,6 @@
 # Requisiti e tracciabilità — search
 
-Requisiti del tool `search`: l'interfaccia comune che ogni sotto-tool deve rispettare. I requisiti dei singoli sotto-tool sono in [`search-rm3/REQUIREMENTS.md`](search-rm3/REQUIREMENTS.md). I requisiti di progetto e la tabella dei bug sono in [`../REQUIREMENTS.md`](../REQUIREMENTS.md); gli ID `REQ-NNN` sono unici in tutto il repository.
+Requisiti del tool `search`: l'interfaccia comune che ogni sotto-tool deve rispettare. I requisiti dei singoli sotto-tool sono in [`search-rm3/docs/REQUIREMENTS.md`](../search-rm3/docs/REQUIREMENTS.md). I requisiti di progetto e la tabella dei bug sono in [`docs/REQUIREMENTS.md`](../../docs/REQUIREMENTS.md); gli ID `REQ-NNN` sono unici in tutto il repository.
 
 ## Requisiti
 

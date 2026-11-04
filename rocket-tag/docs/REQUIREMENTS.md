@@ -2,7 +2,7 @@
 
 Pacchetto Rust del progetto `rocketdata-mvp` che classifica i paragrafi di documenti RFQ/RFP e offerte dei fornitori del settore spaziale. Prende file Markdown già prodotti dagli strumenti precedenti, li scorre paragrafo per paragrafo e assegna a ogni paragrafo un'etichetta per faccetta (natura, dominio, destinazione, ecc.) con due classificatori indipendenti: uno a regole e uno basato su un LLM locale. Valuta anche le prestazioni dei classificatori contro etichette umane.
 
-Requisiti del tool `rocket-tag`. I requisiti di progetto e la tabella dei bug sono in [`../REQUIREMENTS.md`](../REQUIREMENTS.md); gli ID `REQ-NNN` sono unici in tutto il repository.
+Requisiti del tool `rocket-tag`. I requisiti di progetto e la tabella dei bug sono in [`docs/REQUIREMENTS.md`](../../docs/REQUIREMENTS.md); gli ID `REQ-NNN` sono unici in tutto il repository.
 
 Provengono da [`classifier-handoff/requirements.md`](../../classifier-handoff/requirements.md), che conserva gli ID locali originali: il REQ-n locale corrisponde qui a REQ-(n + 78). Le appendici A–G sono normative: i requisiti vi rimandano. L'appendice I elenca i file di riferimento, che si trovano in `classifier-handoff/reference/`.
 

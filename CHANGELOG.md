@@ -5,6 +5,7 @@
 - REQ-152 richiesto — search: `index` con `--exclude` ripetibile e senza esclusioni predefinite legate ad altri tool
 - REQ-076 annullato — sostituito da REQ-152 (esclusioni passate con `--exclude` invece che predefinite)
 - REQ-153 richiesto — gui: `index` di `search-rm3` eseguito con `--exclude index.md --exclude .index`
+- REQ-151 implementato — Requisiti dei tool spostati in `<tool>/docs/REQUIREMENTS.md`, rimandi e README aggiornati (`README.md`)
 
 ## 2026-11-01
 - REQ-079 richiesto — rocket-tag: Il pacchetto deve essere implementato in Rust come parte del progetto `rocketdata-mvp`, in un crate dedicato compilabile ed eseguibile senza le altre parti della pipeline

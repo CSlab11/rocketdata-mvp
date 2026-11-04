@@ -1,6 +1,6 @@
 # Requisiti e tracciabilità — doc-ripper
 
-Requisiti del tool `doc-ripper`. I requisiti di progetto e la tabella dei bug sono in [`../REQUIREMENTS.md`](../REQUIREMENTS.md); gli ID `REQ-NNN` sono unici in tutto il repository.
+Requisiti del tool `doc-ripper`. I requisiti di progetto e la tabella dei bug sono in [`docs/REQUIREMENTS.md`](../../docs/REQUIREMENTS.md); gli ID `REQ-NNN` sono unici in tutto il repository.
 
 ## Requisiti
 

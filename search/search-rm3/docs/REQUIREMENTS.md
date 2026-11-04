@@ -1,6 +1,6 @@
 # Requisiti e tracciabilità — search-rm3
 
-Requisiti del sotto-tool `search-rm3` di `search`: ricerca BM25 con espansione della query per pseudo-relevance feedback (RM3). L'interfaccia comune dei sotto-tool è in [`../REQUIREMENTS.md`](../REQUIREMENTS.md); i requisiti di progetto e la tabella dei bug sono in [`../../REQUIREMENTS.md`](../../REQUIREMENTS.md); gli ID `REQ-NNN` sono unici in tutto il repository.
+Requisiti del sotto-tool `search-rm3` di `search`: ricerca BM25 con espansione della query per pseudo-relevance feedback (RM3). L'interfaccia comune dei sotto-tool è in [`search/docs/REQUIREMENTS.md`](../../docs/REQUIREMENTS.md); i requisiti di progetto e la tabella dei bug sono in [`docs/REQUIREMENTS.md`](../../../docs/REQUIREMENTS.md); gli ID `REQ-NNN` sono unici in tutto il repository.
 
 ## Requisiti
 
