@@ -60,6 +60,8 @@
 - REQ-176 implementato — Percorsi dei file di tool dalla cartella del tool, `gui` con dichiarazione dei percorsi dalla radice; `check_trace.py` e convenzioni aggiornati (`.claude/skills/checkreq/scripts/check_trace.py`, `.claude/skills/req/conventions.md`)
 - REQ-177 implementato — `check_trace.py` segnala i commit di un tool che toccano file fuori dalla sua cartella, dal primo commit che usa il changelog del tool (`.claude/skills/checkreq/scripts/check_trace.py`, `.claude/skills/req/conventions.md`)
 - REQ-178 implementato — Changelog proprio per doc-ripper, rocket-tag, search, search-rm3 e thin-decoder (193 voci spostate dalla radice, changelog di thin-decoder convertito a elenco); `check_trace.py` legge i changelog dei tool e segnala le loro voci nella radice (`.claude/skills/checkreq/scripts/check_trace.py`, `.claude/skills/req/SKILL.md`, `.claude/skills/req/conventions.md`)
+- REQ-179 richiesto — Voce di changelog `importato in` per il codice entrato con un commit di importazione
+- REQ-180 richiesto — thin-decoder: voci `importato in` verso `9c59e24` per i requisiti implementati e i bug risolti
 
 ## 2026-11-01
 - REQ-125 richiesto — package.ps1 che include anche rocket-tag.exe in dist\
