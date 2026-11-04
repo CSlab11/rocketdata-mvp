@@ -28,6 +28,7 @@
 - REQ-161 richiesto — Tool `search` con l'interfaccia comune definita in `search/docs/REQUIREMENTS.md`
 - REQ-052 annullato — sostituito da REQ-161 (percorso dei requisiti di `search` aggiornato da REQ-151)
 - REQ-162 richiesto — README: generazione dell'ipertesto dei requisiti con `req-html.ps1`
+- REQ-162 implementato — README: sezione «Consultare i requisiti» con `req-html.ps1`, `-Out`, `docs\html\` e uso su altre repository (`README.md`)
 
 ## 2026-11-01
 - REQ-079 richiesto — rocket-tag: Il pacchetto deve essere implementato in Rust come parte del progetto `rocketdata-mvp`, in un crate dedicato compilabile ed eseguibile senza le altre parti della pipeline

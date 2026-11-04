@@ -174,6 +174,25 @@ git push origin main vX.Y.Z
 - **Porta.** Il server ascolta solo su `127.0.0.1`, su una porta libera scelta all'avvio, e non è raggiungibile da altri computer.
 - **Impostazioni.** Le ultime cartelle usate sono salvate in `%APPDATA%\rocketdata-gui\settings.json`.
 
+## Consultare i requisiti
+
+`req-html.ps1` trasforma i requisiti in un ipertesto da sfogliare nel browser:
+
+```
+.\req-html.ps1 -Repo .
+```
+
+Le pagine finiscono in `docs\html\`, che non è versionata. Apri `docs\html\index.html`: non servono server né connessione a Internet. Per scriverle altrove usa `-Out`:
+
+```
+.\req-html.ps1 -Repo . -Out C:\temp\requisiti
+```
+
+- **Pagine.** C'è una pagina per il progetto e una per ogni tool o sotto-tool. `index.html` le elenca con il numero di requisiti per stato.
+- **Collegamenti.** Ogni `REQ-NNN` o `BUG-NNN` porta alla riga di quell'ID, anche se sta nella pagina di un altro tool.
+- **Tabelle.** Sopra ogni tabella ci sono un filtro per testo e uno per stato. Un clic sull'intestazione ordina la colonna.
+- **Altre repository.** Lo script funziona su qualunque repository con la stessa struttura: `docs/REQUIREMENTS.md` nella radice e `<cartella>/docs/REQUIREMENTS.md` per ogni tool. Esempio: `.\req-html.ps1 -Repo C:\repo\altro-progetto`.
+
 ## Struttura del repository
 
 | Percorso | Contenuto |
@@ -183,5 +202,6 @@ git push origin main vX.Y.Z
 | `rocket-tag/` | Il classificatore dei paragrafi (progetto Cargo autonomo) |
 | `dist/` | Eseguibili pronti all'uso della release corrente |
 | `package.ps1` | Compila i tool e prepara `dist\` |
+| `req-html.ps1` | Genera l'ipertesto HTML dei requisiti in `docs\html\` |
 | `docs/` | Requisiti di progetto e tabella dei bug (`REQUIREMENTS.md`); i requisiti di ogni tool sono in `<tool>/docs/REQUIREMENTS.md` |
 | `CHANGELOG.md` | Registro delle richieste e delle loro chiusure |
