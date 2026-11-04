@@ -14,6 +14,7 @@
 - REQ-158 richiesto — `req-html.ps1`: ancore per ID e collegamenti `REQ-NNN`/`BUG-NNN` anche fra pagine diverse
 - REQ-159 richiesto — `req-html.ps1`: uscita in `docs/html/` della repository, oppure in `-Out`
 - REQ-153 implementato — `gui` esegue `search-rm3 index` con `--exclude index.md --exclude .index` (`gui/src/search.rs`, `gui/tests/search.rs`)
+- REQ-051 implementato — release v0.3.1: dist rigenerata con REQ-152 e REQ-153 (`dist/gui.exe`, `dist/search-rm3.exe`); in tabella aggiunti i file di rocket-tag della v0.3.0
 
 ## 2026-11-01
 - REQ-079 richiesto — rocket-tag: Il pacchetto deve essere implementato in Rust come parte del progetto `rocketdata-mvp`, in un crate dedicato compilabile ed eseguibile senza le altre parti della pipeline
