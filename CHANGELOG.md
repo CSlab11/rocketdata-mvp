@@ -62,6 +62,7 @@
 - thin-decoder_REQ-073 annullato — validazione rimossa dal concept (thin-decoder_REQ-084)
 - thin-decoder_REQ-041 annullato — validazione rimossa dal concept (thin-decoder_REQ-084)
 - thin-decoder_REQ-042 annullato — validazione rimossa dal concept (thin-decoder_REQ-084)
+- thin-decoder_REQ-049 annullato — senza soglie la condizione di attivazione del fine-tuning LoRA non è verificabile (thin-decoder_REQ-084)
 
 ## 2026-11-01
 - REQ-079 richiesto — rocket-tag: Il pacchetto deve essere implementato in Rust come parte del progetto `rocketdata-mvp`, in un crate dedicato compilabile ed eseguibile senza le altre parti della pipeline

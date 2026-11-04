@@ -139,7 +139,7 @@ Concept: [CONCEPT.md](CONCEPT.md). Stati: `aperto`, `implementato`, `annullato`.
 | REQ-046 | Il sistema deve poter espandere le query di ricerca con un LLM, registrando le espansioni nella traccia; la funzione deve essere attivabile da configurazione e spenta di default. | aperto | — |
 | REQ-047 | Il sistema deve poter ottenere il testo di input con una ricerca che combina BM25 e ricerca per embedding; la funzione deve essere attivabile da configurazione e spenta di default. | aperto | — |
 | REQ-048 | Il sistema deve poter ri-estrarre in modo più dettagliato gli span rilevanti per Q, in aggiunta all'estrazione completa. | aperto | — |
-| REQ-049 | Il sistema deve poter usare un modello con fine-tuning LoRA addestrato sui claim corretti a mano; da attivare se la recall dell'estrazione è sotto soglia per cause di linguaggio di dominio. | aperto | — |
+| REQ-049 | Il sistema deve poter usare un modello con fine-tuning LoRA addestrato sui claim corretti a mano; da attivare se la recall dell'estrazione è sotto soglia per cause di linguaggio di dominio. Annullato da REQ-084 (senza soglie la condizione di attivazione non è verificabile). | annullato | — |
 | REQ-050 | Il sistema deve poter accettare documenti PDF e DOCX convertendoli in testo. | aperto | — |
 | REQ-082 | Il sistema deve poter applicare un passo finale a regole che elimina i duplicati nell'unione dei risultati del motore LLM e del motore a regole. | aperto | — |
 
