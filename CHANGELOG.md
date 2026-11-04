@@ -21,6 +21,7 @@
 - REQ-156 implementato — `req-html.ps1` rende tutto il file: titoli, testo, elenchi, codice, link, tabelle Requisiti e Bug (`req-html.ps1`)
 - REQ-157 implementato — `req-html.ps1` genera `index.html` con i conteggi per stato e una barra di collegamenti su ogni pagina (`req-html.ps1`)
 - REQ-158 implementato — `req-html.ps1`: ancora per ogni ID, collegamenti `REQ-NNN`/`BUG-NNN` anche fra pagine, link fra file dei requisiti verso le pagine HTML (`req-html.ps1`)
+- REQ-159 implementato — `req-html.ps1` scrive in `docs/html/` della repository o in `-Out`; `docs/html/` esclusa da git (`.gitignore`, `req-html.ps1`)
 
 ## 2026-11-01
 - REQ-079 richiesto — rocket-tag: Il pacchetto deve essere implementato in Rust come parte del progetto `rocketdata-mvp`, in un crate dedicato compilabile ed eseguibile senza le altre parti della pipeline

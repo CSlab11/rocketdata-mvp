@@ -3,16 +3,17 @@
 #   le pagine (REQ-157), un collegamento per ogni ID citato (REQ-158).
 # Funziona su qualunque repository con la struttura di REQ-151: docs\REQUIREMENTS.md nella radice per il progetto,
 # <cartella>\docs\REQUIREMENTS.md per ogni tool. Lo script non appartiene a nessun tool (REQ-005).
-# Uso: .\req-html.ps1 -Repo <radice della repository>   (pagine in <Repo>\docs\html)
+# Uso: .\req-html.ps1 -Repo <radice della repository> [-Out <cartella>]   (default: <Repo>\docs\html, REQ-159)
 param(
-    [Parameter(Mandatory = $true)][string]$Repo
+    [Parameter(Mandatory = $true)][string]$Repo,
+    [string]$Out
 )
 $ErrorActionPreference = 'Stop'
 
 $Repo = (Resolve-Path -LiteralPath $Repo).Path.TrimEnd('\')
 $ProjectFile = Join-Path $Repo 'docs\REQUIREMENTS.md'
 if (-not (Test-Path -LiteralPath $ProjectFile -PathType Leaf)) { throw "requisiti di progetto non trovati: $ProjectFile" }
-$Out = Join-Path $Repo 'docs\html'
+if (-not $Out) { $Out = Join-Path $Repo 'docs\html' }
 New-Item -ItemType Directory -Force -Path $Out | Out-Null
 $Out = (Resolve-Path -LiteralPath $Out).Path.TrimEnd('\')
 $Utf8 = New-Object System.Text.UTF8Encoding $false
