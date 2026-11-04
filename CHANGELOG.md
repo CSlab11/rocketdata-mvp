@@ -66,6 +66,7 @@
 - thin-decoder_REQ-084 implementato — Tolta dal concept la sezione "Criteri di successo (soglie v1)" con il criterio di uscita (`thin-decoder/docs/CONCEPT.md`)
 - REQ-176 richiesto — Percorsi dei "File impattati" relativi alla cartella del tool, tranne `gui` e progetto
 - REQ-177 richiesto — Commit dei requisiti e bug di un tool (tranne `gui`) limitati alla cartella del tool
+- REQ-178 richiesto — `CHANGELOG.md` proprio per ogni tool tranne `gui`, voci dei tool tolte dal changelog della radice
 
 ## 2026-11-01
 - REQ-079 richiesto — rocket-tag: Il pacchetto deve essere implementato in Rust come parte del progetto `rocketdata-mvp`, in un crate dedicato compilabile ed eseguibile senza le altre parti della pipeline
