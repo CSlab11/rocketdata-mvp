@@ -31,6 +31,9 @@ enum Command {
         /// Cartella dell'indice
         #[arg(long, value_name = "INDICE")]
         index: PathBuf,
+        /// File o cartella da non indicizzare, relativo alla cartella di origine (ripetibile)
+        #[arg(long, value_name = "PERCORSO")]
+        exclude: Vec<PathBuf>,
     },
     /// Cerca una domanda nell'indice
     Query {
@@ -60,7 +63,7 @@ enum Command {
 
 fn main() -> ExitCode {
     let result = match Args::parse().command {
-        Command::Index { src, index } => run_index(&src, &index),
+        Command::Index { src, index, exclude } => run_index(&src, &index, &exclude),
         Command::Query { index, q, top, fb_docs, fb_terms, lambda, heading_weight } => {
             run_query(&index, &q, top, &rm3::Params { fb_docs, fb_terms, lambda }, heading_weight)
         }
@@ -95,11 +98,11 @@ fn run_query(dir: &Path, q: &str, top: usize, params: &rm3::Params, heading_weig
     Ok(())
 }
 
-fn run_index(src: &Path, dir: &Path) -> Result<(), String> {
+fn run_index(src: &Path, dir: &Path, exclude: &[PathBuf]) -> Result<(), String> {
     if !src.is_dir() {
         return Err(format!("la cartella di origine non esiste o non è una cartella: {}", src.display()));
     }
-    let index = index::build(src, &Analyzer::new())?;
+    let index = index::build(src, exclude, &Analyzer::new())?;
     index::save(&index, dir)?;
     let files = index.sections.iter().map(|s| s.file.as_str()).collect::<HashSet<_>>().len();
     println!("Indicizzati {files} file, {} sezioni", index.sections.len());

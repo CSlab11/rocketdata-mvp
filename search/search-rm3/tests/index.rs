@@ -18,8 +18,16 @@ fn indexed_files(dir: &Path) -> Vec<String> {
     files
 }
 
+fn index_excluding(src: &Path, dir: &Path, exclude: &[&str]) -> Output {
+    let mut args = vec!["index", "--src", src.to_str().unwrap(), "--index", dir.to_str().unwrap()];
+    for e in exclude {
+        args.extend(["--exclude", e]);
+    }
+    run(&args)
+}
+
 #[test]
-fn indicizza_ricorsivamente_i_md_escluso_index_md() {
+fn indicizza_ricorsivamente_tutti_i_md_senza_esclusioni_predefinite() {
     let src = tempfile::tempdir().unwrap();
     let dir = tempfile::tempdir().unwrap();
     fs::create_dir_all(src.path().join("sub")).unwrap();
@@ -31,22 +39,26 @@ fn indicizza_ricorsivamente_i_md_escluso_index_md() {
 
     let out = index(src.path(), dir.path());
     assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
-    assert_eq!(indexed_files(dir.path()), ["a_pdf.md", "sub/b_docx.md", "sub/index.md"]);
+    assert_eq!(indexed_files(dir.path()), ["a_pdf.md", "index.md", "sub/b_docx.md", "sub/index.md"]);
 }
 
 #[test]
-fn esclude_la_cartella_index_nella_radice() {
+fn esclude_i_file_e_le_cartelle_indicati() {
     let src = tempfile::tempdir().unwrap();
     let dir = src.path().join(".index");
     fs::create_dir_all(&dir).unwrap();
     fs::create_dir_all(src.path().join("sub/.index")).unwrap();
+    fs::create_dir_all(src.path().join("altro/dentro")).unwrap();
     fs::write(dir.join("vecchio.md"), "# Vecchio\n").unwrap();
     fs::write(src.path().join("a.md"), "# A\n").unwrap();
+    fs::write(src.path().join("index.md"), "# Indice\n").unwrap();
+    fs::write(src.path().join("sub/index.md"), "# Indice della sottocartella\n").unwrap();
     fs::write(src.path().join("sub/.index/c.md"), "# C\n").unwrap();
+    fs::write(src.path().join("altro/dentro/d.md"), "# D\n").unwrap();
 
-    let out = index(src.path(), &dir);
+    let out = index_excluding(src.path(), &dir, &["index.md", ".index", "altro"]);
     assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
-    assert_eq!(indexed_files(&dir), ["a.md", "sub/.index/c.md"]);
+    assert_eq!(indexed_files(&dir), ["a.md", "sub/.index/c.md", "sub/index.md"]);
 }
 
 #[test]

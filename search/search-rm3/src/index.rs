@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use walkdir::WalkDir;
@@ -32,16 +32,17 @@ pub struct IndexedSection {
     pub text: String,
 }
 
-/// Indicizza ricorsivamente i `.md` di `src`, esclusi `index.md` e la cartella `.index` nella radice (REQ-076).
-pub fn build(src: &Path, analyzer: &Analyzer) -> Result<Index, String> {
+/// Indicizza ricorsivamente i `.md` di `src`, tranne i file e le cartelle di `exclude`,
+/// percorsi relativi a `src` (REQ-152).
+pub fn build(src: &Path, exclude: &[PathBuf], analyzer: &Analyzer) -> Result<Index, String> {
     let mut index = Index { sections: Vec::new(), postings: HashMap::new(), lengths: Vec::new() };
-    let index_dir = src.join(".index");
-    let entries = WalkDir::new(src).sort_by_file_name().into_iter().filter_entry(|e| e.path() != index_dir);
+    let excluded: Vec<PathBuf> = exclude.iter().map(|e| src.join(e)).collect();
+    let entries = WalkDir::new(src).sort_by_file_name().into_iter().filter_entry(|e| !excluded.iter().any(|x| e.path() == x));
     for entry in entries {
         let entry = entry.map_err(|e| format!("impossibile leggere {}: {e}", src.display()))?;
         let path = entry.path();
         let is_md = path.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("md"));
-        if !entry.file_type().is_file() || !is_md || path == src.join("index.md") {
+        if !entry.file_type().is_file() || !is_md {
             continue;
         }
         let content = fs::read_to_string(path).map_err(|e| format!("impossibile leggere {}: {e}", path.display()))?;
