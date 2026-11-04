@@ -31,6 +31,13 @@
 - REQ-162 implementato — README: sezione «Consultare i requisiti» con `req-html.ps1`, `-Out`, `docs\html\` e uso su altre repository (`README.md`)
 - 7a7e1ee attribuito a REQ-051 — commit senza ID "search release": release v0.2.0 con `dist/` rigenerata (`dist/doc-ripper.exe`, `dist/gui.exe`, `dist/search-rm3.exe`)
 - ff696f1 attribuito a REQ-051 — commit senza ID "update gitignore": esclusione di `/test`, poi sostituita da `test*` nella release v0.3.0 (`.gitignore`)
+- REQ-163 richiesto — Numerazione degli ID propria di ogni file dei requisiti di un tool, senza prefisso dentro il file
+- REQ-164 richiesto — ID qualificato `<tool>_REQ-NNN` / `<tool>_BUG-NNN` fuori dal file del tool (commit, changelog, rimandi)
+- REQ-165 richiesto — Requisiti e bug di progetto restano `REQ-NNN` / `BUG-NNN` senza prefisso
+- REQ-166 richiesto — Bug di un tool nella tabella Bug del file del tool
+- REQ-167 richiesto — Nessuna rinumerazione degli ID esistenti; i commit passati restano validi
+- REQ-168 richiesto — `req-html.ps1`: collegamenti per ID qualificati e non qualificati
+- REQ-158 annullato — sostituito da REQ-168 (ID qualificati per tool)
 
 ## 2026-11-01
 - REQ-079 richiesto — rocket-tag: Il pacchetto deve essere implementato in Rust come parte del progetto `rocketdata-mvp`, in un crate dedicato compilabile ed eseguibile senza le altre parti della pipeline
