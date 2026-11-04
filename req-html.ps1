@@ -1,5 +1,7 @@
-﻿# Genera l'ipertesto HTML dei requisiti di una repository (REQ-154), da aprire nel browser senza server né Internet.
-# Lo script non appartiene a nessun tool (REQ-005).
+﻿# Genera l'ipertesto HTML dei requisiti di una repository (REQ-154), da aprire nel browser senza server né Internet:
+#   una pagina per il progetto e per ogni tool o sotto-tool (REQ-155).
+# Funziona su qualunque repository con la struttura di REQ-151: docs\REQUIREMENTS.md nella radice per il progetto,
+# <cartella>\docs\REQUIREMENTS.md per ogni tool. Lo script non appartiene a nessun tool (REQ-005).
 # Uso: .\req-html.ps1 -Repo <radice della repository>   (pagine in <Repo>\docs\html)
 param(
     [Parameter(Mandatory = $true)][string]$Repo
@@ -14,12 +16,28 @@ New-Item -ItemType Directory -Force -Path $Out | Out-Null
 $Out = (Resolve-Path -LiteralPath $Out).Path.TrimEnd('\')
 $Utf8 = New-Object System.Text.UTF8Encoding $false
 
-$Pages = @(
-    [pscustomobject]@{
-        Rel = ''; Label = 'progetto'; Page = 'progetto.html'; File = $ProjectFile
-        Lines = [IO.File]::ReadAllLines($ProjectFile, $Utf8)
+# --- File dei requisiti (REQ-155) ----------------------------------------------------------------------------------
+# Ogni cartella con docs\REQUIREMENTS.md, a qualunque profondità; la radice è il progetto. Le cartelle di build,
+# i collegamenti e la cartella di uscita non si esplorano.
+$Skip = @('.git', 'target', 'node_modules')
+function Find-ReqDirs([string]$Dir) {
+    if (Test-Path -LiteralPath (Join-Path $Dir 'docs\REQUIREMENTS.md') -PathType Leaf) { $Dir }
+    foreach ($Sub in Get-ChildItem -LiteralPath $Dir -Directory -Force -ErrorAction SilentlyContinue) {
+        if ($Skip -contains $Sub.Name -or $Sub.FullName -eq $Out -or ($Sub.Attributes -band [IO.FileAttributes]::ReparsePoint)) { continue }
+        Find-ReqDirs $Sub.FullName
     }
-)
+}
+
+$Pages = @(foreach ($Dir in Find-ReqDirs $Repo) {
+    $Rel = ($Dir.Substring($Repo.Length).TrimStart('\')) -replace '\\', '/'
+    $File = Join-Path $Dir 'docs\REQUIREMENTS.md'
+    $Label = 'progetto'; $Page = 'progetto.html'
+    if ($Rel) { $Label = $Rel; $Page = ($Rel -replace '/', '.') + '.html' }
+    [pscustomobject]@{
+        Rel = $Rel; Label = $Label; Page = $Page; File = $File
+        Lines = [IO.File]::ReadAllLines($File, $Utf8)
+    }
+})
 
 # --- Markdown → HTML -----------------------------------------------------------------------------------------------
 function Enc([string]$s) { [System.Net.WebUtility]::HtmlEncode($s) }
