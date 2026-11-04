@@ -1,0 +1,10 @@
+{
+  "questions": [
+    "What are the steps in assessing the risk?", 
+    "what should be documented for testing?", 
+    "is there a particulat document to be produced for software?", 
+    "is there a particulat document to be produced for software testing?"
+  ],
+  "text": "The supplier shall develop and document, for each requirement of the software item in RB, including IRD, a set of tests, test cases and test procedures including:\ntesting against the mission data and scenario specified by the customer in 5.2.3.1;\ntesting with stress, boundary, and singular inputs;\ntesting the software product for its ability to isolate and reduce the effect of errors;\ntesting that the software product can perform successfully in a representative operational and non-intrusive environment;\nexternal interface testing including boundaries, protocols and timing test;\ntesting HMI applications as per ECSS-E-ST-10-11;\nsecurity testing against security requirements as per clause 5.2.2.1.\nEXPECTED OUTPUT: Software validation specification with respect to the requirements baseline [DJF, SVS; QR, AR].\nNOTE 1 A test case identifies inputs, outputs, and test criteria.\nNOTE 2 The reduction of the effect of an error can be done by graceful degradation upon failure, request for operator assistance upon stress, boundary and singular conditions."
+}
+

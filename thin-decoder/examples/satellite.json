@@ -1,0 +1,22 @@
+{
+  "questions": [
+    "What is the mass of the reaction wheel?",
+    "How much does the satellite weigh?",
+    "Where is the RW mounted?",
+    "What is mounted on the +X panel?",
+    "When was the satellite launched?",
+    "Who manufactures the reaction wheels?",
+    "How many solar arrays does the satellite have?",
+    "What voltage does the OBC operate at?",
+    "Is the reaction wheel an actuator?",
+    "Does the payload exceed 300 W?",
+    "How long is the mission lifetime?",
+    "Which actuator is mounted on the +X panel?",
+    "What does the PCDU distribute?",
+    "What is the orbit altitude?",
+    "Who is the prime contractor?",
+    "What is the mass of the spacecraft?",
+    "Is the magnetorquer an actuator?"
+  ],
+  "text": "AquaSat is a small Earth observation satellite. The satellite has a total mass of 250 kg and carries two solar arrays. It was launched in March 2021 from Kourou.\n\nThe Attitude and Orbit Control System (AOCS) uses actuators such as reaction wheels and magnetorquers. The reaction wheel (RW) has a mass of 2,500 g. The RW is mounted on the +X panel and connected to the On-Board Computer (OBC). Reaction wheels are manufactured by Rockwell Collins. The OBC shall operate at 28 V and shall not consume more than 15 W. The Power Conditioning and Distribution Unit (PCDU) distributes power to all subsystems. The payload does not exceed 120 W. The mission has a lifetime of 5 years. The satellite orbits at an altitude of 600 km."
+}

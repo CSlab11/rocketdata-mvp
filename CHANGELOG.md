@@ -48,6 +48,8 @@
 - REQ-171 richiesto — `req-annullati.ps1`: anteprima con `-WhatIf` senza modifiche
 - REQ-172 richiesto — `req-annullati.ps1`: conservata la riga con l'ID più alto, per non riusare i numeri
 - REQ-173 richiesto — Task VS Code che eseguono `req-annullati.ps1` per ogni cartella di tool
+- REQ-174 richiesto — Tool `thin-decoder` incluso nel repository
+- REQ-174 implementato — Cartella `thin-decoder/` messa sotto versione (sorgenti, esempi, requisiti, concept)
 
 ## 2026-11-01
 - REQ-079 richiesto — rocket-tag: Il pacchetto deve essere implementato in Rust come parte del progetto `rocketdata-mvp`, in un crate dedicato compilabile ed eseguibile senza le altre parti della pipeline

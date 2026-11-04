@@ -1,0 +1,20 @@
+{
+  "synonyms": [
+    [
+      "spacecraft",
+      "satellite"
+    ]
+  ],
+  "subclass_of": [
+    [
+      "actuator",
+      "AOCS equipment"
+    ]
+  ],
+  "attribute_verbs": [
+    [
+      "draw",
+      "power"
+    ]
+  ]
+}
