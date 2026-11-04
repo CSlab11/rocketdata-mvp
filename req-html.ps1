@@ -1,6 +1,6 @@
 ﻿# Genera l'ipertesto HTML dei requisiti di una repository (REQ-154), da aprire nel browser senza server né Internet:
 #   una pagina per il progetto e per ogni tool o sotto-tool (REQ-155, REQ-156), index.html con i collegamenti fra
-#   le pagine (REQ-157), un collegamento per ogni ID citato (REQ-158).
+#   le pagine (REQ-157), un collegamento per ogni ID citato (REQ-158), filtro e ordinamento delle tabelle (REQ-160).
 # Funziona su qualunque repository con la struttura di REQ-151: docs\REQUIREMENTS.md nella radice per il progetto,
 # <cartella>\docs\REQUIREMENTS.md per ogni tool. Lo script non appartiene a nessun tool (REQ-005).
 # Uso: .\req-html.ps1 -Repo <radice della repository> [-Out <cartella>]   (default: <Repo>\docs\html, REQ-159)
@@ -213,9 +213,15 @@ code{font:13px/1.4 Consolas,ui-monospace,monospace;background:var(--head);paddin
 pre{background:var(--head);padding:12px;overflow-x:auto;border-radius:4px}
 pre code{padding:0;background:none}
 .tbl{margin:16px 0}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px;font-size:14px}
+.tools input{flex:1 1 220px;max-width:420px}
+input,select{font:inherit;padding:4px 8px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:4px}
+.tools .count{color:var(--muted)}
 table{border-collapse:collapse;width:100%}
 th,td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
-th{position:sticky;top:var(--nav,40px);z-index:2;background:var(--head)}
+th{position:sticky;top:var(--nav,40px);z-index:2;background:var(--head);cursor:pointer;user-select:none}
+th[data-dir=asc]::after{content:" \25B2";font-size:10px}
+th[data-dir=desc]::after{content:" \25BC";font-size:10px}
 tr{scroll-margin-top:calc(var(--nav,40px) + 48px)}
 tr:target td{background:var(--hl)}
 td.idc,td.st{white-space:nowrap;overflow-wrap:normal}
@@ -226,13 +232,64 @@ td.st{font-weight:600}
 td.num{text-align:right}
 '@
 
-# Barra in cima a ogni pagina: indice e pagine di progetto e tool (REQ-157). L'altezza della barra serve alle
-# intestazioni fisse delle tabelle.
+# L'altezza della barra (REQ-157) serve alle intestazioni fisse delle tabelle. Ogni tabella ha il filtro per testo
+# e stato e l'ordinamento per colonna (REQ-160).
 $Js = @'
 (function () {
   var nav = document.querySelector('nav');
   function navHeight() { document.documentElement.style.setProperty('--nav', nav.offsetHeight + 'px'); }
   navHeight(); window.addEventListener('resize', navHeight);
+  function text(row, i) { return row.cells[i] ? row.cells[i].textContent.trim() : ''; }
+  var tables = [];
+  document.querySelectorAll('.tbl').forEach(function (box) {
+    var table = box.querySelector('table'), body = table.tBodies[0];
+    var ths = [].slice.call(table.tHead.rows[0].cells), rows = [].slice.call(body.rows), st = -1;
+    ths.forEach(function (th, i) { if (th.textContent.trim() === 'Stato') st = i; });
+    var tools = document.createElement('div'); tools.className = 'tools';
+    var q = document.createElement('input'); q.type = 'search'; q.placeholder = 'Filtra le righe'; tools.appendChild(q);
+    var sel = null;
+    if (st >= 0) {
+      sel = document.createElement('select');
+      sel.add(new Option('Tutti gli stati', ''));
+      var seen = {};
+      rows.forEach(function (r) { var v = text(r, st); if (v && !seen[v]) { seen[v] = 1; sel.add(new Option(v, v)); } });
+      tools.appendChild(sel);
+    }
+    var count = document.createElement('span'); count.className = 'count'; tools.appendChild(count);
+    box.insertBefore(tools, table);
+    function apply() {
+      var t = q.value.trim().toLowerCase(), s = sel ? sel.value : '', n = 0;
+      rows.forEach(function (r) {
+        var ok = (!t || r.textContent.toLowerCase().indexOf(t) >= 0) && (!s || text(r, st) === s);
+        r.hidden = !ok; if (ok) n++;
+      });
+      count.textContent = n + ' di ' + rows.length + ' righe';
+    }
+    q.addEventListener('input', apply);
+    if (sel) sel.addEventListener('change', apply);
+    ths.forEach(function (th, i) {
+      th.title = 'Ordina per questa colonna';
+      th.addEventListener('click', function () {
+        var dir = th.dataset.dir === 'asc' ? 'desc' : 'asc', k = dir === 'asc' ? 1 : -1;
+        ths.forEach(function (h) { delete h.dataset.dir; });
+        th.dataset.dir = dir;
+        rows.slice().sort(function (a, b) {
+          return k * text(a, i).localeCompare(text(b, i), 'it', { numeric: true, sensitivity: 'base' });
+        }).forEach(function (r) { body.appendChild(r); });
+      });
+    });
+    apply();
+    tables.push({ rows: rows, reset: function () { q.value = ''; if (sel) sel.value = ''; apply(); } });
+  });
+  // Una riga raggiunta da un collegamento ma nascosta dal filtro torna visibile.
+  function showTarget() {
+    var el = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    if (el && el.hidden) {
+      tables.forEach(function (t) { if (t.rows.indexOf(el) >= 0) t.reset(); });
+      el.scrollIntoView();
+    }
+  }
+  window.addEventListener('hashchange', showTarget); showTarget();
 })();
 '@
 
