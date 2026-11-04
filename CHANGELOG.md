@@ -23,6 +23,7 @@
 - REQ-158 implementato — `req-html.ps1`: ancora per ogni ID, collegamenti `REQ-NNN`/`BUG-NNN` anche fra pagine, link fra file dei requisiti verso le pagine HTML (`req-html.ps1`)
 - REQ-159 implementato — `req-html.ps1` scrive in `docs/html/` della repository o in `-Out`; `docs/html/` esclusa da git (`.gitignore`, `req-html.ps1`)
 - REQ-160 implementato — `req-html.ps1`: filtro per testo e stato, ordinamento per colonna e riga raggiunta da un collegamento sempre visibile (`req-html.ps1`)
+- BUG-004 segnalato — rocket-tag: link rotto e rimandi a `classifier-handoff/` nei requisiti (`rocket-tag/docs/REQUIREMENTS.md`)
 
 ## 2026-11-01
 - REQ-079 richiesto — rocket-tag: Il pacchetto deve essere implementato in Rust come parte del progetto `rocketdata-mvp`, in un crate dedicato compilabile ed eseguibile senza le altre parti della pipeline
