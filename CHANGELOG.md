@@ -51,6 +51,7 @@
 - REQ-174 richiesto — Tool `thin-decoder` incluso nel repository
 - REQ-174 implementato — Cartella `thin-decoder/` messa sotto versione (sorgenti, esempi, requisiti, concept)
 - REQ-169 implementato — Script `req-annullati.ps1` che toglie le righe con stato `annullato` dalle tabelle Requisiti (`req-annullati.ps1`)
+- REQ-172 implementato — La riga con l'ID più alto resta anche se annullata (`req-annullati.ps1`)
 
 ## 2026-11-01
 - REQ-079 richiesto — rocket-tag: Il pacchetto deve essere implementato in Rust come parte del progetto `rocketdata-mvp`, in un crate dedicato compilabile ed eseguibile senza le altre parti della pipeline

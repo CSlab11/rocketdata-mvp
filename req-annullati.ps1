@@ -40,11 +40,14 @@ function Get-ReqRows($Lines) {
 }
 
 # --- Righe da togliere (REQ-169) -----------------------------------------------------------------------------------
+# La riga con l'ID più alto resta anche se annullata, perché il prossimo ID non riusi il suo numero (REQ-172).
 $Doc = Read-Lines $File
 $Rows = @(Get-ReqRows $Doc.Lines)
-$Remove = @($Rows | Where-Object { $_.State -eq 'annullato' })
+$Max = ($Rows | Measure-Object -Property Num -Maximum).Maximum
+$Remove = @($Rows | Where-Object { $_.State -eq 'annullato' -and $_.Num -ne $Max })
 
 Write-Host $File
+foreach ($R in $Rows | Where-Object { $_.State -eq 'annullato' -and $_.Num -eq $Max }) { Write-Host "  conservato $($R.Id): ID più alto" }
 foreach ($R in $Remove) { Write-Host "  tolto $($R.Id)" }
 if (-not $Remove) { Write-Host '  nessun requisito annullato'; return }
 
