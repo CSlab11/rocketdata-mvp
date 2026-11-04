@@ -25,6 +25,9 @@
 - REQ-160 implementato — `req-html.ps1`: filtro per testo e stato, ordinamento per colonna e riga raggiunta da un collegamento sempre visibile (`req-html.ps1`)
 - BUG-004 segnalato — rocket-tag: link rotto e rimandi a `classifier-handoff/` nei requisiti (`rocket-tag/docs/REQUIREMENTS.md`)
 - BUG-004 risolto — Tolti link e rimandi a `classifier-handoff/` dall'introduzione dei requisiti di rocket-tag (`rocket-tag/docs/REQUIREMENTS.md`)
+- REQ-161 richiesto — Tool `search` con l'interfaccia comune definita in `search/docs/REQUIREMENTS.md`
+- REQ-052 annullato — sostituito da REQ-161 (percorso dei requisiti di `search` aggiornato da REQ-151)
+- REQ-162 richiesto — README: generazione dell'ipertesto dei requisiti con `req-html.ps1`
 
 ## 2026-11-01
 - REQ-079 richiesto — rocket-tag: Il pacchetto deve essere implementato in Rust come parte del progetto `rocketdata-mvp`, in un crate dedicato compilabile ed eseguibile senza le altre parti della pipeline
