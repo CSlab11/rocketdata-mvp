@@ -76,13 +76,14 @@ Concept: [CONCEPT.md](CONCEPT.md). Stati: `aperto`, `implementato`, `annullato`.
 
 | ID | Requisito | Stato | File impattati |
 |---|---|---|---|
-| REQ-038 | Il sistema deve fornire uno strumento di valutazione che legge la ground truth dal template `validation/ground_truth_template.xlsx`. | aperto | — |
+| REQ-038 | Il sistema deve fornire uno strumento di valutazione che legge la ground truth dal template `validation/ground_truth_template.xlsx`. Annullato da REQ-084 (validazione rimossa dal concept). | annullato | — |
 | REQ-039 | Lo strumento di valutazione deve eseguire la modalità 1 usando i testi del foglio Contesti e la modalità 2 usando il pacchetto di ricerca, e produrre un report per ciascuna con la differenza tra le due. Sostituito da REQ-072. | annullato | — |
 | REQ-040 | Lo strumento di valutazione deve calcolare falsi "conforme", accuratezza dell'esito, recall della ricerca, recall e precisione delle evidenze, accuratezza delle risposte, tracciabilità e riproducibilità, e confrontarle con le soglie del concept. Sostituito da REQ-073. | annullato | — |
-| REQ-072 | Lo strumento di valutazione deve eseguire il sistema sui testi del foglio Contesti e produrre un report dei risultati. | aperto | — |
-| REQ-073 | Lo strumento di valutazione deve calcolare falsi "conforme", accuratezza dell'esito, recall e precisione delle evidenze, accuratezza delle risposte, tracciabilità e riproducibilità, e confrontarle con le soglie del concept. | aperto | — |
-| REQ-041 | Il report di valutazione deve indicare, per ogni metrica sotto soglia, il passo della pipeline in cui si originano gli errori. | aperto | — |
-| REQ-042 | Lo strumento di valutazione deve esportare l'elenco dei fatti derivati per la revisione manuale. | aperto | — |
+| REQ-072 | Lo strumento di valutazione deve eseguire il sistema sui testi del foglio Contesti e produrre un report dei risultati. Annullato da REQ-084 (validazione rimossa dal concept). | annullato | — |
+| REQ-073 | Lo strumento di valutazione deve calcolare falsi "conforme", accuratezza dell'esito, recall e precisione delle evidenze, accuratezza delle risposte, tracciabilità e riproducibilità, e confrontarle con le soglie del concept. Annullato da REQ-084 (validazione rimossa dal concept). | annullato | — |
+| REQ-041 | Il report di valutazione deve indicare, per ogni metrica sotto soglia, il passo della pipeline in cui si originano gli errori. Annullato da REQ-084 (validazione rimossa dal concept). | annullato | — |
+| REQ-042 | Lo strumento di valutazione deve esportare l'elenco dei fatti derivati per la revisione manuale. Annullato da REQ-084 (validazione rimossa dal concept). | annullato | — |
+| REQ-084 | Il concept (`docs/CONCEPT.md`) non deve contenere criteri di successo con soglie di validazione né un criterio di uscita della v1 basato su di esse; deve conservare l'assunzione che la ground truth non si usa per addestrare né per i prompt few-shot. | aperto | — |
 
 ### Programma deterministico in Rust (`domanda`, modalità 1)
 

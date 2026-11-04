@@ -56,6 +56,12 @@
 - REQ-171 implementato — Anteprima con `-WhatIf`: righe e citazioni elencate senza modificare file (`req-annullati.ps1`)
 - REQ-175 richiesto — Skill di tracciabilità versionate in `.claude/skills/` come skill di progetto e versione di riferimento
 - REQ-173 implementato — Task VS Code per ogni cartella di tool, con scelta anteprima/applica (`.vscode/tasks.json`)
+- thin-decoder_REQ-084 richiesto — Concept senza criteri di successo né criterio di uscita della v1
+- thin-decoder_REQ-038 annullato — validazione rimossa dal concept (thin-decoder_REQ-084)
+- thin-decoder_REQ-072 annullato — validazione rimossa dal concept (thin-decoder_REQ-084)
+- thin-decoder_REQ-073 annullato — validazione rimossa dal concept (thin-decoder_REQ-084)
+- thin-decoder_REQ-041 annullato — validazione rimossa dal concept (thin-decoder_REQ-084)
+- thin-decoder_REQ-042 annullato — validazione rimossa dal concept (thin-decoder_REQ-084)
 
 ## 2026-11-01
 - REQ-079 richiesto — rocket-tag: Il pacchetto deve essere implementato in Rust come parte del progetto `rocketdata-mvp`, in un crate dedicato compilabile ed eseguibile senza le altre parti della pipeline
