@@ -38,6 +38,7 @@
 - REQ-167 richiesto — Nessuna rinumerazione degli ID esistenti; i commit passati restano validi
 - REQ-168 richiesto — `req-html.ps1`: collegamenti per ID qualificati e non qualificati
 - REQ-158 annullato — sostituito da REQ-168 (ID qualificati per tool)
+- REQ-167 annullato — è un'istruzione delle convenzioni di tracciabilità (`~/.claude/skills/req/conventions.md`), non un requisito
 
 ## 2026-11-01
 - REQ-079 richiesto — rocket-tag: Il pacchetto deve essere implementato in Rust come parte del progetto `rocketdata-mvp`, in un crate dedicato compilabile ed eseguibile senza le altre parti della pipeline
