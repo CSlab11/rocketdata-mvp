@@ -1,0 +1,194 @@
+# Regole del classificatore di base. I valori devono esistere in label_schema.json:
+# `rocket-tag rules check` segnala valori sconosciuti e faccette senza regole.
+#
+# Per ogni faccetta:
+#   mode: first   -> regole in ordine, vince la prima che corrisponde (default)
+#   mode: score   -> conta le corrispondenze per valore, vince il punteggio più alto
+#   mode: multi   -> faccetta a scelta multipla, aggiunge ogni valore la cui regola corrisponde
+#   default / default_confidence -> se nessuna regola corrisponde (null = astensione)
+# Campi di una regola:
+#   value, any: [regex], all: [regex], unless: [regex], count_min: N (occorrenze di `any`),
+#   when: {side, doc_type, kind, heading, <faccetta già decisa>: [valori]},
+#   max_len / min_len (caratteri), confidence (0-1), id (per il debug)
+# Le regex sono senza distinzione maiuscole/minuscole, salvo `case: true`.
+# Le faccette sono valutate nell'ordine di questo file: `when` può usare quelle precedenti.
+
+version: "0.1.0"
+
+documents:          # lato e tipo dal nome file, se non c'è un'etichetta documento umana
+  - {match: '^\[TD\]',    side: supplier, doc_type: technical_description}
+  - {match: '^\[TProp\]', side: supplier, doc_type: technical_proposal}
+  - {match: '^\[PA\]',    side: supplier, doc_type: pa_plan}
+  - {match: '^\[DDV\]',   side: supplier, doc_type: development_plan}
+  - {match: '^\[T&C\]',   side: supplier, doc_type: terms_of_sale}
+  - {match: '^\[Ref',     side: supplier, doc_type: cover_letter}
+  - {match: 'statement of work|\bSoW\b',              side: prime, doc_type: statement_of_work}
+  - {match: 'invitation to tender|\bITT\b|\bRFQ\b|\bRFP\b', side: prime, doc_type: invitation_to_tender}
+  - {match: 'specification|\bspec\b',                side: prime, doc_type: technical_specification}
+
+facets:
+
+  extraction_quality:
+    mode: first
+    rules:
+      - id: noise-boilerplate
+        value: noise
+        any: ['^\s*page\s+\d+(\s+of\s+\d+)?\s*$', '\b(all rights reserved|copyright|proprietary to)\b', '^\s*\d+\s*$']
+        max_len: 200
+        confidence: 0.8
+      - id: fragment-short
+        value: fragment
+        any: ['^.{1,24}$']
+        when: {kind: [paragraph, list_item]}
+        confidence: 0.6
+      - id: fragment-lowercase-start
+        value: fragment
+        case: true
+        any: ['^[a-z]']
+        when: {kind: [paragraph, list_item]}
+        unless: ['^(e\.g\.|i\.e\.|a\)|b\)|c\)|[a-z]\))']
+        confidence: 0.5
+    default: ok
+    default_confidence: 0.7
+
+  nature:
+    mode: first
+    rules:
+      - id: def-table
+        value: definition
+        any: ['^(abbreviation|acronym|term|notation)s?\s*:']
+        confidence: 0.9
+      - id: def-acronym
+        value: definition
+        any: ['^(?-i:[A-Z][A-Za-z0-9/&\-]{1,12})\s*[:\u2013-]\s+(?-i:[A-Z])']
+        unless: ['\b(shall|must|will|should)\b']
+        max_len: 200
+        confidence: 0.6
+      - id: def-heading
+        value: definition
+        when: {heading: ['abbreviation', 'acronym', 'glossary', 'definition', 'terminology']}
+        max_len: 250
+        confidence: 0.8
+      - id: ref-doc-table
+        value: reference
+        when: {kind: [table_row], heading: ['applicable doc', 'reference doc', '\bdocuments?\b']}
+        confidence: 0.8
+      - id: ref-pointer
+        value: reference
+        any: ['\b(see|refer to|according to|as (described|defined|documented|specified|detailed|given) in|(is|are) (described|defined|documented|specified|detailed|given) in)\b']
+        unless: ['\b(shall|must|will)\b', '\b(has|have|is|are) (been )?(performed|carried out|conducted)\b']
+        confidence: 0.6
+      - id: compliance
+        value: compliance_statement
+        any: ['\b(fully|partially|not)\s+compl(y|ies|iant)\b', '\bcompliance (matrix|statement|to)\b', '\bstatement of compliance\b', '\bdeviations?\b', '\bnon-?compliant\b', '\b(is|are) compliant\b', '\bcomplies with\b']
+        confidence: 0.7
+      - id: bidder-instr
+        value: bidder_instruction
+        any: ['\b(proposal|offer|bid|tender)s?\b.{0,80}\b(shall|must|should)\b.{0,60}\b(include|contain|describe|provide|address|be submitted)', '\bsubmi(t|ssion|tted)\b.{0,60}\b(by|before|no later than|deadline)\b']
+        when: {side: [prime, null]}
+        confidence: 0.7
+      - id: req-modal
+        value: requirement
+        any: ['\bshall\b', '\bmust\b', '\b(is|are) required to\b']
+        when: {side: [prime, null]}
+        confidence: 0.85
+      - id: rec-modal
+        value: recommendation
+        any: ['\bshould\b', '\b(is|are) recommended\b']
+        when: {side: [prime, null]}
+        confidence: 0.75
+      - id: option
+        value: option
+        any: ['\bmay\b', '\boptional(ly)?\b', '\b(as an |the )option\b', '\boption:', '\bcan be (offered|selected|ordered|provided) as\b']
+        confidence: 0.6
+      - id: commit-supplier-shall
+        value: commitment
+        any: ['\bshall\b', '\bmust\b']
+        when: {side: [supplier]}
+        confidence: 0.7
+      - id: commit-terms
+        value: commitment
+        any: ['^(payment|delivery|validity|warranty|price|lead time)s?\s*:']
+        when: {side: [supplier]}
+        confidence: 0.6
+      - id: commit-will
+        value: commitment
+        any: ['\bwill\b', '\bwe (will|perform|provide|deliver|use|apply|ensure)\b', '\b(is|are) (performed|carried out|conducted|verified|tested|delivered|provided|applied|ensured|implemented|followed|reviewed|controlled|documented)\b']
+        confidence: 0.65
+      - id: context
+        value: context
+        any: ['^(this|the present) (document|plan|section|chapter|proposal|description)\b', '\b(purpose|scope|aim) of this\b', '\bintroduc(es|tion)\b', '\bthis (document|plan) (describes|presents|defines|outlines)']
+        confidence: 0.6
+    default: description
+    default_confidence: 0.4
+
+  domain:
+    mode: score
+    rules:
+      - value: legal
+        any: ['\bliabilit', '\bintellectual property\b', '(?-i:\bIPR\b)', '\bconfidential', '\bexport control', '(?-i:\bECCN\b)', '\bgoverning law\b', '\bjurisdiction\b', '\bindemn', '\btermination\b', '\bforce majeure\b', '\bpatent', '\blegal\b', '\bdispute']
+      - value: commercial
+        any: ['\bprices?\b', '\bpricing\b', '\bcosts?\b', '\bpayment', '\binvoic', '(?-i:\bEUR\b)', '€', '\bdiscount', '\bvalidity\b', '\bquotation\b', '(?-i:\bFFP\b)', '\bfirm fixed\b', '\bwarranty\b', '\bcurrency\b', '\bfees?\b']
+      - value: schedule
+        any: ['\bschedule', '\bmilestone', '\bweeks?\b', '\bmonths?\b', '\bkick-?off\b', '(?-i:\b(SRR|PDR|CDR|QR|AR|EQSR|MRR|TRR)\b)', '\blead time\b', '\bduration\b', '\bdelivery (date|time)\b', '(?-i:\bT0\b)']
+      - value: deliverables
+        any: ['\bdeliverables?\b', '\bdeliver(s)?\b', '\b(test|analysis|inspection) reports?\b', '\bdeliver(ed|y)? (to|with)\b', '\bdata package\b', '\b(user )?manual\b', '(?-i:\bDRL\b)', '(?-i:\bDRD\b)', '\bdocumentation\b', '\bsubmitted to the customer\b']
+      - value: product_assurance
+        any: ['\bquality\b', '\bproduct assurance\b', '(?-i:\bPA\b)', '\bdependability\b', '\breliability\b', '\bsafety\b', '(?-i:\bFMECA\b)', '(?-i:\bFMEA\b)', '(?-i:\bEEE\b)', '\bcomponents?\b', '\bparts\b', '\bmaterials?\b', '\bprocess(es)?\b', '(?-i:\bNCR\b)', '\bnon-?conformanc', '\bcleanliness\b', '(?-i:\bESD\b)', '\btraceability\b', '\bderating\b', '\bECSS-Q', '\bscreening\b', '\baudit', '\bsoldering\b', '\bworkmanship\b']
+      - value: verification
+        any: ['\btest(s|ing|ed)?\b', '\bverif(y|ied|ication)\b', '\bqualif(y|ied|ication)\b', '\bacceptance\b', '\binspection\b', '\banalys(is|es)\b', '\bvibration\b', '\bthermal vacuum\b', '(?-i:\bTVAC\b)', '\bshock\b', '(?-i:\bEMC\b)', '\bburn-?in\b', '\bthermal cycl', '\bflight (unit|model)s?\b', '\bvalidation\b', '\bcampaign\b']
+      - value: management
+        any: ['\bproject\b', '\bmanagement\b', '\bmanager\b', '\borgani[sz]ation\b', '\bconfiguration\b', '\brisks?\b', '\breport(s|ing)?\b', '\bmeetings?\b', '\bsubcontract', '\bplanning\b', '\bwork package', '(?-i:\bWBS\b)', '\bprogress\b', '\bteam\b', '\bscrum\b', '\bsprint\b', '\bbacklog\b', '\bstakeholder', '(?-i:\bSoW\b)', '\bstatement of work\b']
+      - value: technical
+        any: ['\bprocessor\b', '\bmemory\b', '\binterfaces?\b', '\bpower\b', '\bvoltage\b', '\bthermal\b', '\bradiation\b', '\bmass\b', '\bdimensions?\b', '\bsoftware\b', '\bfirmware\b', '\bhardware\b', '\bboards?\b', '\bmodules?\b', '\bbus\b', '(?-i:\bCAN\b)', '\bSpaceWire\b', '(?-i:\bUART\b)', '\btelemetry\b', '\btelecommand\b', '\bTM/TC\b', '(?-i:\bGNSS\b)', '(?-i:\bGPS\b)', '\bantenna\b', '\bperformance\b', '\bredundan', '\bsignals?\b', '\bchannels?\b', '\bfrequency\b', '\b[MGk]Hz\b', '\b[MGk]bps\b', '°C', '\bkg\b', '(?-i:\b\d+\s?W\b)', '\bmode\b', '(?-i:\bFPGA\b)', '(?-i:\bCPU\b)', '\bdesign\b', '\bunit\b']
+    default: technical
+    default_confidence: 0.3
+
+  destination:
+    mode: first
+    rules:
+      - id: none-context
+        value: none
+        when: {nature: [context, definition]}
+        confidence: 0.8
+      - id: none-noise
+        value: none
+        when: {extraction_quality: [noise]}
+        confidence: 0.8
+    then_map:
+      from: domain
+      map: {technical: P, verification: P, product_assurance: P, management: P, schedule: P, deliverables: P, commercial: Q, legal: PQ}
+      confidence: 0.6
+    default: P
+    default_confidence: 0.4
+
+  required_action:
+    mode: first
+    rules:
+      - id: act-quote
+        value: quote
+        when: {side: [prime], nature: [requirement, recommendation], domain: [commercial]}
+        confidence: 0.7
+      - id: act-deliver
+        value: produce_deliverable
+        when: {side: [prime], nature: [requirement, recommendation], domain: [deliverables]}
+        confidence: 0.7
+      - id: act-info
+        value: provide_information
+        when: {side: [prime], nature: [bidder_instruction]}
+        confidence: 0.7
+      - id: act-comply
+        value: declare_compliance
+        when: {side: [prime], nature: [requirement, recommendation, option]}
+        confidence: 0.7
+    default: none
+    default_confidence: 0.6
+
+  flags:
+    mode: multi
+    rules:
+      - id: multi-req
+        value: multiple_requirements
+        any: ['\b(shall|must)\b']
+        count_min: 2
+        confidence: 0.7
