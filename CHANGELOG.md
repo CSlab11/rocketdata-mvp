@@ -43,6 +43,11 @@
 - REQ-163 annullato — è una convenzione globale di tracciabilità (`~/.claude/skills/req/conventions.md`), non un requisito
 - REQ-164 annullato — è una convenzione globale di tracciabilità (`~/.claude/skills/req/conventions.md`), non un requisito
 - REQ-165 annullato — è una convenzione globale di tracciabilità (`~/.claude/skills/req/conventions.md`), non un requisito
+- REQ-169 richiesto — Script `req-annullati.ps1` che toglie i requisiti annullati dal file di una cartella (`-Path`)
+- REQ-170 richiesto — `req-annullati.ps1`: citazioni rimaste degli ID tolti marcate con `(annullato)`
+- REQ-171 richiesto — `req-annullati.ps1`: anteprima con `-WhatIf` senza modifiche
+- REQ-172 richiesto — `req-annullati.ps1`: conservata la riga con l'ID più alto, per non riusare i numeri
+- REQ-173 richiesto — Task VS Code che eseguono `req-annullati.ps1` per ogni cartella di tool
 
 ## 2026-11-01
 - REQ-079 richiesto — rocket-tag: Il pacchetto deve essere implementato in Rust come parte del progetto `rocketdata-mvp`, in un crate dedicato compilabile ed eseguibile senza le altre parti della pipeline
