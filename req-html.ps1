@@ -1,5 +1,5 @@
 ﻿# Genera l'ipertesto HTML dei requisiti di una repository (REQ-154), da aprire nel browser senza server né Internet:
-#   una pagina per il progetto e per ogni tool o sotto-tool (REQ-155).
+#   una pagina per il progetto e per ogni tool o sotto-tool (REQ-155, REQ-156).
 # Funziona su qualunque repository con la struttura di REQ-151: docs\REQUIREMENTS.md nella radice per il progetto,
 # <cartella>\docs\REQUIREMENTS.md per ogni tool. Lo script non appartiene a nessun tool (REQ-005).
 # Uso: .\req-html.ps1 -Repo <radice della repository>   (pagine in <Repo>\docs\html)
@@ -39,8 +39,20 @@ $Pages = @(foreach ($Dir in Find-ReqDirs $Repo) {
     }
 })
 
-# --- Markdown → HTML -----------------------------------------------------------------------------------------------
+# --- Markdown → HTML (REQ-156) -------------------------------------------------------------------------------------
+# Solo ciò che compare nei file dei requisiti: titoli, paragrafi, elenchi, tabelle GFM, blocchi di codice,
+# separatori, commenti HTML e, nel testo, codice, grassetto, corsivo e link.
 function Enc([string]$s) { [System.Net.WebUtility]::HtmlEncode($s) }
+
+# I link relativi sono ricalcolati dalla cartella di uscita, così restano validi.
+function Resolve-Href([string]$Url, [string]$SrcDir) {
+    if ($Url -match '^(#|[a-zA-Z][a-zA-Z0-9+.-]*:)') { return $Url }
+    $Parts = $Url -split '#', 2
+    $Abs = [IO.Path]::GetFullPath((Join-Path $SrcDir ([Uri]::UnescapeDataString($Parts[0]))))
+    $Href = ([Uri]"$Out\").MakeRelativeUri([Uri]$Abs).ToString()
+    if ($Parts.Count -gt 1) { $Href += '#' + $Parts[1] }
+    $Href
+}
 
 function Format-Plain([string]$s) {
     $s = Enc ($s -replace '\\([!-/:-@\[-`{-~])', '$1')
@@ -49,13 +61,18 @@ function Format-Plain([string]$s) {
     $s
 }
 
-$InlineTokens = '`([^`]+)`'
+$InlineTokens = '`([^`]+)`|\[((?:`[^`]*`|[^\]`])+)\]\(([^)\s]+)\)'
 function Format-Inline([string]$s, [string]$SrcDir) {
     $sb = New-Object System.Text.StringBuilder
     $pos = 0
     foreach ($m in [regex]::Matches($s, $InlineTokens)) {
         [void]$sb.Append((Format-Plain $s.Substring($pos, $m.Index - $pos)))
-        [void]$sb.Append('<code>' + (Enc $m.Groups[1].Value) + '</code>')
+        if ($m.Groups[1].Success) {
+            [void]$sb.Append('<code>' + (Enc $m.Groups[1].Value) + '</code>')
+        } else {
+            $Href = Enc (Resolve-Href $m.Groups[3].Value $SrcDir)
+            [void]$sb.Append('<a href="' + $Href + '">' + (Format-Inline $m.Groups[2].Value $SrcDir) + '</a>')
+        }
         $pos = $m.Index + $m.Length
     }
     [void]$sb.Append((Format-Plain $s.Substring($pos)))
@@ -70,8 +87,9 @@ function Split-Row([string]$Line) {
     , @(($l -replace '\\\|', $Esc) -split '\|' | ForEach-Object { $_.Trim().Replace($Esc, '|') })
 }
 
+$ListItem = '^(\s*)([-*+]|\d+[.)])\s+(.*)$'
 $TableSep = '^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$'
-$BlockStart = '^(#{1,6})\s|^\s*\|'
+$BlockStart = '^(#{1,6})\s|^\s*(```|~~~)|^\s*\|'
 
 function Convert-Body($P) {
     $L = $P.Lines; $n = $L.Count; $i = 0
@@ -79,12 +97,24 @@ function Convert-Body($P) {
     $sb = New-Object System.Text.StringBuilder
     while ($i -lt $n) {
         $Line = $L[$i]
-        if ($Line -match '^\s*$') { $i++ }
+        if ($Line -match '^\s*(```|~~~)') {
+            $Fence = $Matches[1]; $i++
+            $Code = New-Object System.Collections.Generic.List[string]
+            while ($i -lt $n -and $L[$i] -notmatch "^\s*$Fence") { $Code.Add($L[$i]); $i++ }
+            $i++
+            [void]$sb.Append('<pre><code>' + (Enc ($Code -join "`n")) + "</code></pre>`n")
+        }
+        elseif ($Line -match '^\s*$') { $i++ }
+        elseif ($Line -match '^\s*<!--') {
+            while ($i -lt $n -and $L[$i] -notmatch '-->') { $i++ }
+            $i++
+        }
         elseif ($Line -match '^(#{1,6})\s+(.*?)\s*#*\s*$') {
             $h = $Matches[1].Length
             [void]$sb.Append("<h$h>" + (Format-Inline $Matches[2] $Src) + "</h$h>`n")
             $i++
         }
+        elseif ($Line -match '^\s*([-*_])(\s*\1){2,}\s*$') { [void]$sb.Append("<hr>`n"); $i++ }
         elseif ($Line -match '^\s*\|' -and $i + 1 -lt $n -and $L[$i + 1] -match $TableSep) {
             $Head = Split-Row $Line
             $i += 2
@@ -107,10 +137,32 @@ function Convert-Body($P) {
             }
             [void]$sb.Append("</tbody></table></div>`n")
         }
+        elseif ($Line -match $ListItem) {
+            $Items = New-Object System.Collections.Generic.List[object]
+            while ($i -lt $n) {
+                $Cur = $L[$i]
+                if ($Cur -match $ListItem) {
+                    $Ind = $Matches[1].Length; $Mark = $Matches[2]; $Text = $Matches[3]
+                    $Items.Add([pscustomobject]@{ Ind = $Ind; Tag = $(if ($Mark -match '\d') { 'ol' } else { 'ul' }); Text = $Text })
+                    $i++
+                }
+                elseif ($Cur -match '^\s+\S') { $Items[$Items.Count - 1].Text += ' ' + $Cur.Trim(); $i++ }
+                elseif ($Cur -match '^\s*$' -and $i + 1 -lt $n -and ($L[$i + 1] -match '^\s+\S' -or $L[$i + 1] -match $ListItem)) { $i++ }
+                else { break }
+            }
+            $Stack = New-Object System.Collections.Stack
+            foreach ($It in $Items) {
+                while ($Stack.Count -and $It.Ind -lt $Stack.Peek()[0]) { [void]$sb.Append('</li></' + $Stack.Pop()[1] + ">`n") }
+                if ($Stack.Count -and $It.Ind -eq $Stack.Peek()[0]) { [void]$sb.Append("</li>`n") }
+                else { [void]$sb.Append('<' + $It.Tag + ">`n"); $Stack.Push(@($It.Ind, $It.Tag)) }
+                [void]$sb.Append('<li>' + (Format-Inline $It.Text $Src))
+            }
+            while ($Stack.Count) { [void]$sb.Append('</li></' + $Stack.Pop()[1] + ">`n") }
+        }
         else {
             $Para = New-Object System.Collections.Generic.List[string]
             $Para.Add($Line.Trim()); $i++
-            while ($i -lt $n -and $L[$i] -notmatch '^\s*$' -and $L[$i] -notmatch $BlockStart) { $Para.Add($L[$i].Trim()); $i++ }
+            while ($i -lt $n -and $L[$i] -notmatch '^\s*$' -and $L[$i] -notmatch $BlockStart -and $L[$i] -notmatch $ListItem) { $Para.Add($L[$i].Trim()); $i++ }
             [void]$sb.Append('<p>' + (Format-Inline ($Para -join ' ') $Src) + "</p>`n")
         }
     }
@@ -129,6 +181,8 @@ h1{font-size:24px;margin:8px 0 16px}
 h2{font-size:19px;margin-top:32px;padding-bottom:4px;border-bottom:1px solid var(--line)}
 h3{font-size:16px;margin-top:24px}
 code{font:13px/1.4 Consolas,ui-monospace,monospace;background:var(--head);padding:1px 4px;border-radius:3px}
+pre{background:var(--head);padding:12px;overflow-x:auto;border-radius:4px}
+pre code{padding:0;background:none}
 .tbl{margin:16px 0}
 table{border-collapse:collapse;width:100%}
 th,td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
