@@ -83,7 +83,7 @@ Concept: [CONCEPT.md](CONCEPT.md). Stati: `aperto`, `implementato`, `annullato`.
 | REQ-073 | Lo strumento di valutazione deve calcolare falsi "conforme", accuratezza dell'esito, recall e precisione delle evidenze, accuratezza delle risposte, tracciabilità e riproducibilità, e confrontarle con le soglie del concept. Annullato da REQ-084 (validazione rimossa dal concept). | annullato | — |
 | REQ-041 | Il report di valutazione deve indicare, per ogni metrica sotto soglia, il passo della pipeline in cui si originano gli errori. Annullato da REQ-084 (validazione rimossa dal concept). | annullato | — |
 | REQ-042 | Lo strumento di valutazione deve esportare l'elenco dei fatti derivati per la revisione manuale. Annullato da REQ-084 (validazione rimossa dal concept). | annullato | — |
-| REQ-084 | Il concept (`docs/CONCEPT.md`) non deve contenere criteri di successo con soglie di validazione né un criterio di uscita della v1 basato su di esse; deve conservare l'assunzione che la ground truth non si usa per addestrare né per i prompt few-shot. | aperto | — |
+| REQ-084 | Il concept (`docs/CONCEPT.md`) non deve contenere criteri di successo con soglie di validazione né un criterio di uscita della v1 basato su di esse; deve conservare l'assunzione che la ground truth non si usa per addestrare né per i prompt few-shot. | implementato | `thin-decoder/docs/CONCEPT.md` |
 
 ### Programma deterministico in Rust (`domanda`, modalità 1)
 

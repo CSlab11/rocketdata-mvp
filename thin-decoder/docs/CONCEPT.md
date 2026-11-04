@@ -67,22 +67,6 @@ L'LLM propone, le regole verificano: nulla entra nel grafo o nella risposta senz
 
 Estrazione ed elaborazione si scelgono come sopra; interpretazione delle domande e proposta di ontologia si attivano separatamente. Riproducibilità: temperatura 0, seed fisso e **cache su file** delle risposte, indicizzata dall'hash di modello, versione, prompt e schema. Se il server non risponde e la risposta non è in cache, l'esecuzione si ferma con un errore.
 
-## Criteri di successo (soglie v1)
-
-| Metrica | Soglia |
-|---|---|
-| Falsi "conforme" | 0 |
-| Accuratezza esito verifica | ≥ 80% |
-| Recall delle evidenze | ≥ 80% |
-| Precisione delle evidenze | ≥ 70% |
-| Accuratezza risposte a domande | ≥ 90% |
-| Tracciabilità delle affermazioni | 100% |
-| Correttezza dei fatti derivati (revisione manuale) | 100% |
-| Riproducibilità degli esiti (due esecuzioni) | 100% |
-
-Le soglie sono il **criterio di uscita** della v1: se una non è rispettata, la v1 si chiude con un report che indica metrica e passo della pipeline responsabili.
-
-
 ## Fuori scope v1 (requisiti opzionali)
 
 - Tipi `sintesi`, `confronto`, `lacune`.
