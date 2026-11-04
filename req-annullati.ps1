@@ -52,5 +52,54 @@ foreach ($R in $Remove) { Write-Host "  tolto $($R.Id)" }
 if (-not $Remove) { Write-Host '  nessun requisito annullato'; return }
 
 $Gone = @{}; foreach ($R in $Remove) { $Gone[$R.Index] = $true }
+
+# --- Citazioni rimaste (REQ-170) -----------------------------------------------------------------------------------
+# Ogni citazione di un ID tolto riceve " (annullato)", se non l'ha già. Nel file stesso si cercano gli ID senza
+# prefisso (non preceduti da lettera, cifra, _ o -, così thin-decoder_REQ-001 resta fuori); se la cartella è un tool,
+# negli altri file dei requisiti della repository si cercano gli ID qualificati <tool>_REQ-NNN. Un ID senza prefisso
+# in un altro file indica quel file o il progetto, mai il tool, e non si tocca.
+$Alt = ($Remove | ForEach-Object { $_.Num.ToString('000') }) -join '|'
+function Mark-Refs($D, [string]$Prefix, $SkipIndex) {
+    $Re = '(?<![\w-])' + [regex]::Escape($Prefix) + 'REQ-(' + $Alt + ')(?!\d)(?! ?\(annullato\))'
+    for ($i = 0; $i -lt $D.Lines.Count; $i++) {
+        if ($SkipIndex -and $SkipIndex[$i]) { continue }
+        $New = [regex]::Replace($D.Lines[$i], $Re, '$0 (annullato)')
+        if ($New -ne $D.Lines[$i]) {
+            $Ids = ([regex]::Matches($D.Lines[$i], $Re) | ForEach-Object { $_.Value }) -join ', '
+            Write-Host "  riga $($i + 1): $Ids (annullato)"
+            $D.Lines[$i] = $New
+            $D.Changed = $true
+        }
+    }
+}
+
+$Doc | Add-Member Changed $true
+Mark-Refs $Doc '' $Gone
 $Doc.Lines = [Collections.Generic.List[string]]@(for ($i = 0; $i -lt $Doc.Lines.Count; $i++) { if (-not $Gone[$i]) { $Doc.Lines[$i] } })
+$Others = @()
+
+$Repo = git -C $Dir rev-parse --show-toplevel
+if ($LASTEXITCODE -ne 0) { throw "la cartella non è in una repository git: $Dir" }
+$Repo = (Resolve-Path -LiteralPath $Repo).Path.TrimEnd('\')
+if ($Dir -ne $Repo) {
+    $Prefix = (Split-Path -Leaf $Dir) + '_'
+    $Skip = @('.git', 'target', 'node_modules')
+    function Find-ReqFiles([string]$D) {
+        $F = Join-Path $D 'docs\REQUIREMENTS.md'
+        if ((Test-Path -LiteralPath $F -PathType Leaf) -and $F -ne $File) { $F }
+        foreach ($Sub in Get-ChildItem -LiteralPath $D -Directory -Force -ErrorAction SilentlyContinue) {
+            if ($Skip -contains $Sub.Name -or ($Sub.Attributes -band [IO.FileAttributes]::ReparsePoint)) { continue }
+            Find-ReqFiles $Sub.FullName
+        }
+    }
+    foreach ($F in Find-ReqFiles $Repo) {
+        $O = Read-Lines $F
+        $O | Add-Member Changed $false
+        Write-Host $F
+        Mark-Refs $O $Prefix $null
+        if ($O.Changed) { $Others += $O } else { Write-Host '  nessuna citazione' }
+    }
+}
+
 Write-Lines $Doc
+foreach ($O in $Others) { Write-Lines $O }
