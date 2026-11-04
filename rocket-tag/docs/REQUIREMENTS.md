@@ -4,7 +4,7 @@ Pacchetto Rust del progetto `rocketdata-mvp` che classifica i paragrafi di docum
 
 Requisiti del tool `rocket-tag`. I requisiti di progetto e la tabella dei bug sono in [`docs/REQUIREMENTS.md`](../../docs/REQUIREMENTS.md); gli ID `REQ-NNN` sono unici in tutto il repository.
 
-Provengono da [`classifier-handoff/requirements.md`](../../classifier-handoff/requirements.md), che conserva gli ID locali originali: il REQ-n locale corrisponde qui a REQ-(n + 78). Le appendici A–G sono normative: i requisiti vi rimandano. L'appendice I elenca i file di riferimento, che si trovano in `classifier-handoff/reference/`.
+Provengono dal pacchetto di passaggio del classificatore, che conserva gli ID locali originali: il REQ-n locale corrisponde qui a REQ-(n + 78). Le appendici A–G sono normative: i requisiti vi rimandano. L'appendice I elenca i file di riferimento; quelli usati dal tool sono in `rocket-tag/config/`.
 
 ## Confini
 
