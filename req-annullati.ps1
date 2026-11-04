@@ -1,8 +1,10 @@
 ﻿# Toglie i requisiti annullati dal file dei requisiti di una cartella, del progetto o di un tool (REQ-169).
 # Lo script non appartiene a nessun tool (REQ-005).
-# Uso: .\req-annullati.ps1 -Path <cartella del progetto o di un tool>
+# Con -WhatIf elenca le righe da togliere e le citazioni da aggiornare senza scrivere nulla (REQ-171).
+# Uso: .\req-annullati.ps1 -Path <cartella del progetto o di un tool> [-WhatIf]
 param(
-    [Parameter(Mandatory = $true)][string]$Path
+    [Parameter(Mandatory = $true)][string]$Path,
+    [switch]$WhatIf
 )
 $ErrorActionPreference = 'Stop'
 
@@ -101,5 +103,6 @@ if ($Dir -ne $Repo) {
     }
 }
 
+if ($WhatIf) { Write-Host 'Anteprima (-WhatIf): nessun file modificato.'; return }
 Write-Lines $Doc
 foreach ($O in $Others) { Write-Lines $O }
