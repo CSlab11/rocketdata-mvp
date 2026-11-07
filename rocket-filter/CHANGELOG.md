@@ -1,0 +1,42 @@
+# Changelog
+
+## 2026-11-07
+- REQ-001 richiesto — Tool Python autonomo in `rocket-filter/`, dati generati esclusi da git
+- REQ-002 richiesto — `setup_model.py` scarica una volta il modello di embedding
+- REQ-003 richiesto — Funzionamento offline con il modello locale
+- REQ-004 richiesto — Parametri letti da `config.yaml`
+- REQ-005 richiesto — Categorie, categorie trasversali e temi letti da `categorie.yaml`
+- REQ-006 richiesto — Gruppi ramo, disciplina e nodo e membri delle categorie
+- REQ-007 richiesto — Embedder fittizio con `ECSS_TEST_EMBEDDER=1`
+- REQ-008 richiesto — Selezione del PDF della versione attiva di ogni standard
+- REQ-009 richiesto — Segmentazione dei PDF in unità con metadati
+- REQ-010 richiesto — Scarto di intestazioni, piè di pagina, indice e capitoli senza contenuto utile
+- REQ-011 richiesto — Divisione delle unità più lunghe di `max_caratteri_unita`
+- REQ-012 richiesto — Embedding delle unità e archivio in `index/`
+- REQ-013 richiesto — Ingestione incrementale, `--forza` e `--solo`
+- REQ-014 richiesto — Rimozione degli standard non più in `categorie.yaml`
+- REQ-015 richiesto — PDF illeggibili segnalati senza interrompere l'ingestione
+- REQ-016 richiesto — Rigenerazione di temi, prototipi e vocabolario, `--solo-prototipi`
+- REQ-017 richiesto — Membri dei temi generici da ancore e semi
+- REQ-018 richiesto — Prototipi di categoria con k-means sferico
+- REQ-019 richiesto — Descrizione delle categorie nell'indice
+- REQ-020 richiesto — Vocabolario di parole singole da definizioni, titoli e sigle
+- REQ-021 richiesto — Riconoscimento delle sigle
+- REQ-022 richiesto — Vettori delle parole da parola e contesto ECSS
+- REQ-023 richiesto — Occorrenze, concentrazione, specificità e punteggio per parola e categoria
+- REQ-024 richiesto — `query.py categorie`
+- REQ-025 richiesto — `query.py termini`
+- REQ-026 richiesto — `query.py lessico`
+- REQ-027 richiesto — `query.py membri`
+- REQ-028 richiesto — `query.py unita`
+- REQ-029 richiesto — `query.py`: uscita `--json` ed errore su categoria sconosciuta
+- REQ-030 richiesto — Errore se mancano prototipi o vocabolario
+- REQ-031 richiesto — `classify.py`: estrazione dei paragrafi da PDF, DOCX, TXT, MD e `--testo`
+- REQ-032 richiesto — `classify.py`: cache degli embeddings dei paragrafi
+- REQ-033 richiesto — `classify.py`: scelta dei livelli con `--livelli`
+- REQ-034 richiesto — `classify.py`: assegnazione per livello con soglia, margine e massimo di categorie
+- REQ-035 richiesto — `classify.py`: `--soglia` e `--margine` per tutti i livelli
+- REQ-036 richiesto — `classify.py`: termini di supporto per paragrafo
+- REQ-037 richiesto — `classify.py`: uscita JSONL o CSV
+- REQ-038 richiesto — `classify.py`: dettaglio e riepilogo a video
+- REQ-039 richiesto — `README.md` con installazione, uso e calibrazione
