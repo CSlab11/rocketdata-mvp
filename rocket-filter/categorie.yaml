@@ -1,0 +1,464 @@
+# Albero delle categorie ECSS
+# Fonte: elenco standard attivi su ecss.nl (144 standard, stato novembre 2026)
+# Livelli: ramo > disciplina > (sotto-disciplina) > standard
+# Ogni categoria ha un `parent` (null = radice): si mappa su categories.parent_id.
+# `descrizione`: da popolare in ingestione con lo Scope (clausola 1) degli standard.
+
+categorie:
+
+  # ───────────── S – Sistema ECSS ─────────────
+  - id: S
+    nome: ECSS system
+    parent: null
+  - id: S-00
+    nome: Sistema ECSS, policy e glossario
+    parent: S
+    standard:
+      - {codice: "ECSS-S-ST-00C Rev.2", titolo: "Description, implementation and general requirements"}
+      - {codice: "ECSS-S-ST-00-01C Rev.1", titolo: "Glossary of terms"}
+      - {codice: "ECSS-S-ST-00-02C Draft 1", titolo: "Tailoring"}
+      - {codice: "ECSS-P-00C Rev.1", titolo: "Standardization objectives, policies and organization"}
+
+  # ───────────── M – Management ─────────────
+  - id: M
+    nome: Space project management
+    parent: null
+  - id: M-10
+    nome: Project planning and implementation
+    parent: M
+    standard:
+      - {codice: "ECSS-M-ST-10C Rev.1", titolo: "Project planning and implementation"}
+      - {codice: "ECSS-M-ST-10-01C", titolo: "Organization and conduct of reviews"}
+  - id: M-40
+    nome: Configuration and information management
+    parent: M
+    standard:
+      - {codice: "ECSS-M-ST-40C Rev.1", titolo: "Configuration and information management"}
+  - id: M-60
+    nome: Cost and schedule management
+    parent: M
+    standard:
+      - {codice: "ECSS-M-ST-60C", titolo: "Cost and schedule management"}
+  - id: M-80
+    nome: Risk management
+    parent: M
+    standard:
+      - {codice: "ECSS-M-ST-80C", titolo: "Risk management"}
+
+  # ───────────── E – Engineering ─────────────
+  - id: E
+    nome: Space engineering
+    parent: null
+  - id: E-10
+    nome: System engineering
+    parent: E
+    standard:
+      - {codice: "ECSS-E-ST-10C Rev.1", titolo: "System engineering general requirements"}
+      - {codice: "ECSS-E-ST-10-02C Rev.1", titolo: "Verification"}
+      - {codice: "ECSS-E-ST-10-03C Rev.1", titolo: "Testing"}
+      - {codice: "ECSS-E-ST-10-04C Rev.1", titolo: "Space environment"}
+      - {codice: "ECSS-E-ST-10-06C", titolo: "Technical requirements specification"}
+      - {codice: "ECSS-E-ST-10-09C", titolo: "Reference coordinate system"}
+      - {codice: "ECSS-E-ST-10-11C", titolo: "Human factors engineering"}
+      - {codice: "ECSS-E-ST-10-12C", titolo: "Methods for the calculation of radiation received and its effects, and a policy for design margins"}
+      - {codice: "ECSS-E-ST-10-24C Rev.1", titolo: "Interface management"}
+      - {codice: "ECSS-E-AS-11C", titolo: "Adoption Notice of ISO 16290 – Technology Readiness Levels (TRLs)"}
+  - id: E-20
+    nome: Electrical and electronic engineering
+    parent: E
+    standard:
+      - {codice: "ECSS-E-ST-20C Rev.2", titolo: "Electrical and electronic"}
+      - {codice: "ECSS-E-ST-20-01C", titolo: "Multipactor design and test"}
+      - {codice: "ECSS-E-ST-20-06C Rev.1", titolo: "Spacecraft charging"}
+      - {codice: "ECSS-E-ST-20-07C Rev.2", titolo: "Electromagnetic compatibility"}
+      - {codice: "ECSS-E-ST-20-08C Rev.2", titolo: "Photovoltaic assemblies and components"}
+      - {codice: "ECSS-E-ST-20-20C", titolo: "Electrical design and interface requirements for power supply"}
+      - {codice: "ECSS-E-ST-20-21C", titolo: "Electrical design and interface requirements for actuators"}
+      - {codice: "ECSS-E-ST-20-40C", titolo: "ASIC, FPGA and IP Core engineering"}
+  - id: E-30
+    nome: Mechanical engineering
+    parent: E
+  - id: E-31
+    nome: Thermal control
+    parent: E-30
+    standard:
+      - {codice: "ECSS-E-ST-31C", titolo: "Thermal control"}
+      - {codice: "ECSS-E-ST-31-02C Rev.1", titolo: "Two-phase heat transport equipment"}
+      - {codice: "ECSS-E-ST-31-04C", titolo: "Exchange of thermal analysis data"}
+  - id: E-32
+    nome: Structural
+    parent: E-30
+    standard:
+      - {codice: "ECSS-E-ST-32C Rev.1", titolo: "Structural general requirements"}
+      - {codice: "ECSS-E-ST-32-01C Rev.2", titolo: "Fracture control"}
+      - {codice: "ECSS-E-ST-32-02C Rev.2", titolo: "Structural design and verification of pressurized hardware"}
+      - {codice: "ECSS-E-ST-32-03C", titolo: "Structural finite element models"}
+      - {codice: "ECSS-E-ST-32-08C Rev.1", titolo: "Materials"}
+      - {codice: "ECSS-E-ST-32-10C Rev.2 Corr.1", titolo: "Structural factors of safety for spaceflight hardware"}
+      - {codice: "ECSS-E-ST-32-11C", titolo: "Modal survey assessment"}
+  - id: E-33
+    nome: Mechanisms and explosive devices
+    parent: E-30
+    standard:
+      - {codice: "ECSS-E-ST-33-01C Rev.2", titolo: "Mechanisms"}
+      - {codice: "ECSS-E-ST-33-11C Rev.1", titolo: "Explosive subsystems and devices"}
+  - id: E-34
+    nome: Environmental control and life support (ECLS)
+    parent: E-30
+    standard:
+      - {codice: "ECSS-E-ST-34C", titolo: "Environmental control and life support (ECLS)"}
+  - id: E-35
+    nome: Propulsion
+    parent: E-30
+    standard:
+      - {codice: "ECSS-E-ST-35C Rev.1", titolo: "Propulsion general requirements"}
+      - {codice: "ECSS-E-ST-35-01C", titolo: "Liquid and electric propulsion for spacecraft"}
+      - {codice: "ECSS-E-ST-35-02C", titolo: "Solid propulsion for spacecrafts and launchers"}
+      - {codice: "ECSS-E-ST-35-03C", titolo: "Liquid propulsion for launchers"}
+      - {codice: "ECSS-E-ST-35-06C Rev.2", titolo: "Cleanliness requirements for spacecraft propulsion hardware"}
+      - {codice: "ECSS-E-ST-35-10C", titolo: "Compatibility testing for liquid propulsion systems"}
+  - id: E-40
+    nome: Software engineering
+    parent: E
+    standard:
+      - {codice: "ECSS-E-ST-40C Rev.1", titolo: "Software"}
+      - {codice: "ECSS-E-ST-40-07C Rev.1", titolo: "Simulation modelling platform – Level 1"}
+      - {codice: "ECSS-E-ST-40-08C", titolo: "Simulation modelling platform – Level 2"}
+  - id: E-50
+    nome: Communications
+    parent: E
+    standard:
+      - {codice: "ECSS-E-ST-50C Rev.2", titolo: "Communications"}
+      - {codice: "ECSS-E-ST-50-02C", titolo: "Ranging and Doppler tracking"}
+      - {codice: "ECSS-E-ST-50-05C Rev.2", titolo: "Radio frequency and modulation"}
+      - {codice: "ECSS-E-ST-50-11C", titolo: "SpaceFibre – Very high-speed serial link"}
+      - {codice: "ECSS-E-ST-50-12C Rev.1", titolo: "SpaceWire – Links, nodes, routers and networks"}
+      - {codice: "ECSS-E-ST-50-13C", titolo: "Interface and communication protocol for MIL-STD-1553B data bus onboard spacecraft"}
+      - {codice: "ECSS-E-ST-50-14C", titolo: "Spacecraft discrete interfaces"}
+      - {codice: "ECSS-E-ST-50-15C", titolo: "CANbus extension protocol"}
+      - {codice: "ECSS-E-ST-50-16C", titolo: "Time-Triggered Ethernet"}
+      - {codice: "ECSS-E-ST-50-51C", titolo: "SpaceWire protocol identification"}
+      - {codice: "ECSS-E-ST-50-52C", titolo: "SpaceWire – Remote memory access protocol"}
+      - {codice: "ECSS-E-ST-50-53C", titolo: "SpaceWire – CCSDS packet transfer protocol"}
+      - {codice: "ECSS-E-AS-50-21C Rev.2", titolo: "Adoption Notice of CCSDS 131.0-B-5, TM Synchronization and Channel Coding"}
+      - {codice: "ECSS-E-AS-50-22C Rev.1", titolo: "Adoption Notice of CCSDS 132.0-B-3, TM Space Data Link Protocol"}
+      - {codice: "ECSS-E-AS-50-23C Rev.1", titolo: "Adoption Notice of CCSDS 732.0-B-4, AOS Space Data Link Protocol"}
+      - {codice: "ECSS-E-AS-50-24C Rev.1", titolo: "Adoption Notice of CCSDS 231.0-B-4, TC Synchronization and Channel Coding"}
+      - {codice: "ECSS-E-AS-50-25C Rev.1", titolo: "Adoption Notice of CCSDS 232.0-B-4, TC Space Data Link Protocol"}
+      - {codice: "ECSS-E-AS-50-26C", titolo: "Adoption Notice of CCSDS 232.1-B-2, Communications Operation Procedure-1"}
+  - id: E-60
+    nome: Control engineering
+    parent: E
+    standard:
+      - {codice: "ECSS-E-ST-60-10C", titolo: "Control performance"}
+      - {codice: "ECSS-E-ST-60-20C Rev.2", titolo: "Star sensor terminology and performance specification"}
+      - {codice: "ECSS-E-ST-60-21C", titolo: "Gyro terminology and performance specification"}
+      - {codice: "ECSS-E-ST-60-30C", titolo: "Satellite attitude and orbit control system (AOCS) requirements"}
+  - id: E-70
+    nome: Ground systems and operations
+    parent: E
+    standard:
+      - {codice: "ECSS-E-ST-70C", titolo: "Ground systems and operations"}
+      - {codice: "ECSS-E-ST-70-01C", titolo: "Spacecraft on-board control procedures"}
+      - {codice: "ECSS-E-ST-70-11C Rev.1", titolo: "Space segment operability"}
+      - {codice: "ECSS-E-ST-70-31C", titolo: "Ground systems and operations – Monitoring and control data definition"}
+      - {codice: "ECSS-E-ST-70-32C", titolo: "Test and operations procedure language"}
+      - {codice: "ECSS-E-ST-70-41C", titolo: "Telemetry and telecommand packet utilization"}
+  - id: E-80
+    nome: Security
+    parent: E
+    standard:
+      - {codice: "ECSS-E-ST-80C", titolo: "Security in space systems lifecycles"}
+
+  # ───────────── Q – Product assurance ─────────────
+  - id: Q
+    nome: Space product assurance
+    parent: null
+  - id: Q-10
+    nome: Product assurance management
+    parent: Q
+    standard:
+      - {codice: "ECSS-Q-ST-10C Rev.1", titolo: "Product assurance management"}
+      - {codice: "ECSS-Q-ST-10-04C", titolo: "Critical-item control"}
+      - {codice: "ECSS-Q-ST-10-09C Rev.1", titolo: "Nonconformance control system"}
+  - id: Q-20
+    nome: Quality assurance
+    parent: Q
+    standard:
+      - {codice: "ECSS-Q-ST-20C Rev.2", titolo: "Quality assurance"}
+      - {codice: "ECSS-Q-ST-20-07C", titolo: "Quality and safety assurance for space test centres"}
+      - {codice: "ECSS-Q-ST-20-08C", titolo: "Storage, handling and transportation of spacecraft hardware"}
+      - {codice: "ECSS-Q-ST-20-10C", titolo: "Off-the-shelf items utilization in space systems"}
+      - {codice: "ECSS-Q-ST-20-30C", titolo: "Manufacturing and control of electrical harness"}
+  - id: Q-30
+    nome: Dependability
+    parent: Q
+    standard:
+      - {codice: "ECSS-Q-ST-30C Rev.1", titolo: "Dependability"}
+      - {codice: "ECSS-Q-ST-30-02C", titolo: "Failure modes, effects (and criticality) analysis (FMEA/FMECA)"}
+      - {codice: "ECSS-Q-ST-30-09C", titolo: "Availability analysis"}
+      - {codice: "ECSS-Q-ST-30-11C Rev.2", titolo: "Derating – EEE components"}
+  - id: Q-40
+    nome: Safety
+    parent: Q
+    standard:
+      - {codice: "ECSS-Q-ST-40C Rev.1", titolo: "Safety"}
+      - {codice: "ECSS-Q-ST-40-02C", titolo: "Hazard analysis"}
+      - {codice: "ECSS-Q-ST-40-12C", titolo: "Fault tree analysis – Adoption notice ECSS/IEC 61025"}
+  - id: Q-60
+    nome: EEE components
+    parent: Q
+    standard:
+      - {codice: "ECSS-Q-ST-60C Rev.4", titolo: "Electrical, electronic and electromechanical (EEE) components"}
+      - {codice: "ECSS-Q-ST-60-03C", titolo: "ASIC, FPGA and IP Core product assurance"}
+      - {codice: "ECSS-Q-ST-60-05C Rev.1", titolo: "Generic procurement requirements for hybrids"}
+      - {codice: "ECSS-Q-ST-60-12C", titolo: "Design, selection, procurement and use of die form MMICs"}
+      - {codice: "ECSS-Q-ST-60-13C Rev.2", titolo: "Commercial EEE components"}
+      - {codice: "ECSS-Q-ST-60-14C Rev.1 Corr.1", titolo: "Relifing procedure – EEE components"}
+      - {codice: "ECSS-Q-ST-60-15C Rev.1", titolo: "Radiation hardness assurance"}
+  - id: Q-70
+    nome: Materials, mechanical parts and processes
+    parent: Q
+    # Disciplina molto ampia: candidata a sotto-categorie (pulizia/contaminazione,
+    # PCB e assemblaggio, test sui materiali, bioburden).
+    standard:
+      - {codice: "ECSS-Q-ST-70C Rev.2", titolo: "Materials, mechanical parts and processes"}
+      - {codice: "ECSS-Q-ST-70-01C Rev.1", titolo: "Cleanliness and contamination control"}
+      - {codice: "ECSS-Q-ST-70-02C", titolo: "Thermal vacuum outgassing test for the screening of space materials"}
+      - {codice: "ECSS-Q-ST-70-03C", titolo: "Black-anodizing of metals with inorganic dyes"}
+      - {codice: "ECSS-Q-ST-70-04C", titolo: "Thermal testing for the evaluation of space materials, processes, mechanical parts and assemblies"}
+      - {codice: "ECSS-Q-ST-70-05C Rev.2", titolo: "Detection of organic contamination of surfaces by infrared spectroscopy"}
+      - {codice: "ECSS-Q-ST-70-06C", titolo: "Particle and UV radiation testing for space materials"}
+      - {codice: "ECSS-Q-ST-70-09C", titolo: "Measurements of thermo-optical properties of thermal control materials"}
+      - {codice: "ECSS-Q-ST-70-12C Rev.1", titolo: "Design rules for printed circuit boards"}
+      - {codice: "ECSS-Q-ST-70-13C Rev.1", titolo: "Measurement of the peel and pull-off strength of coatings and finishes using pressure-sensitive tapes"}
+      - {codice: "ECSS-Q-ST-70-14C", titolo: "Corrosion"}
+      - {codice: "ECSS-Q-ST-70-15C", titolo: "Non-destructive testing"}
+      - {codice: "ECSS-Q-ST-70-16C", titolo: "Adhesive bonding for spacecraft and launcher applications"}
+      - {codice: "ECSS-Q-ST-70-17C", titolo: "Durability testing of coatings"}
+      - {codice: "ECSS-Q-ST-70-18C", titolo: "Preparation, assembly and mounting of RF coaxial cables"}
+      - {codice: "ECSS-Q-ST-70-20C", titolo: "Susceptibility of silver-plated copper wire and cable to red-plague corrosion"}
+      - {codice: "ECSS-Q-ST-70-21C", titolo: "Flammability testing for the screening of space materials"}
+      - {codice: "ECSS-Q-ST-70-22C", titolo: "Control of limited shelf-life materials"}
+      - {codice: "ECSS-Q-ST-70-26C Rev.1 Corr.1", titolo: "Crimping of high-reliability electrical connections"}
+      - {codice: "ECSS-Q-ST-70-28C", titolo: "Repair and modification of printed circuit board assemblies for space use"}
+      - {codice: "ECSS-Q-ST-70-29C", titolo: "Determination of offgassing products from materials and assembled articles (manned crew compartment)"}
+      - {codice: "ECSS-Q-ST-70-30C", titolo: "Wire wrapping of high-reliability electrical connections"}
+      - {codice: "ECSS-Q-ST-70-31C Rev.1", titolo: "Application of paints on space hardware"}
+      - {codice: "ECSS-Q-ST-70-36C", titolo: "Material selection for controlling stress-corrosion cracking"}
+      - {codice: "ECSS-Q-ST-70-37C", titolo: "Determination of the susceptibility of metals to stress-corrosion cracking"}
+      - {codice: "ECSS-Q-ST-70-39C", titolo: "Welding of metallic materials for flight hardware"}
+      - {codice: "ECSS-Q-ST-70-40C", titolo: "Processing and quality assurance requirements for brazing of flight hardware"}
+      - {codice: "ECSS-Q-ST-70-45C", titolo: "Mechanical testing of metallic materials"}
+      - {codice: "ECSS-Q-ST-70-46C Rev.1", titolo: "Requirements for manufacturing and procurement of threaded fasteners"}
+      - {codice: "ECSS-Q-ST-70-50C", titolo: "Particles contamination monitoring for spacecraft systems and cleanrooms"}
+      - {codice: "ECSS-Q-ST-70-53C", titolo: "Materials and hardware compatibility tests for sterilization processes"}
+      - {codice: "ECSS-Q-ST-70-54C", titolo: "Ultracleaning of flight hardware"}
+      - {codice: "ECSS-Q-ST-70-55C", titolo: "Microbial examination of flight hardware and cleanrooms"}
+      - {codice: "ECSS-Q-ST-70-56C", titolo: "Vapour phase bioburden reduction for flight hardware"}
+      - {codice: "ECSS-Q-ST-70-57C", titolo: "Dry heat bioburden reduction for flight hardware"}
+      - {codice: "ECSS-Q-ST-70-58C", titolo: "Bioburden control of cleanrooms"}
+      - {codice: "ECSS-Q-ST-70-60C Rev.1", titolo: "Qualification and procurement of printed circuit boards"}
+      - {codice: "ECSS-Q-ST-70-61C", titolo: "High reliability assembly for surface mount and through hole connections"}
+      - {codice: "ECSS-Q-ST-70-71C Rev.1", titolo: "Materials, processes and their data selection"}
+      - {codice: "ECSS-Q-ST-70-80C", titolo: "Processing and quality assurance requirements for metallic powder bed fusion technologies"}
+  - id: Q-80
+    nome: Software product assurance
+    parent: Q
+    standard:
+      - {codice: "ECSS-Q-ST-80C Rev.2", titolo: "Software product assurance"}
+
+  # ───────────── U – Sustainability ─────────────
+  - id: U
+    nome: Space sustainability
+    parent: null
+  - id: U-10
+    nome: Space debris
+    parent: U
+    standard:
+      - {codice: "ECSS-U-AS-10C Rev.2", titolo: "Adoption Notice of ISO 24113 – Space debris mitigation requirements"}
+  - id: U-20
+    nome: Planetary protection
+    parent: U
+    standard:
+      - {codice: "ECSS-U-ST-20C", titolo: "Planetary protection"}
+
+  # ───────────── I – Industrialization ─────────────
+  - id: I
+    nome: Space industrialization
+    parent: null
+  - id: I-30
+    nome: Integrated product support
+    parent: I
+    standard:
+      - {codice: "ECSS-I-ST-30-10C", titolo: "Integrated Product Support (IPS)"}
+
+# ───────────── Categorie trasversali (PROPOSTA, da rivedere) ─────────────
+# Temi che attraversano più discipline. Possono puntare a categorie intere
+# (`include`) o a clausole specifiche di uno standard (`clausole`).
+categorie_trasversali:
+  - id: T-PM
+    nome: Project management
+    include: [M-10, M-40, M-60, M-80]
+  - id: T-COSTI
+    nome: Gestione dei costi
+    # M-ST-60C: cap. 6 principi di costo, cap. 9 requisiti di costo, annex DRD di costo
+    # (A CBS, D price breakdown, E geographical distribution, F-G cost estimate, H MPP,
+    #  I inventory, J cost and manpower, K-L OBCP/CBCP, M-N EAC/ETC, O CCN, Q-R informativi)
+    clausole:
+      - {codice: "ECSS-M-ST-60C", clausole: ["6", "9", "A", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "Q", "R"]}
+  - id: T-SCHEDULE
+    nome: Gestione della schedule
+    # M-ST-60C: cap. 5 principi di schedule, cap. 8 requisiti di schedule,
+    # annex DRD B (schedule) e C (schedule progress report)
+    clausole:
+      - {codice: "ECSS-M-ST-60C", clausole: ["5", "8", "B", "C"]}
+  - id: T-SW
+    nome: Software
+    include: [E-40, Q-80]
+  - id: T-TEST
+    nome: Test e verifica
+    standard:
+      - "ECSS-E-ST-10-02C Rev.1"
+      - "ECSS-E-ST-10-03C Rev.1"
+      - "ECSS-Q-ST-20-07C"
+      - "ECSS-E-ST-35-10C"
+      - "ECSS-E-ST-70-32C"
+  - id: T-RAD
+    nome: Radiazioni
+    standard:
+      - "ECSS-E-ST-10-04C Rev.1"
+      - "ECSS-E-ST-10-12C"
+      - "ECSS-Q-ST-60-15C Rev.1"
+  - id: T-FPGA
+    nome: ASIC / FPGA
+    standard:
+      - "ECSS-E-ST-20-40C"
+      - "ECSS-Q-ST-60-03C"
+
+# ───────────── Temi generici (livello "temi") ─────────────
+# Categorie per argomento, trasversali a tutti gli standard. Non dipendono dalla struttura ECSS:
+# ogni tema è definito da una descrizione e da termini seme (in inglese, come gli standard).
+# Membri di un tema (python query.py membri --categoria cost per controllarli):
+#   1. ancore (facoltative): standard o clausole che trattano proprio quell'argomento, inclusi per intero;
+#   2. le unità più vicine ai semi, con un bonus se un seme compare letteralmente nel titolo o nel termine.
+# Si possono aggiungere, togliere o modificare liberamente; poi: python ingest.py --solo-prototipi
+temi:
+  - id: cost
+    nome: Cost and finance
+    descrizione: cost estimating, budget control, prices, payments and financial reporting of a space project
+    semi: [cost estimate, budget, cost breakdown structure, estimate at completion, price, payment plan, manpower cost, financial report, cost control, cost overrun]
+    ancore: [{codice: "ECSS-M-ST-60C", clausole: ["6", "9", "A", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "Q"]}]
+  - id: schedule
+    nome: Schedule and planning
+    descrizione: project planning, schedules, milestones and progress monitoring
+    semi: [schedule, milestone, critical path, project planning, Gantt chart, schedule progress report, work package, baseline schedule, delay]
+    ancore: [{codice: "ECSS-M-ST-60C", clausole: ["5", "8", "B", "C"]}]
+  - id: customer
+    nome: Customer and stakeholders
+    descrizione: relationship between customer, supplier and stakeholders, approvals and acceptance by the customer
+    semi: [customer, supplier, customer-supplier relationship, stakeholder, customer approval, contractor, end user, acceptance by the customer]
+  - id: contract
+    nome: Contracts and agreements
+    descrizione: business agreements, contracts, statements of work and contract changes
+    semi: [business agreement, contract, statement of work, contract change notice, fixed price contract, cost reimbursement contract, contractual obligation]
+    ancore: [{codice: "ECSS-M-ST-60C", clausole: ["6.2", "9.1", "O"]}]
+  - id: procurement
+    nome: Procurement and supply chain
+    descrizione: procurement of items and components, supplier selection, subcontracting and incoming inspection
+    semi: [procurement, purchase order, supplier selection, subcontractor, lot acceptance, parts procurement, off-the-shelf items, incoming inspection, procurement specification]
+  - id: risk
+    nome: Risk management
+    descrizione: identification, assessment, mitigation and tracking of project risks
+    semi: [risk assessment, risk mitigation, risk register, risk index, likelihood and severity, risk acceptance, uncertainty]
+    ancore: ["ECSS-M-ST-80C"]
+  - id: quality
+    nome: Quality assurance
+    descrizione: quality assurance, inspections, audits, nonconformances and corrective actions
+    semi: [quality assurance, nonconformance, inspection, audit, quality record, workmanship, corrective action, mandatory inspection point]
+    ancore: ["ECSS-Q-ST-20C Rev.2", "ECSS-Q-ST-10-09C Rev.1"]
+  - id: safety
+    nome: Safety
+    descrizione: hazards, safety analyses and protection of people and equipment
+    semi: [hazard, hazard analysis, safety critical, catastrophic consequence, safety risk, hazardous material, personnel safety]
+    ancore: ["ECSS-Q-ST-40C Rev.1", "ECSS-Q-ST-40-02C"]
+  - id: dependability
+    nome: Dependability and reliability
+    descrizione: reliability, availability, maintainability, failure analysis and redundancy
+    semi: [reliability, availability, failure modes and effects analysis, FMECA, redundancy, derating, failure rate, single point failure]
+    ancore: ["ECSS-Q-ST-30C Rev.1", "ECSS-Q-ST-30-02C", "ECSS-Q-ST-30-09C"]
+  - id: configuration
+    nome: Configuration and documentation
+    descrizione: configuration management, baselines, change control and project documentation
+    semi: [configuration management, configuration item, baseline, change control, document requirements definition, documentation, version control, configuration status accounting]
+    ancore: ["ECSS-M-ST-40C Rev.1"]
+  - id: reviews
+    nome: Project reviews
+    descrizione: project and technical reviews at milestones, review data packages and review item discrepancies
+    semi: [project review, preliminary design review, critical design review, review item discrepancy, review board, qualification review, acceptance review]
+    ancore: ["ECSS-M-ST-10-01C"]
+  - id: requirements
+    nome: Requirements engineering
+    descrizione: specification, definition, traceability and management of requirements
+    semi: [requirement specification, technical requirements specification, requirements traceability, interface requirements, requirement baseline, requirement justification]
+    ancore: ["ECSS-E-ST-10-06C"]
+  - id: verification
+    nome: Verification and testing
+    descrizione: verification, qualification and acceptance testing, test campaigns and test reports
+    semi: [verification, qualification test, acceptance test, test campaign, test report, test procedure, validation, verification control document]
+    ancore: ["ECSS-E-ST-10-02C Rev.1", "ECSS-E-ST-10-03C Rev.1"]
+  - id: software
+    nome: Software
+    descrizione: software development, coding, software validation and software product assurance
+    semi: [software development, source code, software validation, software product assurance, software criticality, software maintenance, software requirements]
+    ancore: ["ECSS-E-ST-40C Rev.1", "ECSS-Q-ST-80C Rev.2"]
+  - id: electrical
+    nome: Electrical and electronics
+    descrizione: electrical design, power, electronic components, harness and electromagnetic compatibility
+    semi: [electrical design, power supply, electronic equipment, EEE components, harness, electromagnetic compatibility, printed circuit board]
+    ancore: ["ECSS-E-ST-20C Rev.2"]
+  - id: materials
+    nome: Materials and processes
+    descrizione: materials selection, manufacturing processes, cleanliness and contamination control
+    semi: [material selection, manufacturing process, coating, adhesive bonding, cleanliness, contamination control, soldering, corrosion]
+    ancore: ["ECSS-Q-ST-70C Rev.2"]
+  - id: mechanical
+    nome: Structures and mechanisms
+    descrizione: structural design, mechanical loads, fracture control, mechanisms and propulsion hardware
+    semi: [structural design, mechanical loads, factor of safety, fracture control, mechanism, pressurized hardware, propulsion system]
+    ancore: ["ECSS-E-ST-32C Rev.1", "ECSS-E-ST-33-01C Rev.2"]
+  - id: thermal
+    nome: Thermal control
+    descrizione: thermal design, thermal control systems and temperature ranges
+    semi: [thermal control, thermal design, temperature range, heat dissipation, thermal model, thermal balance test]
+    ancore: ["ECSS-E-ST-31C"]
+  - id: operations
+    nome: Operations and ground segment
+    descrizione: mission operations, ground segment, telemetry and telecommand, operability
+    semi: [mission operations, ground segment, telemetry, telecommand, on-board control procedure, operability, flight operations]
+    ancore: ["ECSS-E-ST-70C"]
+  - id: communications
+    nome: Communications and data handling
+    descrizione: communication links, data link protocols, radio frequency, data buses and networks
+    semi: [communication link, data link protocol, radio frequency, data bus, SpaceWire, channel coding, network protocol]
+    ancore: ["ECSS-E-ST-50C Rev.2"]
+  - id: security
+    nome: Security
+    descrizione: information security, cybersecurity, threats and protection of space systems
+    semi: [information security, cybersecurity, security threat, security risk, encryption, access control, vulnerability]
+    ancore: ["ECSS-E-ST-80C"]
+  - id: space_environment
+    nome: Space environment and radiation
+    descrizione: space environment effects, radiation, charging and their effects on equipment
+    semi: [space environment, radiation dose, single event effect, spacecraft charging, plasma environment, radiation hardness]
+    ancore: ["ECSS-E-ST-10-04C Rev.1"]
+  - id: sustainability
+    nome: Space sustainability
+    descrizione: space debris mitigation, disposal and planetary protection
+    semi: [space debris, debris mitigation, end of life disposal, planetary protection, bioburden, re-entry]
+    ancore: ["ECSS-U-AS-10C Rev.2", "ECSS-U-ST-20C"]
+  - id: logistics
+    nome: Logistics and support
+    descrizione: integrated logistic support, maintenance, spares, obsolescence, storage and transportation
+    semi: [integrated logistic support, maintenance, spare parts, obsolescence, storage, transportation, handling, shelf life]
+    ancore: ["ECSS-I-ST-30-10C"]

@@ -1,0 +1,50 @@
+# Configurazione del sistema di embeddings ECSS
+
+# Modello di embedding (cartella locale, scaricata una volta con setup_model.py).
+# multilingual-e5-base: buon compromesso qualità/velocità su CPU, query anche in italiano.
+# Alternativa più accurata ma più lenta: BAAI/bge-m3 (prefissi vuoti).
+modello:
+  nome_hf: intfloat/multilingual-e5-base
+  cartella: models/multilingual-e5-base
+  prefisso_query: "query: "
+  prefisso_documento: "passage: "
+  batch: 32
+  max_token: 512
+
+# Cartelle
+indice: index                 # database SQLite + vettori
+categorie: categorie.yaml
+
+# Segmentazione
+max_caratteri_unita: 1500
+
+# Prototipi di categoria (k-means sferico sugli embeddings delle unità)
+prototipi:
+  max_per_categoria: 5
+  unita_per_prototipo: 40     # k = min(max, n_unità / questo valore), almeno 1
+
+# Temi generici: membri = unità ECSS più vicine ai termini seme del tema
+temi:
+  unita_per_tema: 300         # unità aggiunte a ogni tema oltre alle ancore (le più vicine ai semi)
+  bonus_lessicale: 0.05       # bonus di vicinanza se un seme compare alla lettera nel titolo o nel termine
+  tipi: [definizione, requisito, testo, drd]
+
+# Vocabolario di parole singole (da termini definiti, titoli delle clausole e sigle)
+vocabolario:
+  min_occorrenze_titoli: 2    # una parola presente solo nei titoli deve comparire in almeno N titoli distinti
+  max_contesti: 60            # unità usate per il vettore di contesto di ogni parola
+  peso_parola: 0.5            # peso dell'embedding della parola da sola rispetto al contesto ECSS
+  peso_semantico: 0.3         # nel punteggio del lessico: peso della specificità semantica rispetto alla concentrazione
+  smussamento: 10             # evita che parole rare (2-3 occorrenze) dominino il lessico
+
+# Classificazione dei paragrafi
+# Ogni livello è classificato in modo indipendente, con parametri propri.
+classificazione:
+  livelli_attivi: [temi, rami, discipline, trasversali]
+  livelli:
+    rami:        {soglia: 0.80, margine: 0.01, max_categorie: 1}
+    discipline:  {soglia: 0.80, margine: 0.02, max_categorie: 2}
+    trasversali: {soglia: 0.80, margine: 0.02, max_categorie: 2}
+    temi:        {soglia: 0.80, margine: 0.02, max_categorie: 3}
+  termini_supporto: 8
+  min_caratteri_paragrafo: 80
