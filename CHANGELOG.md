@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-11-08
+- REQ-181 richiesto — `package.ps1`: Docling di doc-ripper in `dist\docling\`, non versionato
+
 ## 2026-11-04
 - REQ-151 richiesto — Requisiti di ogni tool in `<cartella del tool>/docs/REQUIREMENTS.md`
 - REQ-153 richiesto — gui: `index` di `search-rm3` eseguito con `--exclude index.md --exclude .index`
