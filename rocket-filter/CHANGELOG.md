@@ -35,6 +35,8 @@
 - REQ-015 implementato — PDF illeggibili segnalati senza interrompere l'ingestione (`ingest.py`)
 - f5eee83 attribuito a REQ-016 — codice entrato con il primo commit del tool
 - REQ-016 implementato — Rigenerazione di temi, prototipi e vocabolario, `--solo-prototipi` (`ingest.py`)
+- f5eee83 attribuito a REQ-017 — codice entrato con il primo commit del tool
+- REQ-017 implementato — Membri dei temi generici da ancore e semi (`core.py`, `ingest.py`)
 
 ## 2026-11-07
 - REQ-001 richiesto — Tool Python autonomo in `rocket-filter/`, dati generati esclusi da git
