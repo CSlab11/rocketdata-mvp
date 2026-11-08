@@ -3,6 +3,8 @@
 ## 2026-11-08
 - REQ-040 richiesto — `classify.py`: supporto DOCX facoltativo con `python-docx` (sostituisce REQ-031)
 - REQ-031 annullato — sostituito da REQ-040
+- f5eee83 attribuito a REQ-001 — codice entrato con il primo commit del tool
+- REQ-001 implementato — Tool Python autonomo in `rocket-filter/`, dati generati esclusi da git (`.gitignore`, `requirements.txt`)
 
 ## 2026-11-07
 - REQ-001 richiesto — Tool Python autonomo in `rocket-filter/`, dati generati esclusi da git
