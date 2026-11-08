@@ -61,6 +61,8 @@
 - REQ-028 implementato — `query.py unita` (`core.py`, `query.py`)
 - f5eee83 attribuito a REQ-029 — codice entrato con il primo commit del tool
 - REQ-029 implementato — `query.py`: uscita `--json` ed errore su categoria sconosciuta (`query.py`)
+- f5eee83 attribuito a REQ-030 — codice entrato con il primo commit del tool
+- REQ-030 implementato — Errore se mancano prototipi o vocabolario; lessico senza vocabolario termina con il messaggio di ingest.py invece di un errore SQLite (`core.py`, `query.py`, `vocabolario.py`)
 
 ## 2026-11-07
 - REQ-001 richiesto — Tool Python autonomo in `rocket-filter/`, dati generati esclusi da git

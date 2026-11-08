@@ -86,6 +86,7 @@ def search_words(text: str, categoria: str | None, k: int, fonte: str | None) ->
 
 
 def lexicon(categoria: str, n: int, min_spec: float | None, min_occ: int, fonte: str | None) -> list[dict]:
+    vocabolario.load()  # senza vocabolario termina indicando di eseguire ingest.py
     con = core.db()
     q = """SELECT p.parola, p.fonti, p.esempi, pc.score, pc.specificita, pc.occorrenze, pc.concentrazione, pc.punteggio
            FROM parola_categoria pc JOIN parole p ON p.id = pc.parola_id
