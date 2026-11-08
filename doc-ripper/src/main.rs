@@ -1,5 +1,6 @@
 mod convert;
 mod csv_out;
+mod docling;
 mod docx;
 mod excel;
 mod images;
@@ -9,6 +10,7 @@ mod output;
 mod pdf;
 mod report;
 mod run;
+mod structure;
 mod walk;
 
 use std::fs;

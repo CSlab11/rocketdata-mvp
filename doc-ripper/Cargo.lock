@@ -443,6 +443,8 @@ dependencies = [
  "image",
  "pdfium-render",
  "rust_xlsxwriter",
+ "serde",
+ "serde_json",
  "tempfile",
  "url",
  "walkdir",

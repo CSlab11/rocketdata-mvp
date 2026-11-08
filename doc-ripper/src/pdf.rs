@@ -6,12 +6,14 @@ use image::ImageFormat;
 use pdfium_render::prelude::*;
 
 use crate::convert::base_name;
+use crate::docling;
 use crate::docx::escape;
 use crate::images::Images;
 use crate::link::origin_line;
 use crate::output::write_file;
 use crate::report::SkipReason;
 use crate::run::Outcome;
+use crate::structure;
 
 thread_local! {
     static PDFIUM: OnceCell<Result<Pdfium, String>> = const { OnceCell::new() };
@@ -29,8 +31,12 @@ fn load_pdfium() -> Result<Pdfium, String> {
 }
 
 /// Converte un `.pdf` in `<nome>_pdf.md` ricostruendo titoli, paragrafi, elenchi e tabelle (REQ-010)
-/// ed estraendo le immagini (REQ-020).
+/// ed estraendo le immagini (REQ-020): con Docling se è installato accanto all'eseguibile (REQ-048),
+/// altrimenti con PDFium.
 pub fn convert(src: &Path, dst: &Path, rel: &Path, progress: &str) -> Result<Outcome, String> {
+    if let Some(installation) = docling::installation() {
+        return convert_docling(&installation, src, dst, rel);
+    }
     let mut images = Images::new(rel);
     let pages = PDFIUM.with(|cell| match cell.get_or_init(load_pdfium) {
         Ok(pdfium) => extract(pdfium, &src.join(rel), &mut images, progress),
@@ -40,7 +46,23 @@ pub fn convert(src: &Path, dst: &Path, rel: &Path, progress: &str) -> Result<Out
     if pages.iter().all(|p| p.runs.is_empty()) {
         return Ok(Outcome::skipped(SkipReason::Scanned));
     }
-    let markdown = layout::to_markdown(&pages);
+    write_markdown(src, dst, rel, &images, &layout::to_markdown(&pages))
+}
+
+/// Struttura da Docling, salvata in `<dst>\.doc-ripper\<cartella>\<nome>_pdf\`, e Markdown con regole proprie.
+fn convert_docling(installation: &Path, src: &Path, dst: &Path, rel: &Path) -> Result<Outcome, String> {
+    let work = dst.join(".doc-ripper").join(rel.with_file_name(base_name(rel)));
+    let document = docling::run(installation, &src.join(rel), &work)?;
+    let mut images = Images::new(rel);
+    let blocks = structure::blocks(&document, &work, &mut images);
+    if blocks.is_empty() {
+        return Ok(Outcome::skipped(SkipReason::Scanned));
+    }
+    write_markdown(src, dst, rel, &images, &structure::to_markdown(&blocks))
+}
+
+/// Scrive `<nome>_pdf.md`, con la riga di origine in testa (REQ-045), e le sue immagini.
+fn write_markdown(src: &Path, dst: &Path, rel: &Path, images: &Images, markdown: &str) -> Result<Outcome, String> {
     let out_rel = rel.with_file_name(format!("{}.md", base_name(rel)));
     let out_path = dst.join(&out_rel);
     images.write(&out_path)?;
