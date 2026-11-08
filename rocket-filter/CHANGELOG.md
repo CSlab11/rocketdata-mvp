@@ -69,6 +69,8 @@
 - REQ-033 implementato — `classify.py`: scelta dei livelli con `--livelli` (`classify.py`)
 - f5eee83 attribuito a REQ-034 — codice entrato con il primo commit del tool
 - REQ-034 implementato — `classify.py`: assegnazione per livello con soglia, margine e massimo di categorie (`classify.py`, `core.py`)
+- f5eee83 attribuito a REQ-035 — codice entrato con il primo commit del tool
+- REQ-035 implementato — `classify.py`: `--soglia` e `--margine` per tutti i livelli (`classify.py`)
 
 ## 2026-11-07
 - REQ-001 richiesto — Tool Python autonomo in `rocket-filter/`, dati generati esclusi da git
