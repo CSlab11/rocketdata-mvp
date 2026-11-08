@@ -6,6 +6,7 @@ use std::path::Path;
 
 use crate::docling::{self, Document, Item, Ref};
 use crate::docx::escape;
+use crate::furniture;
 use crate::images::Images;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -31,9 +32,34 @@ pub struct Block {
     pub page: u32,
 }
 
-/// Blocchi del corpo del documento nell'ordine di lettura di Docling. Le immagini vengono registrate in
-/// `images`; i loro file si leggono a partire da `base`, la cartella del JSON.
-pub fn blocks(document: &Document, base: &Path, images: &mut Images) -> Vec<Block> {
+/// Per ogni blocco di Docling, i riferimenti (`#/texts/N`) ai testi che si ripetono come intestazione o piè di
+/// pagina nell'intero PDF, qualunque sia la loro classificazione (REQ-074).
+pub fn repeated(documents: &[Document]) -> Vec<HashSet<String>> {
+    let pages: HashSet<&String> = documents.iter().flat_map(|d| d.pages.keys()).collect();
+    let mut owners = Vec::new();
+    let mut items = Vec::new();
+    for (index, document) in documents.iter().enumerate() {
+        for (n, text) in document.texts.iter().enumerate() {
+            let Some(prov) = text.prov.first() else { continue };
+            let Some(bbox) = &prov.bbox else { continue };
+            let Some(page) = document.pages.get(&prov.page_no.to_string()) else { continue };
+            let (top, bottom) = bbox.from_top(page.size.height);
+            owners.push((index, format!("#/texts/{n}")));
+            items.push(furniture::Placed { page: prov.page_no, text: text.text.clone(), top, bottom, page_height: page.size.height });
+        }
+    }
+    let mut out = vec![HashSet::new(); documents.len()];
+    for ((index, target), found) in owners.into_iter().zip(furniture::detect(&items, pages.len())) {
+        if found {
+            out[index].insert(target);
+        }
+    }
+    out
+}
+
+/// Blocchi del corpo del documento nell'ordine di lettura di Docling, senza i testi di `repeated` (REQ-074).
+/// Le immagini vengono registrate in `images`; i loro file si leggono a partire da `base`, la cartella del JSON.
+pub fn blocks(document: &Document, base: &Path, images: &mut Images, repeated: &HashSet<String>) -> Vec<Block> {
     // Le didascalie delle immagini si scrivono solo dopo l'immagine, anche se nel corpo la precedono (REQ-066).
     let picture_captions = document.pictures.iter().flat_map(|p| p.captions.iter().map(|r| r.target.clone())).collect();
     let mut walker = Walker {
@@ -44,6 +70,7 @@ pub fn blocks(document: &Document, base: &Path, images: &mut Images) -> Vec<Bloc
         picture_captions,
         in_picture: false,
         per_page: HashMap::new(),
+        repeated,
         out: Vec::new(),
     };
     walker.children(&document.body.children, 0);
@@ -61,6 +88,8 @@ struct Walker<'a> {
     in_picture: bool,
     /// Immagini già estratte per pagina, per i nomi dei file.
     per_page: HashMap<u32, usize>,
+    /// Intestazioni e piè di pagina riconosciuti dalla ripetizione (REQ-074).
+    repeated: &'a HashSet<String>,
     out: Vec<Block>,
 }
 
@@ -82,6 +111,8 @@ impl Walker<'_> {
             // Intestazioni e piè di pagina (furniture) non entrano nel Markdown (REQ-061).
             Some(Item::Group(group)) if group.content_layer != "body" => {}
             Some(Item::Text(text)) if text.content_layer != "body" || matches!(text.label.as_str(), "page_header" | "page_footer") => {}
+            // Anche quelli che Docling classifica come corpo, riconosciuti dalla ripetizione (REQ-074).
+            Some(Item::Text(_)) if self.repeated.contains(&reference.target) => {}
             Some(Item::Group(group)) => match group.label.as_str() {
                 "list" | "ordered_list" => self.children(&group.children, depth + 1),
                 // Testo spezzato da formattazioni diverse: un solo paragrafo.
@@ -89,6 +120,7 @@ impl Walker<'_> {
                     let parts: Vec<&str> = group
                         .children
                         .iter()
+                        .filter(|r| !self.repeated.contains(&r.target))
                         .filter_map(|r| match self.document.get(r) {
                             Some(Item::Text(t)) => Some(t.text.trim()),
                             _ => None,
@@ -401,7 +433,69 @@ mod tests {
 
     fn markdown(json: &str) -> String {
         let mut images = Images::new(Path::new("doc.pdf"));
-        to_markdown(&refine(blocks(&document(json), Path::new("."), &mut images)))
+        to_markdown(&refine(blocks(&document(json), Path::new("."), &mut images, &HashSet::new())))
+    }
+
+    /// Markdown di più blocchi di Docling, come per un PDF intero.
+    fn markdown_all(jsons: &[String]) -> String {
+        let documents: Vec<Document> = jsons.iter().map(|j| document(j)).collect();
+        let repeated = super::repeated(&documents);
+        let mut images = Images::new(Path::new("doc.pdf"));
+        let blocks =
+            documents.iter().zip(&repeated).flat_map(|(d, r)| blocks(d, Path::new("."), &mut images, r)).collect();
+        to_markdown(&refine(blocks))
+    }
+
+    /// Blocco di Docling con le pagine `pages` (alte 842 punti); ogni pagina ha un'intestazione con il numero di
+    /// pagina, una legenda in fondo classificata come nota, un titolo e un testo nel corpo, e alla prima pagina
+    /// la stessa intestazione ripetuta anche a metà pagina.
+    fn pages_json(pages: std::ops::RangeInclusive<u32>) -> String {
+        let text = |label: &str, text: &str, page: u32, t: f32| {
+            format!(
+                r#"{{"label": "{label}", "text": "{text}", "prov": [{{"page_no": {page}, "bbox": {{"l": 50, "t": {t}, "b": {}, "coord_origin": "BOTTOMLEFT"}}}}]}}"#,
+                t - 10.0
+            )
+        };
+        let mut texts = Vec::new();
+        for p in pages.clone() {
+            texts.push(text("text", &format!("Doc ID 1385823 Page {p} of 53"), p, 803.0));
+            texts.push(text("section_header", &format!("Capitolo {p}"), p, 700.0));
+            texts.push(text("text", &format!("Corpo {p}."), p, 600.0));
+            texts.push(text("footnote", "b) be copied or reproduced", p, 80.0));
+            if p == *pages.start() {
+                texts.push(text("text", "Doc ID 1385823 Page 1 of 53", p, 400.0));
+            }
+        }
+        let refs: Vec<String> = (0..texts.len()).map(|i| format!(r##"{{"$ref": "#/texts/{i}"}}"##)).collect();
+        let sizes: Vec<String> = pages.map(|p| format!(r#""{p}": {{"size": {{"width": 595, "height": 842}}}}"#)).collect();
+        format!(
+            r#"{{"body": {{"children": [{}]}}, "texts": [{}], "pages": {{{}}}}}"#,
+            refs.join(","),
+            texts.join(","),
+            sizes.join(",")
+        )
+    }
+
+    #[test]
+    fn intestazioni_e_pie_di_pagina_ripetuti_esclusi_qualunque_classificazione() {
+        // Due blocchi di Docling: la ripetizione si conta sull'intero PDF.
+        let md = markdown_all(&[pages_json(1..=2), pages_json(3..=4)]);
+        assert_eq!(
+            md,
+            concat!(
+                "# Capitolo 1\n\nCorpo 1.\n\nDoc ID 1385823 Page 1 of 53\n\n",
+                "# Capitolo 2\n\nCorpo 2.\n\n",
+                "# Capitolo 3\n\nCorpo 3.\n\nDoc ID 1385823 Page 1 of 53\n\n",
+                "# Capitolo 4\n\nCorpo 4.\n"
+            )
+        );
+    }
+
+    #[test]
+    fn documento_di_due_pagine_invariato() {
+        let md = markdown_all(&[pages_json(1..=2)]);
+        assert!(md.starts_with("Doc ID 1385823 Page 1 of 53\n\n# Capitolo 1\n"), "{md}");
+        assert!(md.contains("b) be copied or reproduced"), "{md}");
     }
 
     fn table(rows: &[&[&str]], page: u32) -> Block {
@@ -673,7 +767,7 @@ mod tests {
             "pictures": [{"image": {"uri": "a.png"}, "prov": [{"page_no": 2}], "captions": [{"$ref": "#/texts/1"}]}]}"##,
         );
         let mut images = Images::new(Path::new("doc.pdf"));
-        let md = to_markdown(&refine(blocks(&doc, dir.path(), &mut images)));
+        let md = to_markdown(&refine(blocks(&doc, dir.path(), &mut images, &HashSet::new())));
         assert_eq!(
             md,
             "Table 4-1: Levels\n\n| x |\n|---|\n\n![pagina2_immagine1.png](doc_pdf_img/pagina2_immagine1.png)\n\nFigure 4-1: Setup\n"
@@ -711,7 +805,7 @@ mod tests {
                 "captions": [{"$ref": "#/texts/0"}], "children": [{"$ref": "#/texts/0"}, {"$ref": "#/texts/1"}]}]}"##,
         );
         let mut images = Images::new(Path::new("doc.pdf"));
-        let md = to_markdown(&blocks(&doc, dir.path(), &mut images));
+        let md = to_markdown(&blocks(&doc, dir.path(), &mut images, &HashSet::new()));
         assert_eq!(md, "![pagina3_immagine1.png](doc_pdf_img/pagina3_immagine1.png)\n\nFigure 1: Schema\n");
     }
 
@@ -764,6 +858,6 @@ mod tests {
     #[test]
     fn nessun_testo_nessun_blocco() {
         let doc = document(r##"{"body": {"children": []}}"##);
-        assert!(blocks(&doc, Path::new("."), &mut Images::new(Path::new("doc.pdf"))).is_empty());
+        assert!(blocks(&doc, Path::new("."), &mut Images::new(Path::new("doc.pdf")), &HashSet::new()).is_empty());
     }
 }

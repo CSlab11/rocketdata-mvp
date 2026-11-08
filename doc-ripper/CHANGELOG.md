@@ -58,6 +58,7 @@
 - REQ-074 richiesto — doc-ripper: intestazioni e piè di pagina ripetuti esclusi dal `.md` dei PDF anche se Docling li classifica come corpo
 - REQ-075 richiesto — doc-ripper: righe di tabella fatte solo di intestazioni o piè di pagina escluse dal `.md`
 - REQ-076 richiesto — doc-ripper: intestazioni e piè di pagina ripetuti esclusi dal `.md` dei PDF anche in modalità simple
+- REQ-074 implementato — Testi ripetuti nella fascia alta o bassa su metà delle pagine esclusi qualunque sia la classificazione di Docling, contati sull'intero PDF (`src/docling.rs`, `src/furniture.rs`, `src/main.rs`, `src/pdf.rs`, `src/structure.rs`)
 
 ## 2026-10-23
 - REQ-041 richiesto — doc-ripper: riga di avanzamento per ciascun file elaborato

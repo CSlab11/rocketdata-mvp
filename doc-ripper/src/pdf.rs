@@ -68,8 +68,13 @@ fn convert_docling(installation: &Path, src: &Path, dst: &Path, rel: &Path, prog
     let work = dst.join(".doc-ripper").join(rel.with_file_name(base_name(rel)));
     let documents = docling::convert(installation, &src.join(rel), &work, progress)?;
     let mut images = Images::new(rel);
-    let blocks: Vec<structure::Block> =
-        documents.iter().flat_map(|document| structure::blocks(document, &work, &mut images)).collect();
+    // Intestazioni e piè di pagina ripetuti si riconoscono sull'intero PDF, non sul singolo blocco (REQ-074).
+    let repeated = structure::repeated(&documents);
+    let blocks: Vec<structure::Block> = documents
+        .iter()
+        .zip(&repeated)
+        .flat_map(|(document, repeated)| structure::blocks(document, &work, &mut images, repeated))
+        .collect();
     let blocks = structure::refine(blocks);
     if blocks.is_empty() {
         return Ok(Outcome::skipped(SkipReason::Scanned));

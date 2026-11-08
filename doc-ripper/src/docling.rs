@@ -1,6 +1,7 @@
 //! Conversione dei PDF con Docling (REQ-048): esecuzione dello script Python distribuito in `docling\`
 //! accanto all'eseguibile e lettura del `DoclingDocument` JSON che produce.
 
+use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Read};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -132,6 +133,19 @@ pub struct Document {
     pub tables: Vec<Table>,
     #[serde(default)]
     pub pictures: Vec<Picture>,
+    /// Pagine del blocco per numero di pagina (es. `"11"`).
+    #[serde(default)]
+    pub pages: HashMap<String, PageInfo>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PageInfo {
+    pub size: Size,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Size {
+    pub height: f32,
 }
 
 #[derive(Debug, Deserialize)]
@@ -238,6 +252,21 @@ pub struct Prov {
 pub struct BBox {
     /// Margine sinistro in punti.
     pub l: f32,
+    /// Lati alto e basso in punti, misurati secondo `coord_origin`.
+    #[serde(default)]
+    pub t: f32,
+    #[serde(default)]
+    pub b: f32,
+    /// `BOTTOMLEFT` (y verso l'alto, come nel PDF) o `TOPLEFT`.
+    #[serde(default)]
+    pub coord_origin: String,
+}
+
+impl BBox {
+    /// Lati alto e basso misurati dal bordo superiore di una pagina alta `height`.
+    pub fn from_top(&self, height: f32) -> (f32, f32) {
+        if self.coord_origin == "TOPLEFT" { (self.t, self.b) } else { (height - self.t, height - self.b) }
+    }
 }
 
 /// Livello predefinito degli elementi: il corpo del documento.

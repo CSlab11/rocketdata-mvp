@@ -3,6 +3,7 @@ mod csv_out;
 mod docling;
 mod docx;
 mod excel;
+mod furniture;
 mod images;
 mod index;
 mod link;
