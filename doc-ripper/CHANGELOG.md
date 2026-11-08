@@ -49,6 +49,7 @@
 - REQ-064 implementato — Voci di elenco annidate dai gruppi di Docling o dal rientro, con la numerazione originale in testa al testo (`src/docling.rs`, `src/structure.rs`)
 - REQ-065 implementato — Note a piè di pagina in fondo alla sezione in cui si trovano (`src/structure.rs`)
 - REQ-066 implementato — Didascalia della tabella subito prima della tabella, quella dell'immagine subito dopo il richiamo (`src/structure.rs`)
+- BUG-001 segnalato — PDF di prova creati con PDFium nei test: corrotti in parallelo, errore di inizializzazione in serie (`tests/index.rs`, `tests/pdf.rs`)
 
 ## 2026-10-23
 - REQ-041 richiesto — doc-ripper: riga di avanzamento per ciascun file elaborato
