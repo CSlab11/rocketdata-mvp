@@ -33,7 +33,7 @@ pub fn convert(src: &Path, dst: &Path, rel: &Path) -> Result<Outcome, String> {
     md.images.borrow().write(&out_path)?;
     let markdown = format!("{}\n\n{markdown}", origin_line(&src.join(rel)));
     write_file(&out_path, markdown.as_bytes())?;
-    Ok(Outcome { outputs: vec![out_rel], skipped: Vec::new() })
+    Ok(Outcome { outputs: vec![out_rel], ..Default::default() })
 }
 
 /// Blocchi Markdown: le voci consecutive dello stesso elenco (stesso id di numerazione)

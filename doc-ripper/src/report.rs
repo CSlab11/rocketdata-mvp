@@ -25,6 +25,15 @@ pub struct Report {
     pub converted: Vec<(PathBuf, Vec<PathBuf>)>,
     pub skipped: Vec<(PathBuf, SkipReason)>,
     pub failed: Vec<(PathBuf, String)>,
+    /// Note da mostrare accanto ai file convertiti o saltati (es. ripiego su PDFium, REQ-070).
+    pub notes: Vec<(PathBuf, String)>,
+}
+
+impl Report {
+    ///  (nota) da aggiungere alla riga del file, se ne ha una.
+    fn note(&self, src: &PathBuf) -> String {
+        self.notes.iter().find(|(p, _)| p == src).map(|(_, n)| format!(" ({n})")).unwrap_or_default()
+    }
 }
 
 impl fmt::Display for Report {
@@ -33,11 +42,11 @@ impl fmt::Display for Report {
         writeln!(f, "  Convertiti: {}", self.converted.len())?;
         for (src, outputs) in &self.converted {
             let outputs: Vec<String> = outputs.iter().map(|p| p.display().to_string()).collect();
-            writeln!(f, "    {} -> {}", src.display(), outputs.join(", "))?;
+            writeln!(f, "    {} -> {}{}", src.display(), outputs.join(", "), self.note(src))?;
         }
         writeln!(f, "  Saltati: {}", self.skipped.len())?;
         for (src, reason) in &self.skipped {
-            writeln!(f, "    {} - {}", src.display(), reason)?;
+            writeln!(f, "    {} - {}{}", src.display(), reason, self.note(src))?;
         }
         writeln!(f, "  Falliti: {}", self.failed.len())?;
         for (src, error) in &self.failed {
@@ -64,8 +73,10 @@ mod tests {
                 (PathBuf::from("vendite.xlsx"), SkipReason::EmptySheet("Marzo".into())),
             ],
             failed: vec![(PathBuf::from("rotto.docx"), "archivio non valido".into())],
+            notes: vec![(PathBuf::from("scan.pdf"), "ripiego PDFium: Docling non disponibile".into())],
         };
         let text = report.to_string();
+        assert!(text.contains("scan.pdf - scansionato (ripiego PDFium: Docling non disponibile)"));
         assert!(text.contains("Convertiti: 1"));
         assert!(text.contains("vendite.xlsx -> vendite_xlsx_Gennaio.csv, vendite_xlsx_Febbraio.csv"));
         assert!(text.contains("Saltati: 3"));

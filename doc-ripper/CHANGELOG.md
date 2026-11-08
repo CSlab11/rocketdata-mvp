@@ -32,6 +32,7 @@
 - REQ-052 implementato — `fetch-docling.ps1` prepara in `vendor/docling/python/` un Python embeddable 3.12 con Docling 2.149.0 (`docling/requirements.txt`, `scripts/fetch-docling.ps1`)
 - REQ-053 implementato — Modelli di layout, tabelle ed EasyOCR scaricati una volta in `vendor/docling/models/` (`docling/requirements.txt`, `scripts/fetch-docling.ps1`)
 - REQ-048 implementato — PDF convertiti con Docling quando `docling\` è accanto all'eseguibile: JSON in `.doc-ripper\`, Markdown generato dai blocchi della struttura (`Cargo.lock`, `Cargo.toml`, `docling/convert_pdf.py`, `src/docling.rs`, `src/main.rs`, `src/pdf.rs`, `src/structure.rs`)
+- REQ-070 implementato — Ripiego su PDFium se Docling manca o fallisce, con la nota `(ripiego PDFium: <motivo>)` nel riepilogo (`examples/fake_python.rs`, `src/docx.rs`, `src/pdf.rs`, `src/report.rs`, `src/run.rs`, `tests/docling.rs`)
 
 ## 2026-10-23
 - REQ-041 richiesto — doc-ripper: riga di avanzamento per ciascun file elaborato

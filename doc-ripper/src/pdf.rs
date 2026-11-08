@@ -31,12 +31,22 @@ fn load_pdfium() -> Result<Pdfium, String> {
 }
 
 /// Converte un `.pdf` in `<nome>_pdf.md` ricostruendo titoli, paragrafi, elenchi e tabelle (REQ-010)
-/// ed estraendo le immagini (REQ-020): con Docling se è installato accanto all'eseguibile (REQ-048),
-/// altrimenti con PDFium.
+/// ed estraendo le immagini (REQ-020): con Docling se è installato accanto all'eseguibile (REQ-048);
+/// se Docling manca o fallisce, con PDFium, indicandolo nel riepilogo (REQ-070).
 pub fn convert(src: &Path, dst: &Path, rel: &Path, progress: &str) -> Result<Outcome, String> {
-    if let Some(installation) = docling::installation() {
-        return convert_docling(&installation, src, dst, rel);
-    }
+    let reason = match docling::installation() {
+        Some(installation) => match convert_docling(&installation, src, dst, rel) {
+            Ok(outcome) => return Ok(outcome),
+            Err(error) => error,
+        },
+        None => "Docling non disponibile".to_string(),
+    };
+    let mut outcome = convert_pdfium(src, dst, rel, progress)?;
+    outcome.note = Some(format!("ripiego PDFium: {reason}"));
+    Ok(outcome)
+}
+
+fn convert_pdfium(src: &Path, dst: &Path, rel: &Path, progress: &str) -> Result<Outcome, String> {
     let mut images = Images::new(rel);
     let pages = PDFIUM.with(|cell| match cell.get_or_init(load_pdfium) {
         Ok(pdfium) => extract(pdfium, &src.join(rel), &mut images, progress),
@@ -68,7 +78,7 @@ fn write_markdown(src: &Path, dst: &Path, rel: &Path, images: &Images, markdown:
     images.write(&out_path)?;
     let markdown = format!("{}\n\n{markdown}", origin_line(&src.join(rel)));
     write_file(&out_path, markdown.as_bytes())?;
-    Ok(Outcome { outputs: vec![out_rel], skipped: Vec::new() })
+    Ok(Outcome { outputs: vec![out_rel], ..Default::default() })
 }
 
 /// Frammenti di testo di ogni pagina, con posizione e dimensione del carattere, e immagini

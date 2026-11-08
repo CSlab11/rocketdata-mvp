@@ -2,16 +2,18 @@ use std::path::{Path, PathBuf};
 
 use crate::report::{Report, SkipReason};
 
-/// Risultato della conversione di un file: i file generati e ciò che è stato saltato.
+/// Risultato della conversione di un file: i file generati, ciò che è stato saltato e un'eventuale nota
+/// da mostrare accanto al file nel riepilogo (es. il ripiego su PDFium, REQ-070).
 #[derive(Debug, Default)]
 pub struct Outcome {
     pub outputs: Vec<PathBuf>,
     pub skipped: Vec<SkipReason>,
+    pub note: Option<String>,
 }
 
 impl Outcome {
     pub fn skipped(reason: SkipReason) -> Self {
-        Outcome { outputs: Vec::new(), skipped: vec![reason] }
+        Outcome { outputs: Vec::new(), skipped: vec![reason], note: None }
     }
 }
 
@@ -25,6 +27,9 @@ where
     for file in files {
         match convert(&file) {
             Ok(outcome) => {
+                if let Some(note) = outcome.note {
+                    report.notes.push((file.clone(), note));
+                }
                 for reason in outcome.skipped {
                     report.skipped.push((file.clone(), reason));
                 }
@@ -56,7 +61,7 @@ mod tests {
             if f == Path::new("rotto.docx") {
                 Err("archivio non valido".into())
             } else {
-                Ok(Outcome { outputs: vec![f.with_extension("md")], skipped: Vec::new() })
+                Ok(Outcome { outputs: vec![f.with_extension("md")], ..Default::default() })
             }
         });
         assert_eq!(seen.len(), 3);
