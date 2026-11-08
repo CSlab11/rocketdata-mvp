@@ -56,7 +56,7 @@ Requisiti del tool `rocket-filter`. I requisiti di progetto e la tabella dei bug
 | REQ-026 | `query.py lessico --categoria <id>` deve restituire le `--n` parole della categoria con punteggio più alto (predefinito 50), con concentrazione, occorrenze, specificità, fonti ed esempi, e filtri `--min-occorrenze` (predefinito 2), `--min-specificita` e `--fonte`. | implementato | `query.py` |
 | REQ-027 | `query.py membri --categoria <tema>` deve restituire le `--n` unità del tema con score più alto (predefinito 40) e il motivo di appartenenza, con filtri `--tipo` e `--origine` (`ancora`, `lessicale` o `semantica`), e terminare con errore se la categoria non è un tema generico. | implementato | `query.py` |
 | REQ-028 | `query.py unita "<testo>"` deve restituire le `--k` unità più vicine al testo (predefinito 10) tra i tipi `--tipo` (predefinito requisito, testo, drd, definizione), con filtro facoltativo `--categoria`, mostrando score, tipo, standard e ID del requisito o clausola. | implementato | `core.py`, `query.py` |
-| REQ-029 | I comandi `termini`, `unita`, `lessico` e `membri` devono accettare `--json` per un'uscita strutturata; una categoria sconosciuta deve terminare con un errore che rimanda a `python query.py categorie`. | aperto | — |
+| REQ-029 | I comandi `termini`, `unita`, `lessico` e `membri` devono accettare `--json` per un'uscita strutturata; una categoria sconosciuta deve terminare con un errore che rimanda a `python query.py categorie`. | implementato | `query.py` |
 | REQ-030 | Se mancano i prototipi o il vocabolario, `query.py` e `classify.py` devono terminare con un messaggio che indica di eseguire `ingest.py`. | aperto | — |
 
 ## Classificazione (`classify.py`)
