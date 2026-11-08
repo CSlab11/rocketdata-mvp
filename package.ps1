@@ -1,6 +1,7 @@
 ﻿# Prepara dist\ con tutto il necessario per usare RocketData (REQ-127):
 #   gui.exe, doc-ripper.exe, search-rm3.exe, rocket-tag.exe, pdfium.dll, start.cmd, stop.cmd, la licenza
-#   di PDFium e rocket-tag-config\ con i file di configurazione di rocket-tag.
+#   di PDFium, rocket-tag-config\ con i file di configurazione di rocket-tag e docling\ con Python, Docling e
+#   i suoi modelli per doc-ripper.
 # Compila in release doc-ripper, gui, search-rm3 e rocket-tag, ciascuno nel proprio progetto Cargo: lo script non
 # appartiene a nessun tool e i tool non condividono nulla (REQ-005).
 # Uso: .\package.ps1   poi   dist\start.cmd
@@ -19,6 +20,13 @@ if (-not (Test-Path $Pdfium)) {
     & (Join-Path $Root 'doc-ripper\scripts\fetch-pdfium.ps1')
 }
 
+# Ambiente Python di Docling con i modelli: preparato una volta sola in doc-ripper\vendor\docling\ e poi
+# copiato in dist\docling\ a ogni pacchetto (REQ-052, REQ-053).
+$Docling = Join-Path $Root 'doc-ripper\vendor\docling'
+if (-not (Test-Path (Join-Path $Docling 'python\python.exe'))) {
+    & (Join-Path $Root 'doc-ripper\scripts\fetch-docling.ps1')
+}
+
 foreach ($Tool in 'doc-ripper', 'gui', 'search\search-rm3', 'rocket-tag') {
     Write-Output "Compilazione di $Tool..."
     & $Cargo build --release --quiet --manifest-path (Join-Path $Root "$Tool\Cargo.toml")
@@ -27,7 +35,7 @@ foreach ($Tool in 'doc-ripper', 'gui', 'search\search-rm3', 'rocket-tag') {
 
 # Una gui avviata da dist\ tiene bloccati i file: si controlla prima di cancellare qualsiasi cosa,
 # così dist\ non resta a metà.
-$Running = Get-Process gui, doc-ripper, search-rm3, rocket-tag -ErrorAction SilentlyContinue |
+$Running = Get-Process gui, doc-ripper, search-rm3, rocket-tag, python -ErrorAction SilentlyContinue |
     Where-Object { $_.Path -and $_.Path.StartsWith("$Dist\", [StringComparison]::OrdinalIgnoreCase) }
 if ($Running) {
     throw "la gui di $Dist è in esecuzione: fermarla con dist\stop.cmd e rilanciare lo script"
@@ -53,6 +61,9 @@ foreach ($File in $Files) {
 Copy-Item (Join-Path $Root 'rocket-tag\config') (Join-Path $Dist 'rocket-tag-config') -Recurse
 # Licenza di PDFium, da distribuire insieme alla DLL.
 Copy-Item (Join-Path $Root 'doc-ripper\vendor\pdfium\LICENSE') (Join-Path $Dist 'pdfium-LICENSE.txt')
+# Docling accanto a doc-ripper.exe: Python embeddable, modelli e script di doc-ripper (REQ-052, REQ-053).
+Copy-Item $Docling (Join-Path $Dist 'docling') -Recurse
+Copy-Item (Join-Path $Root 'doc-ripper\docling\*.py') (Join-Path $Dist 'docling')
 
 Write-Output "Pacchetto pronto in $Dist"
 Get-ChildItem $Dist | ForEach-Object { Write-Output "  $($_.Name)" }
