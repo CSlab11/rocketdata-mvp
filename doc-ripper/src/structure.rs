@@ -98,15 +98,24 @@ impl Walker<'_> {
                 let page = docling::page(&table.prov);
                 let data = &table.data;
                 let mut rows = vec![vec![String::new(); data.num_cols]; data.num_rows];
+                // Righe coperte solo da celle d'intestazione (almeno una).
+                let mut header = vec![(false, true); data.num_rows];
                 // Una cella unita ripete il suo valore in ogni cella che copre (REQ-058).
                 for cell in &data.table_cells {
                     let row_end = cell.end_row_offset_idx.unwrap_or(cell.start_row_offset_idx + 1).min(data.num_rows);
                     let col_end = cell.end_col_offset_idx.unwrap_or(cell.start_col_offset_idx + 1).min(data.num_cols);
+                    for flags in header.iter_mut().take(row_end).skip(cell.start_row_offset_idx) {
+                        *flags = (true, flags.1 && cell.column_header);
+                    }
                     for row in rows.iter_mut().take(row_end).skip(cell.start_row_offset_idx) {
                         for slot in row.iter_mut().take(col_end).skip(cell.start_col_offset_idx) {
                             *slot = cell.text.trim().to_string();
                         }
                     }
+                }
+                let header_rows = header.iter().take_while(|&&(covered, all)| covered && all).count();
+                if header_rows > 1 {
+                    rows.splice(0..header_rows, [merge_header(&rows[..header_rows])]);
                 }
                 if !rows.is_empty() && data.num_cols > 0 {
                     self.out.push(Block { kind: Kind::Table(rows), text: String::new(), page });
@@ -168,6 +177,22 @@ fn annex_level(text: &str) -> Option<usize> {
     let parts: Vec<&str> = first.strip_suffix('.').unwrap_or(first).split('.').collect();
     let numbered = parts[1..].iter().all(|p| !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit()));
     (parts.len() > 1 && is_letter(parts[0]) && numbered).then(|| parts.len().min(6))
+}
+
+/// Più righe d'intestazione in una sola: per colonna i testi sovrapposti uniti con ` / `, senza ripetere due
+/// volte lo stesso testo (es. una cella unita su più righe) (REQ-059).
+fn merge_header(rows: &[Vec<String>]) -> Vec<String> {
+    (0..rows[0].len())
+        .map(|col| {
+            let mut parts: Vec<&str> = Vec::new();
+            for text in rows.iter().map(|row| row[col].as_str()).filter(|t| !t.is_empty()) {
+                if !parts.contains(&text) {
+                    parts.push(text);
+                }
+            }
+            parts.join(" / ")
+        })
+        .collect()
 }
 
 /// Markdown dei blocchi: un blocco per paragrafo, voci di elenco consecutive senza riga vuota tra loro.
@@ -261,6 +286,40 @@ mod tests {
             ]}}]}"##,
         );
         assert_eq!(md, "| Voce | Livello | Livello |\n|---|---|---|\n| Urto | 5 | 20 |\n| Urto | 100 | 100 |\n");
+    }
+
+    #[test]
+    fn intestazioni_su_piu_righe_fuse_in_una() {
+        let cell = |text: &str, r0: usize, r1: usize, c0: usize, c1: usize, header: bool| {
+            format!(r#"{{"text": "{text}", "start_row_offset_idx": {r0}, "end_row_offset_idx": {r1}, "start_col_offset_idx": {c0}, "end_col_offset_idx": {c1}, "column_header": {header}}}"#)
+        };
+        let cells = [
+            cell("Voce", 0, 2, 0, 1, true),
+            cell("Livello", 0, 1, 1, 3, true),
+            cell("Min", 1, 2, 1, 2, true),
+            cell("Max", 1, 2, 2, 3, true),
+            cell("Urto", 2, 3, 0, 1, false),
+            cell("5", 2, 3, 1, 2, false),
+            cell("20", 2, 3, 2, 3, false),
+        ];
+        let json = format!(
+            r##"{{"body": {{"children": [{{"$ref": "#/tables/0"}}]}},
+               "tables": [{{"data": {{"num_rows": 3, "num_cols": 3, "table_cells": [{}]}}}}]}}"##,
+            cells.join(",")
+        );
+        assert_eq!(markdown(&json), "| Voce | Livello / Min | Livello / Max |\n|---|---|---|\n| Urto | 5 | 20 |\n");
+    }
+
+    #[test]
+    fn una_sola_riga_di_intestazione_resta_com_e() {
+        let md = markdown(
+            r##"{"body": {"children": [{"$ref": "#/tables/0"}]},
+            "tables": [{"data": {"num_rows": 2, "num_cols": 1, "table_cells": [
+                {"text": "Voce", "start_row_offset_idx": 0, "start_col_offset_idx": 0, "column_header": true},
+                {"text": "Urto", "start_row_offset_idx": 1, "start_col_offset_idx": 0}
+            ]}}]}"##,
+        );
+        assert_eq!(md, "| Voce |\n|---|\n| Urto |\n");
     }
 
     #[test]

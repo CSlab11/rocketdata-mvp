@@ -201,6 +201,8 @@ pub struct Cell {
     pub end_row_offset_idx: Option<usize>,
     #[serde(default)]
     pub end_col_offset_idx: Option<usize>,
+    #[serde(default)]
+    pub column_header: bool,
 }
 
 #[derive(Debug, Deserialize)]
