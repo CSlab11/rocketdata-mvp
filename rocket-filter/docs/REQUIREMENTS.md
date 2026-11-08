@@ -31,7 +31,7 @@ Requisiti del tool `rocket-filter`. I requisiti di progetto e la tabella dei bug
 | REQ-011 | Le unità più lunghe di `max_caratteri_unita` devono essere spezzate sui confini di frase e, dove manca la punteggiatura, sugli spazi tra le parole. | implementato | `ecss_parser.py` |
 | REQ-012 | `ingest.py` deve calcolare l'embedding di ogni unità con il prefisso di documento, anteponendo il percorso dei titoli al testo di requisiti, testo e DRD, e salvare i vettori in `index/emb/<standard>.npy` e testi e metadati in `index/ecss.sqlite`. | implementato | `core.py`, `ingest.py` |
 | REQ-013 | L'ingestione deve essere incrementale: uno standard viene rielaborato solo se cambia l'impronta SHA-1 del PDF o il modello, o se manca il suo file di vettori; `--forza` rielabora tutti gli standard e `--solo "<codici>"` rielabora quelli indicati, terminando con errore se un codice non è in `categorie.yaml`. | implementato | `ingest.py` |
-| REQ-014 | `ingest.py` deve togliere dall'indice unità, file e vettori degli standard non più presenti in `categorie.yaml`. | aperto | — |
+| REQ-014 | `ingest.py` deve togliere dall'indice unità, file e vettori degli standard non più presenti in `categorie.yaml`. | implementato | `ingest.py` |
 | REQ-015 | Se un PDF non si riesce a leggere o non produce unità, `ingest.py` deve segnalarlo e proseguire con gli standard successivi. | aperto | — |
 | REQ-016 | A ogni esecuzione `ingest.py` deve rigenerare temi, prototipi e vocabolario; con `--solo-prototipi` deve rigenerare solo questa parte, senza leggere i PDF. | aperto | — |
 
