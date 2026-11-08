@@ -1,6 +1,6 @@
-test*
-old*
-ignore*
+# File e cartelle personali nella radice (BUG-005: senza / le regole valgono a ogni livello).
+/old*
+ignore/
 docs/html/
 # Python, Docling e modelli (oltre 1 GB): preparati da package.ps1, non versionati (REQ-052, REQ-053).
 dist/docling/
