@@ -170,3 +170,21 @@ fn riusa_il_json_se_pdf_e_versione_non_cambiano() {
     assert!(run(&exe, src.path(), dst.path(), &envs).status.success());
     assert_eq!(calls(), 3);
 }
+/// Nessun OCR sui `.docx`: anche con Docling installato un `.docx` senza testo è saltato come scansionato e
+/// Docling non viene invocato (REQ-050).
+#[test]
+fn docx_senza_testo_scansionato_senza_ocr() {
+    let bin = tempfile::tempdir().unwrap();
+    let src = tempfile::tempdir().unwrap();
+    let dst = tempfile::tempdir().unwrap();
+    let log = bin.path().join("chiamate.txt");
+    let docx = docx_rs::Docx::new().add_paragraph(docx_rs::Paragraph::new());
+    docx.build().pack(fs::File::create(src.path().join("scansione.docx")).unwrap()).unwrap();
+
+    let output = run(&install(bin.path()), src.path(), dst.path(), &[("FAKE_DOCLING_LOG", log.to_str().unwrap())]);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(output.status.success(), "{stdout}");
+    assert!(stdout.contains("scansione.docx - scansionato"), "{stdout}");
+    assert!(!log.exists(), "Docling invocato per un .docx");
+    assert!(!dst.path().join("scansione_docx.md").exists());
+}
