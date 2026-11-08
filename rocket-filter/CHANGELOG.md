@@ -7,6 +7,8 @@
 - REQ-001 implementato — Tool Python autonomo in `rocket-filter/`, dati generati esclusi da git (`.gitignore`, `requirements.txt`)
 - f5eee83 attribuito a REQ-002 — codice entrato con il primo commit del tool
 - REQ-002 implementato — `setup_model.py` scarica una volta il modello di embedding (`config.yaml`, `setup_model.py`)
+- f5eee83 attribuito a REQ-003 — codice entrato con il primo commit del tool
+- REQ-003 implementato — Funzionamento offline con il modello locale (`core.py`)
 
 ## 2026-11-07
 - REQ-001 richiesto — Tool Python autonomo in `rocket-filter/`, dati generati esclusi da git
