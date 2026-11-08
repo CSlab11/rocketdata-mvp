@@ -79,6 +79,8 @@
 - REQ-038 implementato — `classify.py`: dettaglio e riepilogo a video (`classify.py`)
 - f5eee83 attribuito a REQ-039 — codice entrato con il primo commit del tool
 - REQ-039 implementato — `README.md` con installazione, uso e calibrazione; corretta la cartella nelle istruzioni di installazione (`README.md`)
+- f5eee83 attribuito a REQ-040 — codice entrato con il primo commit del tool
+- REQ-040 implementato — `classify.py`: supporto DOCX facoltativo con `python-docx` (sostituisce REQ-031) (`classify.py`, `requirements.txt`)
 
 ## 2026-11-07
 - REQ-001 richiesto — Tool Python autonomo in `rocket-filter/`, dati generati esclusi da git
