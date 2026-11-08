@@ -29,6 +29,7 @@
 - REQ-067 annullato — opzionale, rinviato finché un tool non usa i marcatori di pagina
 - REQ-068 annullato — sostituito da REQ-071 (corpus con ECSS reale e PDF generati)
 - REQ-071 richiesto — doc-ripper: corpus di riferimento con uno standard ECSS e PDF generati da HTML con Edge
+- REQ-052 implementato — `fetch-docling.ps1` prepara in `vendor/docling/python/` un Python embeddable 3.12 con Docling 2.149.0 (`docling/requirements.txt`, `scripts/fetch-docling.ps1`)
 
 ## 2026-10-23
 - REQ-041 richiesto — doc-ripper: riga di avanzamento per ciascun file elaborato

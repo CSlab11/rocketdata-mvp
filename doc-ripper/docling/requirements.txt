@@ -1,0 +1,3 @@
+# Dipendenze dell'ambiente Python di Docling distribuito in dist\docling\ (REQ-052).
+# Le wheel di torch per Windows su PyPI sono solo CPU: nessun indice CUDA.
+docling==2.149.0
