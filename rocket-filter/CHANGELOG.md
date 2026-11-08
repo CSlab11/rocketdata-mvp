@@ -21,6 +21,8 @@
 - REQ-008 implementato — Selezione del PDF della versione attiva di ogni standard (`ecss_parser.py`)
 - f5eee83 attribuito a REQ-009 — codice entrato con il primo commit del tool
 - REQ-009 implementato — Segmentazione dei PDF in unità con metadati (`ecss_parser.py`)
+- f5eee83 attribuito a REQ-010 — codice entrato con il primo commit del tool
+- REQ-010 implementato — Scarto di intestazioni, piè di pagina, indice e capitoli senza contenuto utile (`ecss_parser.py`)
 
 ## 2026-11-07
 - REQ-001 richiesto — Tool Python autonomo in `rocket-filter/`, dati generati esclusi da git
