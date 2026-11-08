@@ -171,15 +171,27 @@ def parse_items(text, errors, name):
     return items
 
 
-def file_births(root, files):
-    """Per ogni file dei requisiti: (hash, data) del commit che lo ha creato, seguendo i rinomini; None se mai committato."""
+ROW_ADDED_RE = re.compile(r"^\+\|\s*((?:REQ|BUG)-\d{3,})\s*\|")
+
+
+def row_births(root, files):
+    """Per ogni riga dei file dei requisiti, (file, ID locale) -> (hash, data) del primo commit che la aggiunge:
+    un ID senza prefisso storico indica l'elemento che aveva quell'ID in quel momento (BUG-006)."""
     births = {}
     for name in files:
         try:
-            out = git(root, "log", "--follow", "--diff-filter=A", "--format=%H %cs", "--", name).split()
+            out = git(root, "log", "--reverse", "-p", "--unified=0", "--format=%x1e%H %cs", "--", name)
         except RuntimeError:
-            out = []
-        births[name] = (out[-2][:7], out[-1]) if len(out) >= 2 else None
+            continue
+        for rec in out.split("\x1e")[1:]:
+            lines = rec.splitlines()
+            head = lines[0].split() if lines else []
+            if len(head) < 2:
+                continue
+            for ln in lines[1:]:
+                m = ROW_ADDED_RE.match(ln)
+                if m:
+                    births.setdefault((name, m.group(1)), (head[0][:7], head[1]))
     return births
 
 
@@ -206,7 +218,7 @@ class Resolver:
             return cands[0]["id"]
 
         def born(it):
-            b = self.births.get(it["file"])
+            b = self.births.get((it["file"], it["local"]))
             if not b:
                 return False
             if pos is not None:
@@ -218,9 +230,9 @@ class Resolver:
         if len(alive) == 1:
             return alive[0]["id"]
         if not alive:
-            # Nessun file esisteva ancora (es. requisiti spostati da un file all'altro): il file creato per primo.
+            # Nessuna riga esisteva ancora (es. requisiti spostati da un file all'altro): la riga nata per prima.
             def key(it):
-                b = self.births.get(it["file"])
+                b = self.births.get((it["file"], it["local"]))
                 return (b is None, -self.commit_pos.get(b[0], -1) if b else 0)
             return sorted(cands, key=key)[0]["id"]
         return None  # ambiguo
@@ -288,7 +300,7 @@ def main():
 
     tracked = set(git(root, "ls-files").splitlines())
     commits = load_commits(root)
-    resolver = Resolver(items, file_births(root, files), {c["hash"]: i for i, c in enumerate(commits)})
+    resolver = Resolver(items, row_births(root, files), {c["hash"]: i for i, c in enumerate(commits)})
     for i, c in enumerate(commits):
         for part, local in c["refs"]:
             ident = resolver.resolve(part, local, pos=i)

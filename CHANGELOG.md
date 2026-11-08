@@ -12,6 +12,7 @@
 - gui_REQ-155 implementato — senza Docling accanto a doc-ripper.exe la modalità ai è disabilitata con messaggio e rifiutata dal server (`gui/src/server.rs`, `gui/tests/doc_ripper_lookup.rs`, `gui/web/app.js`)
 - gui_REQ-156 implementato — modalità predefinita ai, ultima modalità usata salvata nelle impostazioni e riproposta; simple se Docling manca (`gui/src/server.rs`, `gui/src/settings.rs`, `gui/tests/settings.rs`, `gui/web/app.js`)
 - BUG-006 segnalato — `check_trace.py` risolve gli ID storici senza prefisso dalla nascita del file e non della riga: ambigui quando una parte riusa un numero di un'altra (`.claude/skills/checkreq/scripts/check_trace.py`)
+- BUG-006 risolto — `check_trace.py` risolve gli ID storici senza prefisso dalla nascita della riga dell'ID; errori da 64 a 33, restano quelli di thin-decoder (REQ-179, REQ-180) (`.claude/skills/checkreq/scripts/check_trace.py`)
 
 ## 2026-11-04
 - REQ-151 richiesto — Requisiti di ogni tool in `<cartella del tool>/docs/REQUIREMENTS.md`
