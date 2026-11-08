@@ -3,24 +3,28 @@
 Uso (lo lancia doc-ripper con il Python di dist\\docling\\):
     python convert_pdf.py --pdf <file.pdf> --out <cartella>
 
-Scrive <cartella>\\documento.json e le immagini del documento in <cartella>\\immagini\\, richiamate dal JSON
-con percorsi relativi.
-I modelli si leggono da models\\ accanto allo script, senza accesso alla rete (REQ-053).
+Il PDF si converte a blocchi di BLOCK pagine con lo stesso converter (REQ-054): per ogni blocco scrive
+<cartella>\\blocco-NNNN.json (NNNN = prima pagina del blocco) e, su stdout, la riga "pagina X/Y" con l'ultima
+pagina elaborata e il totale. Le immagini vanno in <cartella>\\immagini\\, richiamate dal JSON con percorsi
+relativi. I modelli si leggono da models\\ accanto allo script, senza accesso alla rete (REQ-053).
 In caso di errore termina con codice 1 e il motivo su stderr.
 """
 from __future__ import annotations
 
 import argparse
 import os
+import shutil
 import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 MODELS = HERE / "models"
+BLOCK = 10
 
 
 def convert(pdf: Path, out: Path, models: Path) -> None:
     os.environ["HF_HUB_OFFLINE"] = "1"
+    import pypdfium2
     from docling.datamodel.base_models import InputFormat
     from docling.datamodel.pipeline_options import PdfPipelineOptions, TableFormerMode
     from docling.document_converter import DocumentConverter, PdfFormatOption
@@ -34,11 +38,22 @@ def convert(pdf: Path, out: Path, models: Path) -> None:
     options.generate_picture_images = True
     options.images_scale = 2.0
     converter = DocumentConverter(format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=options)})
-    document = converter.convert(pdf).document
+
+    with pypdfium2.PdfDocument(str(pdf)) as document:
+        total = len(document)
+    # I blocchi di un'esecuzione precedente non devono mescolarsi a quelli nuovi.
+    if out.exists():
+        for old in out.glob("blocco-*.json"):
+            old.unlink()
+        shutil.rmtree(out / "immagini", ignore_errors=True)
     out.mkdir(parents=True, exist_ok=True)
-    # Cartella delle immagini relativa: gli uri nel JSON restano relativi a <cartella> e il JSON resta valido
-    # anche se la cartella viene spostata.
-    document.save_as_json(out / "documento.json", artifacts_dir=Path("immagini"), image_mode=ImageRefMode.REFERENCED)
+    for first in range(1, total + 1, BLOCK):
+        last = min(first + BLOCK - 1, total)
+        block = converter.convert(pdf, page_range=(first, last)).document
+        # Cartella delle immagini relativa: gli uri restano relativi a <cartella> anche se viene spostata.
+        block.save_as_json(out / f"blocco-{first:04d}.json", artifacts_dir=Path("immagini"),
+                           image_mode=ImageRefMode.REFERENCED)
+        print(f"pagina {last}/{total}", flush=True)
 
 
 def main() -> None:

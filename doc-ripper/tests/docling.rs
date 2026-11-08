@@ -55,8 +55,20 @@ fn converte_con_docling_quando_e_installato() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(output.status.success(), "{stdout}");
     assert!(stdout.contains("report.pdf -> report_pdf.md\n"), "{stdout}");
-    assert_eq!(markdown(dst.path(), "report_pdf.md"), "# Titolo da Docling\n\nParagrafo da Docling.\n");
-    assert!(dst.path().join(".doc-ripper").join("report_pdf").join("documento.json").is_file());
+    assert_eq!(markdown(dst.path(), "report_pdf.md"), "# Titolo da Docling\n\nParagrafo da Docling.\n\nSeconda parte.\n");
+    assert!(dst.path().join(".doc-ripper").join("report_pdf").join("blocco-0001.json").is_file());
+}
+
+/// Avanzamento per blocco di pagine dei PDF convertiti con Docling (REQ-054).
+#[test]
+fn avanzamento_per_blocco_di_pagine() {
+    let bin = tempfile::tempdir().unwrap();
+    let src = tempfile::tempdir().unwrap();
+    let dst = tempfile::tempdir().unwrap();
+    sample_pdf(&src.path().join("report.pdf"), "Testo");
+    let output = run(&install(bin.path()), src.path(), dst.path(), &[]);
+    let stdout = String::from_utf8_lossy(&output.stdout).replace("\r\n", "\n");
+    assert!(stdout.starts_with("[1/1] report.pdf\n[1/1] pagina 10/12\n[1/1] pagina 12/12\n"), "{stdout}");
 }
 
 #[test]

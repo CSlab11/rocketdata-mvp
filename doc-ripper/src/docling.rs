@@ -1,8 +1,9 @@
 //! Conversione dei PDF con Docling (REQ-048): esecuzione dello script Python distribuito in `docling\`
 //! accanto all'eseguibile e lettura del `DoclingDocument` JSON che produce.
 
+use std::io::{BufRead, BufReader, Read};
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 use serde::Deserialize;
 
@@ -16,24 +17,57 @@ fn python(installation: &Path) -> PathBuf {
     installation.join("python").join("python.exe")
 }
 
-/// Esegue Docling su `pdf`, scrivendo il JSON e le immagini in `out`, e restituisce il documento.
-pub fn run(installation: &Path, pdf: &Path, out: &Path) -> Result<Document, String> {
+/// Esegue Docling su `pdf`, scrivendo i blocchi JSON e le immagini in `out`, e restituisce i blocchi del
+/// documento nell'ordine delle pagine. Lo script converte a blocchi di pagine e dopo ciascuno scrive
+/// `pagina X/Y`, che diventa la riga di avanzamento `<progress> pagina X/Y` (REQ-054).
+pub fn run(installation: &Path, pdf: &Path, out: &Path, progress: &str) -> Result<Vec<Document>, String> {
     let mut command = Command::new(python(installation));
     // -I: le variabili PYTHON* e i pacchetti dell'utente non entrano nel Python distribuito.
     command.arg("-I").arg(installation.join("convert_pdf.py")).arg("--pdf").arg(pdf).arg("--out").arg(out);
+    command.stdout(Stdio::piped()).stderr(Stdio::piped());
     #[cfg(windows)]
     {
         // Senza console propria: lanciato dalla gui, Python non deve aprire finestre.
         use std::os::windows::process::CommandExt;
         command.creation_flags(0x0800_0000);
     }
-    let output = command.output().map_err(|e| format!("Docling non avviabile: {e}"))?;
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        let reason = stderr.lines().rev().find(|l| !l.trim().is_empty()).unwrap_or("errore sconosciuto");
+    let mut child = command.spawn().map_err(|e| format!("Docling non avviabile: {e}"))?;
+    // Lo stderr (log di Docling) si legge a parte: un buffer pieno bloccherebbe lo script.
+    let mut stderr = child.stderr.take().unwrap();
+    let errors = std::thread::spawn(move || {
+        let mut text = String::new();
+        let _ = stderr.read_to_string(&mut text);
+        text
+    });
+    for line in BufReader::new(child.stdout.take().unwrap()).lines().map_while(Result::ok) {
+        if line.starts_with("pagina ") {
+            println!("{progress} {}", line.trim());
+        }
+    }
+    let status = child.wait().map_err(|e| format!("Docling: {e}"))?;
+    let errors = errors.join().unwrap_or_default();
+    if !status.success() {
+        let reason = errors.lines().rev().find(|l| !l.trim().is_empty()).unwrap_or("errore sconosciuto");
         return Err(format!("Docling: {}", reason.trim()));
     }
-    read(&out.join("documento.json"))
+    read_blocks(out)
+}
+
+/// Blocchi `blocco-NNNN.json` di `dir`, in ordine di pagina.
+pub fn read_blocks(dir: &Path) -> Result<Vec<Document>, String> {
+    let mut paths: Vec<PathBuf> = std::fs::read_dir(dir)
+        .map_err(|e| format!("{}: {e}", dir.display()))?
+        .filter_map(|entry| entry.ok().map(|e| e.path()))
+        .filter(|p| {
+            let name = p.file_name().unwrap_or_default().to_string_lossy();
+            name.starts_with("blocco-") && name.ends_with(".json")
+        })
+        .collect();
+    paths.sort();
+    if paths.is_empty() {
+        return Err(format!("Docling non ha prodotto alcun blocco in {}", dir.display()));
+    }
+    paths.iter().map(|p| read(p)).collect()
 }
 
 /// Legge un `DoclingDocument` JSON.
