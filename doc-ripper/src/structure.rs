@@ -86,8 +86,7 @@ impl Walker<'_> {
             },
             Some(Item::Text(text)) => {
                 let kind = match text.label.as_str() {
-                    "title" => Kind::Heading(1),
-                    "section_header" => Kind::Heading(text.level.unwrap_or(1).clamp(1, 6)),
+                    "title" | "section_header" => Kind::Heading(heading_level(&text.text, &text.label, text.level)),
                     "list_item" => Kind::ListItem(depth.saturating_sub(1)),
                     "code" => Kind::Code,
                     _ => Kind::Paragraph,
@@ -130,6 +129,24 @@ impl Walker<'_> {
             self.out.push(Block { kind, text, page });
         }
     }
+}
+
+/// Livello di un titolo: dalla numerazione di clausola se c'è (REQ-055), altrimenti quello di Docling.
+fn heading_level(text: &str, label: &str, docling_level: Option<usize>) -> usize {
+    if let Some(level) = clause_level(text) {
+        return level;
+    }
+    if label == "title" { 1 } else { docling_level.unwrap_or(1).clamp(1, 6) }
+}
+
+/// `4.2.3 Titolo` (o `4.2.3. Titolo`) → 3: tanti livelli quanti componenti del numero, al massimo sei.
+fn clause_level(text: &str) -> Option<usize> {
+    let (number, rest) = text.trim().split_once(char::is_whitespace)?;
+    if rest.trim().is_empty() {
+        return None;
+    }
+    let parts: Vec<&str> = number.strip_suffix('.').unwrap_or(number).split('.').collect();
+    parts.iter().all(|p| !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit())).then(|| parts.len().min(6))
 }
 
 /// Markdown dei blocchi: un blocco per paragrafo, voci di elenco consecutive senza riga vuota tra loro.
@@ -241,6 +258,26 @@ mod tests {
         let mut images = Images::new(Path::new("doc.pdf"));
         let md = to_markdown(&blocks(&doc, dir.path(), &mut images));
         assert_eq!(md, "![pagina3_immagine1.png](doc_pdf_img/pagina3_immagine1.png)\n\nFigure 1: Schema\n");
+    }
+
+    /// Titolo di Docling con il livello indicato.
+    fn header(text: &str, level: usize) -> String {
+        format!(
+            r##"{{"body": {{"children": [{{"$ref": "#/texts/0"}}]}},
+               "texts": [{{"label": "section_header", "level": {level}, "text": "{text}"}}]}}"##
+        )
+    }
+
+    #[test]
+    fn livello_dei_titoli_dalla_numerazione_di_clausola() {
+        assert_eq!(markdown(&header("4 Requirements", 1)), "# 4 Requirements\n");
+        assert_eq!(markdown(&header("4.2 Materials", 1)), "## 4.2 Materials\n");
+        assert_eq!(markdown(&header("4.2.3 Metals", 1)), "### 4.2.3 Metals\n");
+        assert_eq!(markdown(&header("4.2.3. Metals", 2)), "### 4.2.3. Metals\n");
+        assert_eq!(markdown(&header("1.2.3.4.5.6.7 Profondo", 1)), "###### 1.2.3.4.5.6.7 Profondo\n");
+        // Non è una numerazione di clausola: livello di Docling.
+        assert_eq!(markdown(&header("4.2", 2)), "## 4.2\n");
+        assert_eq!(markdown(&header("4.a Varianti", 2)), "## 4.a Varianti\n");
     }
 
     #[test]
