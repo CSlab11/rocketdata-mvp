@@ -27,6 +27,8 @@
 - REQ-011 implementato — Divisione delle unità più lunghe di `max_caratteri_unita` (`ecss_parser.py`)
 - f5eee83 attribuito a REQ-012 — codice entrato con il primo commit del tool
 - REQ-012 implementato — Embedding delle unità e archivio in `index/` (`core.py`, `ingest.py`)
+- f5eee83 attribuito a REQ-013 — codice entrato con il primo commit del tool
+- REQ-013 implementato — Ingestione incrementale, `--forza` e `--solo` (`ingest.py`)
 
 ## 2026-11-07
 - REQ-001 richiesto — Tool Python autonomo in `rocket-filter/`, dati generati esclusi da git
