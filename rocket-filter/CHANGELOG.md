@@ -45,6 +45,8 @@
 - REQ-020 implementato — Vocabolario di parole singole da definizioni, titoli e sigle (`vocabolario.py`)
 - f5eee83 attribuito a REQ-021 — codice entrato con il primo commit del tool
 - REQ-021 implementato — Riconoscimento delle sigle (`vocabolario.py`)
+- f5eee83 attribuito a REQ-022 — codice entrato con il primo commit del tool
+- REQ-022 implementato — Vettori delle parole da parola e contesto ECSS (`vocabolario.py`)
 
 ## 2026-11-07
 - REQ-001 richiesto — Tool Python autonomo in `rocket-filter/`, dati generati esclusi da git
