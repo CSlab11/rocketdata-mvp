@@ -63,7 +63,7 @@ Requisiti del tool `rocket-filter`. I requisiti di progetto e la tabella dei bug
 
 | ID | Requisito | Stato | File impattati |
 |----|-----------|-------|----------------|
-| REQ-031 | `classify.py` deve accettare uno o più file PDF, DOCX, TXT o MD e un testo passato con `--testo`, ed estrarne i paragrafi (PDF: blocchi di testo con numero di pagina; DOCX: paragrafi, con `python-docx`; TXT e MD: blocchi separati da righe vuote), scartando quelli più corti di `classificazione.min_caratteri_paragrafo`; senza paragrafi deve terminare con errore. | aperto | — |
+| REQ-031 | `classify.py` deve accettare uno o più file PDF, DOCX, TXT o MD e un testo passato con `--testo`, ed estrarne i paragrafi (PDF: blocchi di testo con numero di pagina; DOCX: paragrafi, con `python-docx`; TXT e MD: blocchi separati da righe vuote), scartando quelli più corti di `classificazione.min_caratteri_paragrafo`; senza paragrafi deve terminare con errore. (sostituito da REQ-040) | annullato | — |
 | REQ-032 | `classify.py` deve conservare in `index/ecss.sqlite` gli embeddings dei paragrafi, con chiave l'impronta SHA-1 di modello e testo, e ricalcolare solo i paragrafi non ancora visti. | aperto | — |
 | REQ-033 | `classify.py` deve classificare sui livelli scelti con `--livelli` tra `temi`, `rami`, `discipline` e `trasversali` (separati da virgola, oppure `tutti`; predefinito `classificazione.livelli_attivi`) e terminare con errore su un livello non valido. | aperto | — |
 | REQ-034 | Lo score di un paragrafo verso una categoria deve essere il massimo coseno con i prototipi della categoria; per ogni livello, in modo indipendente, il paragrafo riceve le categorie, tra le prime `max_categorie`, con score non inferiore alla `soglia` e alla migliore meno il `margine`, ed è non classificato se nessuna supera la soglia; il risultato conserva le cinque categorie migliori e segnala come ambiguo un livello con un numero di categorie diverso da uno. | aperto | — |
@@ -71,6 +71,7 @@ Requisiti del tool `rocket-filter`. I requisiti di progetto e la tabella dei bug
 | REQ-036 | Per ogni paragrafo `classify.py` deve indicare le `classificazione.termini_supporto` parole del vocabolario più vicine al paragrafo. | aperto | — |
 | REQ-037 | Con `--out <file>.jsonl` `classify.py` deve scrivere un oggetto JSON per paragrafo; con un'altra estensione un CSV UTF-8 con BOM e separatore `;`, con colonne `file`, `pagina`, per ogni livello `<livello>`, `<livello>_score` e `<livello>_top3`, poi `termini` e `testo`. | aperto | — |
 | REQ-038 | `classify.py` deve mostrare a video il dettaglio di ogni paragrafo quando manca `--out` o i paragrafi sono al più 20, e sempre un riepilogo per livello con paragrafi classificati, sotto soglia, soglia e margine. | aperto | — |
+| REQ-040 | `classify.py` deve accettare uno o più file PDF, DOCX, TXT o MD e un testo passato con `--testo`, ed estrarne i paragrafi (PDF: blocchi di testo con numero di pagina; DOCX: paragrafi, con `python-docx`, dipendenza facoltativa che `requirements.txt` non installa; TXT e MD: blocchi separati da righe vuote), scartando quelli più corti di `classificazione.min_caratteri_paragrafo`; se `python-docx` non è installato, un file DOCX deve far terminare con un messaggio che indica come installarlo; senza paragrafi deve terminare con errore. (sostituisce REQ-031) | aperto | — |
 
 ## Documentazione
 

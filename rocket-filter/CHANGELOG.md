@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-08
+- REQ-040 richiesto — `classify.py`: supporto DOCX facoltativo con `python-docx` (sostituisce REQ-031)
+- REQ-031 annullato — sostituito da REQ-040
+
 ## 2026-11-07
 - REQ-001 richiesto — Tool Python autonomo in `rocket-filter/`, dati generati esclusi da git
 - REQ-002 richiesto — `setup_model.py` scarica una volta il modello di embedding
