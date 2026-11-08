@@ -25,6 +25,8 @@
 - REQ-010 implementato — Scarto di intestazioni, piè di pagina, indice e capitoli senza contenuto utile (`ecss_parser.py`)
 - f5eee83 attribuito a REQ-011 — codice entrato con il primo commit del tool
 - REQ-011 implementato — Divisione delle unità più lunghe di `max_caratteri_unita` (`ecss_parser.py`)
+- f5eee83 attribuito a REQ-012 — codice entrato con il primo commit del tool
+- REQ-012 implementato — Embedding delle unità e archivio in `index/` (`core.py`, `ingest.py`)
 
 ## 2026-11-07
 - REQ-001 richiesto — Tool Python autonomo in `rocket-filter/`, dati generati esclusi da git
