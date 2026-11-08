@@ -77,4 +77,4 @@ Requisiti del tool `rocket-filter`. I requisiti di progetto e la tabella dei bug
 
 | ID | Requisito | Stato | File impattati |
 |----|-----------|-------|----------------|
-| REQ-039 | `README.md` deve descrivere installazione, scaricamento del modello, costruzione dell'indice, comandi di interrogazione e di classificazione, calibrazione delle soglie, definizione dei temi e cambio del modello. | aperto | — |
+| REQ-039 | `README.md` deve descrivere installazione, scaricamento del modello, costruzione dell'indice, comandi di interrogazione e di classificazione, calibrazione delle soglie, definizione dei temi e cambio del modello. | implementato | `README.md` |

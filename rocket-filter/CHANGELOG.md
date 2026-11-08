@@ -77,6 +77,8 @@
 - REQ-037 implementato — `classify.py`: uscita JSONL o CSV (`classify.py`)
 - f5eee83 attribuito a REQ-038 — codice entrato con il primo commit del tool
 - REQ-038 implementato — `classify.py`: dettaglio e riepilogo a video (`classify.py`)
+- f5eee83 attribuito a REQ-039 — codice entrato con il primo commit del tool
+- REQ-039 implementato — `README.md` con installazione, uso e calibrazione; corretta la cartella nelle istruzioni di installazione (`README.md`)
 
 ## 2026-11-07
 - REQ-001 richiesto — Tool Python autonomo in `rocket-filter/`, dati generati esclusi da git

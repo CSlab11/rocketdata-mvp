@@ -39,7 +39,7 @@ Testi con significato simile producono vettori vicini, anche se usano parole div
 ## Installazione (una tantum, online)
 
 ```bat
-cd ecss_embed
+cd rocket-filter
 python -m venv .venv
 .venv\Scripts\activate
 pip install torch --index-url https://download.pytorch.org/whl/cpu
