@@ -57,6 +57,7 @@
 - REQ-073 implementato — `--mode simple` converte i PDF solo con PDFium, senza Docling né nota; `--mode ai` invariato (`src/pdf.rs`, `tests/docling.rs`)
 - REQ-074 richiesto — doc-ripper: intestazioni e piè di pagina ripetuti esclusi dal `.md` dei PDF anche se Docling li classifica come corpo
 - REQ-075 richiesto — doc-ripper: righe di tabella fatte solo di intestazioni o piè di pagina escluse dal `.md`
+- REQ-076 richiesto — doc-ripper: intestazioni e piè di pagina ripetuti esclusi dal `.md` dei PDF anche in modalità simple
 
 ## 2026-10-23
 - REQ-041 richiesto — doc-ripper: riga di avanzamento per ciascun file elaborato
