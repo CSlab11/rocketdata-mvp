@@ -224,6 +224,8 @@ pub struct Cell {
     pub end_col_offset_idx: Option<usize>,
     #[serde(default)]
     pub column_header: bool,
+    #[serde(default)]
+    pub bbox: Option<BBox>,
 }
 
 #[derive(Debug, Deserialize)]

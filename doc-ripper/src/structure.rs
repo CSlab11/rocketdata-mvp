@@ -32,9 +32,18 @@ pub struct Block {
     pub page: u32,
 }
 
-/// Per ogni blocco di Docling, i riferimenti (`#/texts/N`) ai testi che si ripetono come intestazione o piè di
-/// pagina nell'intero PDF, qualunque sia la loro classificazione (REQ-074).
-pub fn repeated(documents: &[Document]) -> Vec<HashSet<String>> {
+/// Intestazioni e piè di pagina riconosciuti dalla ripetizione in un blocco di Docling.
+#[derive(Debug, Default)]
+pub struct Repeated {
+    /// Riferimenti (`#/texts/N`) ai testi ripetuti (REQ-074).
+    texts: HashSet<String>,
+    /// Estensione verticale che occupano nell'intero PDF, per le righe di tabella (REQ-075).
+    zones: furniture::Zones,
+}
+
+/// Per ogni blocco di Docling, i testi che si ripetono come intestazione o piè di pagina nell'intero PDF,
+/// qualunque sia la loro classificazione (REQ-074), e le zone che occupano (REQ-075).
+pub fn repeated(documents: &[Document]) -> Vec<Repeated> {
     let pages: HashSet<&String> = documents.iter().flat_map(|d| d.pages.keys()).collect();
     let mut owners = Vec::new();
     let mut items = Vec::new();
@@ -48,10 +57,12 @@ pub fn repeated(documents: &[Document]) -> Vec<HashSet<String>> {
             items.push(furniture::Placed { page: prov.page_no, text: text.text.clone(), top, bottom, page_height: page.size.height });
         }
     }
-    let mut out = vec![HashSet::new(); documents.len()];
-    for ((index, target), found) in owners.into_iter().zip(furniture::detect(&items, pages.len())) {
+    let found = furniture::detect(&items, pages.len());
+    let zones = furniture::Zones::new(&items, &found);
+    let mut out: Vec<Repeated> = documents.iter().map(|_| Repeated { texts: HashSet::new(), zones }).collect();
+    for ((index, target), found) in owners.into_iter().zip(found) {
         if found {
-            out[index].insert(target);
+            out[index].texts.insert(target);
         }
     }
     out
@@ -59,7 +70,7 @@ pub fn repeated(documents: &[Document]) -> Vec<HashSet<String>> {
 
 /// Blocchi del corpo del documento nell'ordine di lettura di Docling, senza i testi di `repeated` (REQ-074).
 /// Le immagini vengono registrate in `images`; i loro file si leggono a partire da `base`, la cartella del JSON.
-pub fn blocks(document: &Document, base: &Path, images: &mut Images, repeated: &HashSet<String>) -> Vec<Block> {
+pub fn blocks(document: &Document, base: &Path, images: &mut Images, repeated: &Repeated) -> Vec<Block> {
     // Le didascalie delle immagini si scrivono solo dopo l'immagine, anche se nel corpo la precedono (REQ-066).
     let picture_captions = document.pictures.iter().flat_map(|p| p.captions.iter().map(|r| r.target.clone())).collect();
     let mut walker = Walker {
@@ -88,8 +99,8 @@ struct Walker<'a> {
     in_picture: bool,
     /// Immagini già estratte per pagina, per i nomi dei file.
     per_page: HashMap<u32, usize>,
-    /// Intestazioni e piè di pagina riconosciuti dalla ripetizione (REQ-074).
-    repeated: &'a HashSet<String>,
+    /// Intestazioni e piè di pagina riconosciuti dalla ripetizione (REQ-074, REQ-075).
+    repeated: &'a Repeated,
     out: Vec<Block>,
 }
 
@@ -112,7 +123,7 @@ impl Walker<'_> {
             Some(Item::Group(group)) if group.content_layer != "body" => {}
             Some(Item::Text(text)) if text.content_layer != "body" || matches!(text.label.as_str(), "page_header" | "page_footer") => {}
             // Anche quelli che Docling classifica come corpo, riconosciuti dalla ripetizione (REQ-074).
-            Some(Item::Text(_)) if self.repeated.contains(&reference.target) => {}
+            Some(Item::Text(_)) if self.repeated.texts.contains(&reference.target) => {}
             Some(Item::Group(group)) => match group.label.as_str() {
                 "list" | "ordered_list" => self.children(&group.children, depth + 1),
                 // Testo spezzato da formattazioni diverse: un solo paragrafo.
@@ -120,7 +131,7 @@ impl Walker<'_> {
                     let parts: Vec<&str> = group
                         .children
                         .iter()
-                        .filter(|r| !self.repeated.contains(&r.target))
+                        .filter(|r| !self.repeated.texts.contains(&r.target))
                         .filter_map(|r| match self.document.get(r) {
                             Some(Item::Text(t)) => Some(t.text.trim()),
                             _ => None,
@@ -160,6 +171,10 @@ impl Walker<'_> {
                 let mut rows = vec![vec![String::new(); data.num_cols]; data.num_rows];
                 // Righe coperte solo da celle d'intestazione (almeno una).
                 let mut header = vec![(false, true); data.num_rows];
+                // Righe con almeno una cella di testo e tutte le celle di testo dentro le zone delle intestazioni
+                // e dei piè di pagina ripetuti (REQ-075).
+                let mut repeated = vec![(false, true); data.num_rows];
+                let height = self.document.pages.get(&page.to_string()).map(|p| p.size.height);
                 // Una cella unita ripete il suo valore in ogni cella che copre (REQ-058).
                 for cell in &data.table_cells {
                     let row_end = cell.end_row_offset_idx.unwrap_or(cell.start_row_offset_idx + 1).min(data.num_rows);
@@ -167,12 +182,26 @@ impl Walker<'_> {
                     for flags in header.iter_mut().take(row_end).skip(cell.start_row_offset_idx) {
                         *flags = (true, flags.1 && cell.column_header);
                     }
+                    if !cell.text.trim().is_empty() {
+                        let inside = cell.bbox.as_ref().zip(height).is_some_and(|(bbox, height)| {
+                            let (top, bottom) = bbox.from_top(height);
+                            self.repeated.zones.contains(top, bottom, height)
+                        });
+                        for flags in repeated.iter_mut().take(row_end).skip(cell.start_row_offset_idx) {
+                            *flags = (true, flags.1 && inside);
+                        }
+                    }
                     for row in rows.iter_mut().take(row_end).skip(cell.start_row_offset_idx) {
                         for slot in row.iter_mut().take(col_end).skip(cell.start_col_offset_idx) {
                             *slot = cell.text.trim().to_string();
                         }
                     }
                 }
+                let keep: Vec<bool> = repeated.iter().map(|&(text, all)| !(text && all)).collect();
+                let mut flags = keep.iter();
+                rows.retain(|_| *flags.next().unwrap());
+                let mut flags = keep.iter();
+                header.retain(|_| *flags.next().unwrap());
                 let header_rows = header.iter().take_while(|&&(covered, all)| covered && all).count();
                 if header_rows > 1 {
                     rows.splice(0..header_rows, [merge_header(&rows[..header_rows])]);
@@ -433,7 +462,7 @@ mod tests {
 
     fn markdown(json: &str) -> String {
         let mut images = Images::new(Path::new("doc.pdf"));
-        to_markdown(&refine(blocks(&document(json), Path::new("."), &mut images, &HashSet::new())))
+        to_markdown(&refine(blocks(&document(json), Path::new("."), &mut images, &Repeated::default())))
     }
 
     /// Markdown di più blocchi di Docling, come per un PDF intero.
@@ -489,6 +518,41 @@ mod tests {
                 "# Capitolo 4\n\nCorpo 4.\n"
             )
         );
+    }
+
+    #[test]
+    fn righe_di_tabella_nelle_zone_delle_intestazioni_escluse() {
+        // Celle con la posizione dall'alto della pagina, come le dà Docling per le tabelle.
+        let cell = |text: &str, row: usize, col: usize, top: f32| {
+            format!(
+                r#"{{"text": "{text}", "start_row_offset_idx": {row}, "start_col_offset_idx": {col}, "bbox": {{"l": 50, "t": {top}, "b": {}, "coord_origin": "TOPLEFT"}}}}"#,
+                top + 8.0
+            )
+        };
+        let table = |cells: &[String], rows: usize| {
+            format!(r#"{{"prov": [{{"page_no": 5}}], "data": {{"num_rows": {rows}, "num_cols": 2, "table_cells": [{}]}}}}"#, cells.join(","))
+        };
+        // Pagina 5: l'indice ingloba l'intestazione (in alto) e la legenda (in fondo); una seconda tabella è
+        // fatta solo d'intestazione.
+        let index = table(
+            &[
+                cell("Doc ID", 0, 0, 40.0),
+                cell("1385823", 0, 1, 40.0),
+                cell("Voce", 1, 0, 200.0),
+                cell("Pagina", 1, 1, 200.0),
+                cell("Ambito", 2, 0, 220.0),
+                cell("3", 2, 1, 220.0),
+                cell("b) be copied", 3, 0, 765.0),
+            ],
+            4,
+        );
+        let only_header = table(&[cell("Page", 0, 0, 41.0), cell("5 of 53", 0, 1, 41.0)], 1);
+        let page5 = format!(
+            r##"{{"body": {{"children": [{{"$ref": "#/tables/0"}}, {{"$ref": "#/tables/1"}}]}},
+               "tables": [{index}, {only_header}], "pages": {{"5": {{"size": {{"width": 595, "height": 842}}}}}}}}"##
+        );
+        let md = markdown_all(&[pages_json(1..=4), page5]);
+        assert!(md.ends_with("# Capitolo 4\n\nCorpo 4.\n\n| Voce | Pagina |\n|---|---|\n| Ambito | 3 |\n"), "{md}");
     }
 
     #[test]
@@ -767,7 +831,7 @@ mod tests {
             "pictures": [{"image": {"uri": "a.png"}, "prov": [{"page_no": 2}], "captions": [{"$ref": "#/texts/1"}]}]}"##,
         );
         let mut images = Images::new(Path::new("doc.pdf"));
-        let md = to_markdown(&refine(blocks(&doc, dir.path(), &mut images, &HashSet::new())));
+        let md = to_markdown(&refine(blocks(&doc, dir.path(), &mut images, &Repeated::default())));
         assert_eq!(
             md,
             "Table 4-1: Levels\n\n| x |\n|---|\n\n![pagina2_immagine1.png](doc_pdf_img/pagina2_immagine1.png)\n\nFigure 4-1: Setup\n"
@@ -805,7 +869,7 @@ mod tests {
                 "captions": [{"$ref": "#/texts/0"}], "children": [{"$ref": "#/texts/0"}, {"$ref": "#/texts/1"}]}]}"##,
         );
         let mut images = Images::new(Path::new("doc.pdf"));
-        let md = to_markdown(&blocks(&doc, dir.path(), &mut images, &HashSet::new()));
+        let md = to_markdown(&blocks(&doc, dir.path(), &mut images, &Repeated::default()));
         assert_eq!(md, "![pagina3_immagine1.png](doc_pdf_img/pagina3_immagine1.png)\n\nFigure 1: Schema\n");
     }
 
@@ -858,6 +922,6 @@ mod tests {
     #[test]
     fn nessun_testo_nessun_blocco() {
         let doc = document(r##"{"body": {"children": []}}"##);
-        assert!(blocks(&doc, Path::new("."), &mut Images::new(Path::new("doc.pdf")), &HashSet::new()).is_empty());
+        assert!(blocks(&doc, Path::new("."), &mut Images::new(Path::new("doc.pdf")), &Repeated::default()).is_empty());
     }
 }

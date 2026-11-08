@@ -41,6 +41,38 @@ pub fn detect(items: &[Placed], pages: usize) -> Vec<bool> {
         .collect()
 }
 
+/// Estensione verticale occupata dalle intestazioni e da piè di pagina riconosciuti (REQ-075), come distanze
+/// (minima, massima) dal bordo superiore per la fascia alta e dal bordo inferiore per quella bassa.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Zones {
+    top: Option<(f32, f32)>,
+    bottom: Option<(f32, f32)>,
+}
+
+impl Zones {
+    /// Zone dei testi di `items` per cui `found` è vero.
+    pub fn new(items: &[Placed], found: &[bool]) -> Zones {
+        let mut zones = Zones::default();
+        for item in items.iter().zip(found).filter(|(_, f)| **f).map(|(item, _)| item) {
+            let (zone, near, far) = if item.bottom <= BAND * item.page_height {
+                (&mut zones.top, item.top, item.bottom)
+            } else {
+                (&mut zones.bottom, item.page_height - item.bottom, item.page_height - item.top)
+            };
+            *zone = Some(zone.map_or((near, far), |(lo, hi)| (lo.min(near), hi.max(far))));
+        }
+        zones
+    }
+
+    /// Un elemento con i lati `top` e `bottom` (dal bordo superiore) sta tutto in una delle zone.
+    pub fn contains(&self, top: f32, bottom: f32, page_height: f32) -> bool {
+        let within = |zone: Option<(f32, f32)>, near: f32, far: f32| {
+            zone.is_some_and(|(lo, hi)| near >= lo - TOLERANCE && far <= hi + TOLERANCE)
+        };
+        within(self.top, top, bottom) || within(self.bottom, page_height - bottom, page_height - top)
+    }
+}
+
 /// Il testo sta tutto nella fascia alta o tutto in quella bassa.
 fn in_band(item: &Placed) -> bool {
     let band = BAND * item.page_height;
@@ -111,6 +143,17 @@ mod tests {
         assert_eq!(detect(&items, 6), vec![true; 3], "3 pagine su 6");
         let short: Vec<Placed> = (1..=2).map(|p| placed(p, "Testata", 30.0)).collect();
         assert_eq!(detect(&short, 2), vec![false; 2]);
+    }
+
+    #[test]
+    fn zone_occupate_dai_testi_riconosciuti() {
+        let items = [placed(1, "Testata", 40.0), placed(1, "Seconda riga", 90.0), placed(1, "Piede", 800.0)];
+        let zones = Zones::new(&items, &[true, true, true]);
+        assert!(zones.contains(38.0, 100.0, 842.0), "intestazione su due righe, entro la tolleranza");
+        assert!(zones.contains(805.0, 808.0, 842.0), "dentro il piè di pagina");
+        assert!(!zones.contains(38.0, 130.0, 842.0), "sconfina nel corpo");
+        assert!(!zones.contains(400.0, 410.0, 842.0));
+        assert!(!Zones::new(&items, &[false; 3]).contains(40.0, 50.0, 842.0), "nessun testo riconosciuto");
     }
 
     #[test]
