@@ -2,8 +2,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
-use pdfium_render::prelude::*;
-
 fn exe() -> PathBuf {
     PathBuf::from(env!("CARGO_BIN_EXE_doc-ripper"))
 }
@@ -15,25 +13,11 @@ fn run(src: &Path, dst: &Path) -> Output {
         .unwrap()
 }
 
-/// PDFium caricata dalla stessa cartella di doc-ripper.exe (vi è copiata da build.rs).
-fn pdfium() -> Pdfium {
-    let dir = exe().parent().unwrap().to_path_buf();
-    Pdfium::new(Pdfium::bind_to_library(Pdfium::pdfium_platform_library_name_at_path(&dir)).unwrap())
+/// Copia in `dest` un PDF di prova di tests/fixtures/, generato una volta da examples/pdf_fixtures.rs:
+/// PDFium non si usa nei test perché non regge più collegamenti nello stesso processo (BUG-001).
+fn fixture(name: &str, dest: &Path) {
+    fs::copy(Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures").join(name), dest).unwrap();
 }
-
-/// Crea un PDF di una pagina con i testi indicati: (x, y, dimensione, testo).
-fn sample(pdfium: &Pdfium, path: &Path, texts: &[(f32, f32, f32, &str)]) {
-    let mut document = pdfium.create_new_pdf().unwrap();
-    let font = document.fonts_mut().helvetica();
-    let mut page = document.pages_mut().create_page_at_end(PdfPagePaperSize::a4()).unwrap();
-    for &(x, y, size, text) in texts {
-        page.objects_mut()
-            .create_text_object(PdfPoints::new(x), PdfPoints::new(y), text, font, PdfPoints::new(size))
-            .unwrap();
-    }
-    document.save_to_file(path).unwrap();
-}
-
 
 /// Separa la riga "Origine" dal resto del Markdown e verifica che il link porti al file originale.
 fn split_origin(md: &str, original: &Path) -> String {
@@ -53,25 +37,7 @@ fn converte_pdf_in_markdown_strutturato() {
     let src = tempfile::tempdir().unwrap();
     let dst = tempfile::tempdir().unwrap();
     fs::create_dir(src.path().join("pdf")).unwrap();
-    sample(
-        &pdfium(),
-        &src.path().join("pdf/report.pdf"),
-        &[
-            (72.0, 780.0, 24.0, "Relazione annuale"),
-            (72.0, 740.0, 16.0, "Introduzione"),
-            (72.0, 715.0, 11.0, "Questo paragrafo continua"),
-            (72.0, 702.0, 11.0, "sulla riga successiva."),
-            (72.0, 675.0, 11.0, "- Primo punto"),
-            (72.0, 661.0, 11.0, "- Secondo punto"),
-            (72.0, 630.0, 11.0, "Voce"),
-            (250.0, 630.0, 11.0, "Q1"),
-            (350.0, 630.0, 11.0, "Q2"),
-            (72.0, 616.0, 11.0, "Affitto"),
-            (250.0, 616.0, 11.0, "100"),
-            (350.0, 616.0, 11.0, "110"),
-            (72.0, 590.0, 11.0, "Fine del documento."),
-        ],
-    );
+    fixture("report.pdf", &src.path().join("pdf/report.pdf"));
 
     let out = run(src.path(), dst.path());
     let stdout = String::from_utf8_lossy(&out.stdout);
@@ -95,20 +61,7 @@ fn converte_pdf_in_markdown_strutturato() {
 fn voci_di_sommario_con_puntini_guida_restano_testo() {
     let src = tempfile::tempdir().unwrap();
     let dst = tempfile::tempdir().unwrap();
-    sample(
-        &pdfium(),
-        &src.path().join("manuale.pdf"),
-        &[
-            (72.0, 780.0, 16.0, "Contents"),
-            (72.0, 750.0, 16.0, "1 Overview of the manual . . . . . 40"),
-            (72.0, 720.0, 16.0, "ETH_MMCTIR . . . . .1050"),
-            (72.0, 690.0, 11.0, "Testo del corpo del documento."),
-            (72.0, 676.0, 11.0, "Altra riga del corpo."),
-            (72.0, 662.0, 11.0, "Terza riga del corpo."),
-            (72.0, 648.0, 11.0, "Quarta riga del corpo."),
-            (72.0, 620.0, 11.0, "Fine... 2"),
-        ],
-    );
+    fixture("manuale.pdf", &src.path().join("manuale.pdf"));
 
     let out = run(src.path(), dst.path());
     assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
@@ -125,18 +78,7 @@ fn voci_di_sommario_con_puntini_guida_restano_testo() {
 fn estrae_le_immagini_dei_pdf() {
     let src = tempfile::tempdir().unwrap();
     let dst = tempfile::tempdir().unwrap();
-    let pdfium = pdfium();
-    let mut document = pdfium.create_new_pdf().unwrap();
-    let font = document.fonts_mut().helvetica();
-    let mut page = document.pages_mut().create_page_at_end(PdfPagePaperSize::a4()).unwrap();
-    let objects = page.objects_mut();
-    objects.create_text_object(PdfPoints::new(72.0), PdfPoints::new(780.0), "Sopra.", font, PdfPoints::new(11.0)).unwrap();
-    let picture = image::DynamicImage::ImageRgb8(image::RgbImage::from_pixel(4, 3, image::Rgb([200, 30, 30])));
-    objects
-        .create_image_object(PdfPoints::new(72.0), PdfPoints::new(600.0), &picture, Some(PdfPoints::new(40.0)), None)
-        .unwrap();
-    objects.create_text_object(PdfPoints::new(72.0), PdfPoints::new(500.0), "Sotto.", font, PdfPoints::new(11.0)).unwrap();
-    document.save_to_file(&src.path().join("foto.pdf")).unwrap();
+    fixture("foto.pdf", &src.path().join("foto.pdf"));
 
     let out = run(src.path(), dst.path());
     assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stdout));
@@ -155,14 +97,7 @@ fn estrae_le_immagini_dei_pdf() {
 fn salta_i_pdf_scansionati() {
     let src = tempfile::tempdir().unwrap();
     let dst = tempfile::tempdir().unwrap();
-    let pdfium = pdfium();
-    let mut document = pdfium.create_new_pdf().unwrap();
-    let mut page = document.pages_mut().create_page_at_end(PdfPagePaperSize::a4()).unwrap();
-    let scan = image::DynamicImage::ImageLuma8(image::GrayImage::from_pixel(20, 30, image::Luma([240])));
-    page.objects_mut()
-        .create_image_object(PdfPoints::new(0.0), PdfPoints::new(0.0), &scan, Some(PdfPoints::new(595.0)), None)
-        .unwrap();
-    document.save_to_file(&src.path().join("scansione.pdf")).unwrap();
+    fixture("scansione.pdf", &src.path().join("scansione.pdf"));
 
     let out = run(src.path(), dst.path());
     let stdout = String::from_utf8_lossy(&out.stdout);
@@ -189,16 +124,7 @@ fn pdf_corrotto_fallisce() {
 fn scrive_una_riga_di_avanzamento_per_pagina() {
     let src = tempfile::tempdir().unwrap();
     let dst = tempfile::tempdir().unwrap();
-    let pdfium = pdfium();
-    let mut document = pdfium.create_new_pdf().unwrap();
-    let font = document.fonts_mut().helvetica();
-    for text in ["Prima pagina.", "Seconda pagina."] {
-        let mut page = document.pages_mut().create_page_at_end(PdfPagePaperSize::a4()).unwrap();
-        page.objects_mut()
-            .create_text_object(PdfPoints::new(72.0), PdfPoints::new(780.0), text, font, PdfPoints::new(11.0))
-            .unwrap();
-    }
-    document.save_to_file(&src.path().join("doc.pdf")).unwrap();
+    fixture("doc.pdf", &src.path().join("doc.pdf"));
 
     let out = run(src.path(), dst.path());
     let stdout = String::from_utf8_lossy(&out.stdout);

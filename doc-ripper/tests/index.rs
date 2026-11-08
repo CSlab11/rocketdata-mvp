@@ -49,16 +49,10 @@ fn indice_con_link_relativi_e_originali() {
     }
 }
 
-/// PDF di `pages` pagine vuote, creato con la PDFium copiata accanto a doc-ripper.exe.
-fn blank_pdf(path: &Path, pages: usize) {
-    use pdfium_render::prelude::*;
-    let dir = Path::new(env!("CARGO_BIN_EXE_doc-ripper")).parent().unwrap();
-    let pdfium = Pdfium::new(Pdfium::bind_to_library(Pdfium::pdfium_platform_library_name_at_path(&dir)).unwrap());
-    let mut document = pdfium.create_new_pdf().unwrap();
-    for _ in 0..pages {
-        document.pages_mut().create_page_at_end(PdfPagePaperSize::a4()).unwrap();
-    }
-    document.save_to_file(path).unwrap();
+/// Copia in `dest` un PDF di prova di tests/fixtures/, generato una volta da examples/pdf_fixtures.rs:
+/// PDFium non si usa nei test perché non regge più collegamenti nello stesso processo (BUG-001).
+fn fixture(name: &str, dest: &Path) {
+    fs::copy(Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures").join(name), dest).unwrap();
 }
 
 #[test]
@@ -68,7 +62,7 @@ fn cancella_l_indice_all_avvio() {
 
     let src = tempfile::tempdir().unwrap();
     let dst = tempfile::tempdir().unwrap();
-    blank_pdf(&src.path().join("lungo.pdf"), 5000);
+    fixture("lungo.pdf", &src.path().join("lungo.pdf"));
     fs::write(dst.path().join("index.md"), "VECCHIO").unwrap();
 
     let mut child = Command::new(env!("CARGO_BIN_EXE_doc-ripper"))

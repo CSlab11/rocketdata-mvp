@@ -1,0 +1,3 @@
+# PDF di prova versionati (tests/fixtures/, BUG-001): binari, senza conversione dei fine riga, che ne
+# sposterebbe gli offset interni rendendoli illeggibili.
+*.pdf binary
