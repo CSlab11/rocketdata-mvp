@@ -20,6 +20,8 @@ pub enum Kind {
     /// Riferimento Markdown all'immagine estratta.
     Image(String),
     Code,
+    /// Nota a piè di pagina, scritta in fondo alla sua sezione (REQ-065).
+    Footnote,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -97,6 +99,7 @@ impl Walker<'_> {
                         Kind::ListItem { depth: depth.saturating_sub(1), indent }
                     }
                     "code" => Kind::Code,
+                    "footnote" => Kind::Footnote,
                     _ => Kind::Paragraph,
                 };
                 self.push(kind, body, docling::page(&text.prov));
@@ -213,7 +216,26 @@ fn dehyphenate(text: &str) -> String {
 
 /// Regole che riguardano più blocchi, applicate ai blocchi di tutto il documento.
 pub fn refine(blocks: Vec<Block>) -> Vec<Block> {
-    join_tables(join_paragraphs(nest_lists(blocks)))
+    join_tables(join_paragraphs(nest_lists(move_footnotes(blocks))))
+}
+
+/// Note a piè di pagina in fondo alla sezione in cui si trovano: prima del titolo successivo o alla fine del
+/// documento, nell'ordine in cui compaiono (REQ-065).
+fn move_footnotes(blocks: Vec<Block>) -> Vec<Block> {
+    let mut out = Vec::with_capacity(blocks.len());
+    let mut notes = Vec::new();
+    for block in blocks {
+        match block.kind {
+            Kind::Footnote => notes.push(block),
+            Kind::Heading(_) => {
+                out.append(&mut notes);
+                out.push(block);
+            }
+            _ => out.push(block),
+        }
+    }
+    out.append(&mut notes);
+    out
 }
 
 /// Numerazione originale in testa al testo della voce (`a) testo`); i simboli (`•`, `-`) si tolgono (REQ-064).
@@ -327,7 +349,7 @@ pub fn to_markdown(blocks: &[Block]) -> String {
         }
         match &block.kind {
             Kind::Heading(level) => out.push_str(&format!("{} {}", "#".repeat(*level), escape(&block.text))),
-            Kind::Paragraph => out.push_str(&escape(&block.text)),
+            Kind::Paragraph | Kind::Footnote => out.push_str(&escape(&block.text)),
             Kind::ListItem { depth, .. } => out.push_str(&format!("{}- {}", "  ".repeat(*depth), escape(&block.text))),
             Kind::Table(rows) => out.push_str(&table(rows)),
             Kind::Image(link) => out.push_str(link),
@@ -583,6 +605,37 @@ mod tests {
             ]}"##,
         );
         assert_eq!(md, "- 1) Primo\n  - a) Dettaglio\n");
+    }
+
+    #[test]
+    fn note_in_fondo_alla_sezione() {
+        let note = |text: &str, page: u32| Block { kind: Kind::Footnote, text: text.to_string(), page };
+        let heading = |text: &str, page: u32| Block { kind: Kind::Heading(1), text: text.to_string(), page };
+        let blocks = vec![
+            heading("1 Scope", 1),
+            paragraph("The supplier shall", 1),
+            note("1 See ECSS-S-ST-00-01.", 1),
+            paragraph("establish a programme.", 2),
+            heading("2 References", 2),
+            note("2 Normative.", 2),
+            paragraph("List.", 3),
+        ];
+        assert_eq!(
+            refine(blocks),
+            vec![
+                heading("1 Scope", 1),
+                paragraph("The supplier shall establish a programme.", 1),
+                note("1 See ECSS-S-ST-00-01.", 1),
+                heading("2 References", 2),
+                paragraph("List.", 3),
+                note("2 Normative.", 2),
+            ]
+        );
+        let md = markdown(
+            r##"{"body": {"children": [{"$ref": "#/texts/0"}, {"$ref": "#/texts/1"}]},
+            "texts": [{"label": "footnote", "text": "3 Nota."}, {"label": "text", "text": "Corpo."}]}"##,
+        );
+        assert_eq!(md, "Corpo.\n\n3 Nota.\n");
     }
 
     #[test]
