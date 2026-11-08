@@ -23,6 +23,8 @@
 - REQ-009 implementato — Segmentazione dei PDF in unità con metadati (`ecss_parser.py`)
 - f5eee83 attribuito a REQ-010 — codice entrato con il primo commit del tool
 - REQ-010 implementato — Scarto di intestazioni, piè di pagina, indice e capitoli senza contenuto utile (`ecss_parser.py`)
+- f5eee83 attribuito a REQ-011 — codice entrato con il primo commit del tool
+- REQ-011 implementato — Divisione delle unità più lunghe di `max_caratteri_unita` (`ecss_parser.py`)
 
 ## 2026-11-07
 - REQ-001 richiesto — Tool Python autonomo in `rocket-filter/`, dati generati esclusi da git
