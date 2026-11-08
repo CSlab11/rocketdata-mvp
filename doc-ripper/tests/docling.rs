@@ -188,3 +188,40 @@ fn docx_senza_testo_scansionato_senza_ocr() {
     assert!(!log.exists(), "Docling invocato per un .docx");
     assert!(!dst.path().join("scansione_docx.md").exists());
 }
+
+/// In modalità `simple` i `.pdf` si convertono con PDFium senza eseguire Docling e senza nota (REQ-073).
+#[test]
+fn modalita_simple_non_usa_docling() {
+    let bin = tempfile::tempdir().unwrap();
+    let src = tempfile::tempdir().unwrap();
+    let dst = tempfile::tempdir().unwrap();
+    let log = bin.path().join("chiamate.txt");
+    sample_pdf(&src.path().join("report.pdf"), "Testo PDFium");
+    let output = Command::new(install(bin.path()))
+        .args(["--src", src.path().to_str().unwrap(), "--dst", dst.path().to_str().unwrap(), "--mode", "simple"])
+        .env("FAKE_DOCLING_LOG", log.to_str().unwrap())
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(output.status.success(), "{stdout}");
+    assert!(stdout.contains("report.pdf -> report_pdf.md\n") || stdout.contains("report.pdf -> report_pdf.md\r\n"), "{stdout}");
+    assert!(!stdout.contains("ripiego"), "{stdout}");
+    assert!(!log.exists(), "Docling eseguito in modalità simple");
+    assert!(markdown(dst.path(), "report_pdf.md").contains("Testo PDFium"));
+    assert!(!dst.path().join(".doc-ripper").exists());
+}
+
+/// In modalità `ai` esplicita i `.pdf` passano da Docling come senza parametro (REQ-073).
+#[test]
+fn modalita_ai_usa_docling() {
+    let bin = tempfile::tempdir().unwrap();
+    let src = tempfile::tempdir().unwrap();
+    let dst = tempfile::tempdir().unwrap();
+    sample_pdf(&src.path().join("report.pdf"), "Testo PDFium");
+    let output = Command::new(install(bin.path()))
+        .args(["--src", src.path().to_str().unwrap(), "--dst", dst.path().to_str().unwrap(), "--mode", "ai"])
+        .output()
+        .unwrap();
+    assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stdout));
+    assert!(markdown(dst.path(), "report_pdf.md").starts_with("# Titolo da Docling"));
+}

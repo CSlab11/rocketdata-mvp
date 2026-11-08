@@ -54,6 +54,7 @@
 - REQ-072 richiesto — doc-ripper: parametro `--mode ai` o `simple`, predefinito `ai`
 - REQ-073 richiesto — doc-ripper: `--mode ai` converte i PDF con Docling e ripiego PDFium, `--mode simple` solo con PDFium
 - REQ-072 implementato — parametro `--mode ai` o `simple`, predefinito `ai`, valori non ammessi rifiutati da clap (`src/convert.rs`, `src/main.rs`, `src/pdf.rs`, `tests/mode.rs`)
+- REQ-073 implementato — `--mode simple` converte i PDF solo con PDFium, senza Docling né nota; `--mode ai` invariato (`src/pdf.rs`, `tests/docling.rs`)
 
 ## 2026-10-23
 - REQ-041 richiesto — doc-ripper: riga di avanzamento per ciascun file elaborato

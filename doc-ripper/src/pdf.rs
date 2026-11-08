@@ -33,7 +33,11 @@ fn load_pdfium() -> Result<Pdfium, String> {
 /// Converte un `.pdf` in `<nome>_pdf.md` ricostruendo titoli, paragrafi, elenchi e tabelle (REQ-010)
 /// ed estraendo le immagini (REQ-020): con Docling se è installato accanto all'eseguibile (REQ-048);
 /// se Docling manca o fallisce, con PDFium, indicandolo nel riepilogo (REQ-070).
-pub fn convert(src: &Path, dst: &Path, rel: &Path, progress: &str, _mode: Mode) -> Result<Outcome, String> {
+/// In modalità `simple` solo con PDFium, senza eseguire Docling e senza nota (REQ-073).
+pub fn convert(src: &Path, dst: &Path, rel: &Path, progress: &str, mode: Mode) -> Result<Outcome, String> {
+    if mode == Mode::Simple {
+        return convert_pdfium(src, dst, rel, progress);
+    }
     let reason = match docling::installation() {
         Some(installation) => match convert_docling(&installation, src, dst, rel, progress) {
             Ok(outcome) => return Ok(outcome),
