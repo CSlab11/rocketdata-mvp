@@ -1,6 +1,7 @@
-# Prepara doc-ripper\vendor\docling\ con tutto il necessario per eseguire Docling senza Python installato
-# (REQ-052):
+﻿# Prepara doc-ripper\vendor\docling\ con tutto il necessario per eseguire Docling senza Python installato
+# e senza rete (REQ-052, REQ-053):
 #   python\   Python embeddable con Docling e le sue dipendenze (doc-ripper\docling\requirements.txt)
+#   models\   modelli di Docling (layout, tabelle, OCR), scaricati qui una volta sola
 # package.ps1 lo esegue solo se la cartella manca e poi la copia in dist\docling\.
 $ErrorActionPreference = 'Stop'
 
@@ -9,7 +10,7 @@ $PySha256 = '4ACBED6DD1C744B0376E3B1CF57CE906F9DC9E95E68824584C8099A63025A3C3'
 $PyUrl = "https://www.python.org/ftp/python/$PyVersion/python-$PyVersion-embed-amd64.zip"
 $GetPipUrl = 'https://bootstrap.pypa.io/get-pip.py'
 
-# pip scrive il log su stderr: in PowerShell 5.1, con 'Stop', una riga di stderr rediretto
+# pip e docling-tools scrivono il log su stderr: in PowerShell 5.1, con 'Stop', una riga di stderr rediretto
 # interromperebbe lo script. L'esito dei comandi esterni si giudica solo dal codice di uscita.
 function Invoke-Native([string] $Exe, [string[]] $Arguments, [string] $Failure) {
     $Previous = $ErrorActionPreference
@@ -26,7 +27,8 @@ New-Item -ItemType Directory -Force $Tmp | Out-Null
 try {
     if (Test-Path $Vendor) { Remove-Item -Recurse -Force $Vendor }
     $Python = Join-Path $Vendor 'python'
-    New-Item -ItemType Directory -Force $Python | Out-Null
+    $Models = Join-Path $Vendor 'models'
+    New-Item -ItemType Directory -Force $Python, $Models | Out-Null
 
     $Zip = Join-Path $Tmp 'python.zip'
     Invoke-WebRequest $PyUrl -OutFile $Zip -UseBasicParsing
@@ -43,6 +45,10 @@ try {
     Invoke-WebRequest $GetPipUrl -OutFile $GetPip -UseBasicParsing
     Invoke-Native $Exe @($GetPip, '--no-warn-script-location', '--quiet') 'installazione di pip fallita'
     Invoke-Native $Exe @('-m', 'pip', 'install', '--no-warn-script-location', '--quiet', '-r', $Requirements) 'installazione di Docling fallita'
+
+    # Modelli scaricati una volta: in esecuzione Docling li legge da qui senza rete (REQ-053).
+    $Tools = Join-Path $Python 'Scripts\docling-tools.exe'
+    Invoke-Native $Tools @('models', 'download', 'layout', 'tableformer', 'easyocr', '--output-dir', $Models) 'scaricamento dei modelli di Docling fallito'
 
     Write-Output "Docling installato in $((Resolve-Path $Vendor).Path)"
 }

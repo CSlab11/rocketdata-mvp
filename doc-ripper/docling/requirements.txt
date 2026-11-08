@@ -1,3 +1,4 @@
 # Dipendenze dell'ambiente Python di Docling distribuito in dist\docling\ (REQ-052).
 # Le wheel di torch per Windows su PyPI sono solo CPU: nessun indice CUDA.
-docling==2.149.0
+# L'extra easyocr serve a scaricare e usare i modelli OCR (REQ-053; OCR attivato con REQ-051).
+docling[easyocr]==2.149.0
