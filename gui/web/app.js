@@ -263,6 +263,13 @@ async function renderDocRipper(content) {
     showError(status.message);
     return;
   }
+  // Senza Docling accanto a doc-ripper la modalità ai non è disponibile (REQ-155).
+  if (!status.docling) {
+    modeAi.input.disabled = true;
+    modeSimple.input.checked = true;
+    modeHint.textContent = status.docling_message;
+    modeHint.hidden = false;
+  }
 
   // Barra di avanzamento dalle righe `[n/totale] <file>` e `[n/totale] pagina p/pagine` (REQ-044):
   // ogni file pesa uguale, dentro un pdf conta la frazione di pagine elaborate.

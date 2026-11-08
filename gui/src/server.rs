@@ -100,14 +100,38 @@ struct DocRipperStatus {
     message: Option<String>,
 }
 
-async fn doc_ripper_status(State(state): State<Arc<AppState>>) -> Json<DocRipperStatus> {
-    Json(match &state.doc_ripper {
+/// Stato di doc-ripper, con la disponibilità di Docling per la modalità ai (REQ-155).
+#[derive(Serialize)]
+struct DocRipperFullStatus {
+    #[serde(flatten)]
+    status: DocRipperStatus,
+    docling: bool,
+    docling_message: Option<String>,
+}
+
+async fn doc_ripper_status(State(state): State<Arc<AppState>>) -> Json<DocRipperFullStatus> {
+    let status = match &state.doc_ripper {
         Some(_) => DocRipperStatus { available: true, message: None },
         None => DocRipperStatus {
             available: false,
             message: Some("doc-ripper.exe non trovato nella cartella di gui.exe: copiarlo lì e riavviare la gui.".into()),
         },
-    })
+    };
+    let docling = docling_installed(&state.doc_ripper);
+    let docling_message = (!docling).then(|| {
+        "Modalità ai non disponibile: Docling non è installato nella cartella docling accanto a doc-ripper.exe. \
+         I PDF si convertono in modalità simple."
+            .to_string()
+    });
+    Json(DocRipperFullStatus { status, docling, docling_message })
+}
+
+/// Docling installato accanto a `doc-ripper.exe`: `docling\python\python.exe` e `docling\convert_pdf.py`
+/// (doc-ripper_REQ-052), lo stesso criterio con cui doc-ripper decide se usarlo (REQ-155).
+fn docling_installed(doc_ripper: &Option<PathBuf>) -> bool {
+    let Some(dir) = doc_ripper.as_ref().and_then(|exe| exe.parent()) else { return false };
+    let docling = dir.join("docling");
+    docling.join("python").join("python.exe").is_file() && docling.join("convert_pdf.py").is_file()
 }
 
 #[derive(Deserialize)]
@@ -134,6 +158,10 @@ async fn doc_ripper_run(
     if let Some(mode) = &request.mode {
         if mode != "ai" && mode != "simple" {
             return Err((StatusCode::BAD_REQUEST, "modalità non valida: usare ai o simple".into()));
+        }
+        // Senza Docling la modalità ai non si avvia (REQ-155).
+        if mode == "ai" && !docling_installed(&state.doc_ripper) {
+            return Err((StatusCode::CONFLICT, "modalità ai non disponibile: Docling non è installato accanto a doc-ripper.exe".into()));
         }
         args.extend(["--mode".into(), mode.into()]);
     }
