@@ -310,6 +310,19 @@ mod tests {
     }
 
     #[test]
+    fn titoli_senza_numerazione_con_il_livello_di_docling() {
+        assert_eq!(markdown(&header("Introduction", 2)), "## Introduction\n");
+        assert_eq!(markdown(&header("Foreword", 1)), "# Foreword\n");
+        assert_eq!(markdown(&header("Profondo", 9)), "###### Profondo\n");
+        let title = r##"{"body": {"children": [{"$ref": "#/texts/0"}]},
+            "texts": [{"label": "title", "level": 3, "text": "Space product assurance"}]}"##;
+        assert_eq!(markdown(title), "# Space product assurance\n");
+        let no_level = r##"{"body": {"children": [{"$ref": "#/texts/0"}]},
+            "texts": [{"label": "section_header", "text": "Scope"}]}"##;
+        assert_eq!(markdown(no_level), "# Scope\n");
+    }
+
+    #[test]
     fn nessun_testo_nessun_blocco() {
         let doc = document(r##"{"body": {"children": []}}"##);
         assert!(blocks(&doc, Path::new("."), &mut Images::new(Path::new("doc.pdf"))).is_empty());
