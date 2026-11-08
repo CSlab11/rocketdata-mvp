@@ -215,7 +215,12 @@ async function renderDocRipper(content) {
   };
   const modeAi = modeOption("ai");
   const modeSimple = modeOption("simple");
-  modeAi.input.checked = true;
+  // Modalità proposta come attributo `checked`, così resta anche nel DOM serializzato (REQ-156).
+  const proposeMode = (value) => {
+    modeAi.input.defaultChecked = value === "ai";
+    modeSimple.input.defaultChecked = value === "simple";
+  };
+  proposeMode("ai");
   const modeHint = el("p", { id: "mode-hint", class: "hint", hidden: "" });
   const modeRow = el(
     "fieldset",
@@ -266,7 +271,7 @@ async function renderDocRipper(content) {
   // Senza Docling accanto a doc-ripper la modalità ai non è disponibile (REQ-155).
   if (!status.docling) {
     modeAi.input.disabled = true;
-    modeSimple.input.checked = true;
+    proposeMode("simple");
     modeHint.textContent = status.docling_message;
     modeHint.hidden = false;
   }
@@ -404,6 +409,8 @@ async function renderDocRipper(content) {
   const saved = await fetch("/api/settings").then((r) => r.json());
   if (!src.input.value) src.input.defaultValue = saved.src;
   if (!dst.input.value) dst.input.defaultValue = saved.dst;
+  // Ultima modalità usata, ai se non ce n'è; simple se ai non è disponibile (REQ-156, REQ-155).
+  if (saved.mode === "simple" || modeAi.input.disabled) proposeMode("simple");
 
   // Pagina ricaricata: si ricollega all'esecuzione in corso o mostra l'esito dell'ultima.
   const snapshot = await fetch("/api/doc-ripper/output").then((r) => r.json());

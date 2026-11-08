@@ -18,6 +18,10 @@ pub struct Settings {
     /// Assente nei file salvati prima di REQ-141.
     #[serde(default)]
     pub classify: ClassifySettings,
+    /// Ultima modalità di conversione di doc-ripper, `ai` o `simple` (REQ-156); assente nei file salvati
+    /// prima e finché non si avvia una conversione.
+    #[serde(default)]
+    pub mode: Option<String>,
 }
 
 /// Ultimi valori della classificazione (REQ-141); la chiave del server non si salva mai.
@@ -97,7 +101,7 @@ mod tests {
         let path = dir.path().join("rocketdata-gui/settings.json");
         assert_eq!(load(&path), Settings::default());
         let settings =
-            Settings { src: r"C:\Dati\Città".into(), dst: r"D:\Uscita".into(), top: Some(25), stale: vec![r"D:\Uscita".into()], classify: ClassifySettings::default() };
+            Settings { src: r"C:\Dati\Città".into(), dst: r"D:\Uscita".into(), top: Some(25), stale: vec![r"D:\Uscita".into()], classify: ClassifySettings::default(), mode: Some("simple".into()) };
         save(&path, &settings).unwrap();
         assert_eq!(load(&path), settings);
         fs::write(&path, "non json").unwrap();

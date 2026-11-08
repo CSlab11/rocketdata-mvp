@@ -176,6 +176,10 @@ async fn doc_ripper_run(
     if let Some(path) = &state.settings_path {
         let change = |s: &mut Settings| {
             (s.src, s.dst) = (src.into(), dst.into());
+            // Ultima modalità usata, riproposta ai prossimi avvii (REQ-156).
+            if request.mode.is_some() {
+                s.mode = request.mode.clone();
+            }
             // L'indice della destinazione va rifatto (REQ-074).
             s.set_stale(dst, true);
         };
