@@ -85,3 +85,28 @@ fn ripiega_su_pdfium_se_docling_non_e_installato() {
     assert!(output.status.success(), "{stdout}");
     assert!(stdout.contains("report.pdf -> report_pdf.md (ripiego PDFium: Docling non disponibile)"), "{stdout}");
 }
+
+/// Solo i `.pdf` passano da Docling: `.docx` e fogli di calcolo restano ai loro convertitori (REQ-049).
+#[test]
+fn docling_solo_per_i_pdf() {
+    let bin = tempfile::tempdir().unwrap();
+    let src = tempfile::tempdir().unwrap();
+    let dst = tempfile::tempdir().unwrap();
+    let log = bin.path().join("chiamate.txt");
+    sample_pdf(&src.path().join("report.pdf"), "Testo");
+    let docx = docx_rs::Docx::new().add_paragraph(docx_rs::Paragraph::new().add_run(docx_rs::Run::new().add_text("Testo DOCX")));
+    docx.build().pack(fs::File::create(src.path().join("nota.docx")).unwrap()).unwrap();
+    let mut workbook = rust_xlsxwriter::Workbook::new();
+    workbook.add_worksheet().write_string(0, 0, "cella").unwrap();
+    workbook.save(src.path().join("dati.xlsx")).unwrap();
+
+    let output = run(&install(bin.path()), src.path(), dst.path(), &[("FAKE_DOCLING_LOG", log.to_str().unwrap())]);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(output.status.success(), "{stdout}");
+    assert!(stdout.contains("Convertiti: 3"), "{stdout}");
+    let calls = fs::read_to_string(&log).unwrap();
+    let calls: Vec<&str> = calls.lines().collect();
+    assert_eq!(calls.len(), 1, "{calls:?}");
+    assert!(calls[0].ends_with("report.pdf"), "{calls:?}");
+    assert!(fs::read_to_string(dst.path().join("nota_docx.md")).unwrap().contains("Testo DOCX"));
+}
