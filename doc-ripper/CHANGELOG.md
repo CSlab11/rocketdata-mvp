@@ -44,6 +44,7 @@
 - REQ-059 implementato — Righe di intestazione iniziali fuse in una, testi per colonna uniti con ` / ` (`src/docling.rs`, `src/structure.rs`)
 - REQ-060 implementato — Tabella che prosegue nella pagina successiva unita alla precedente, senza l'intestazione ripetuta (`src/pdf.rs`, `src/structure.rs`)
 - REQ-061 implementato — Intestazioni, piè di pagina e numeri di pagina (furniture) esclusi dal Markdown (`src/docling.rs`, `src/structure.rs`)
+- REQ-062 implementato — Parole sillabate a fine riga ricomposte senza trattino (anche con trattino morbido) (`src/structure.rs`)
 
 ## 2026-10-23
 - REQ-041 richiesto — doc-ripper: riga di avanzamento per ciascun file elaborato

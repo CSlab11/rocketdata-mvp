@@ -142,6 +142,7 @@ impl Walker<'_> {
     }
 
     fn push(&mut self, kind: Kind, text: String, page: u32) {
+        let text = if kind == Kind::Code { text } else { dehyphenate(&text) };
         if !text.is_empty() {
             self.out.push(Block { kind, text, page });
         }
@@ -180,6 +181,29 @@ fn annex_level(text: &str) -> Option<usize> {
     let parts: Vec<&str> = first.strip_suffix('.').unwrap_or(first).split('.').collect();
     let numbered = parts[1..].iter().all(|p| !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit()));
     (parts.len() > 1 && is_letter(parts[0]) && numbered).then(|| parts.len().min(6))
+}
+
+/// Parole spezzate a fine riga ricomposte: lettera, trattino (o trattino morbido), spazi e lettera minuscola
+/// diventano una parola sola (`qual- ified` → `qualified`) (REQ-062). I trattini morbidi rimasti si tolgono.
+fn dehyphenate(text: &str) -> String {
+    let chars: Vec<char> = text.chars().collect();
+    let mut out = String::with_capacity(text.len());
+    let mut i = 0;
+    while i < chars.len() {
+        let c = chars[i];
+        if (c == '-' || c == '\u{ad}') && i > 0 && chars[i - 1].is_alphabetic() {
+            let next = (i + 1..chars.len()).find(|&j| !chars[j].is_whitespace()).unwrap_or(chars.len());
+            if next > i + 1 && next < chars.len() && chars[next].is_lowercase() {
+                i = next;
+                continue;
+            }
+        }
+        if c != '\u{ad}' {
+            out.push(c);
+        }
+        i += 1;
+    }
+    out
 }
 
 /// Regole che riguardano più blocchi, applicate ai blocchi di tutto il documento.
@@ -401,6 +425,19 @@ mod tests {
             ]}"##,
         );
         assert_eq!(md, "Corpo.\n");
+    }
+
+    #[test]
+    fn parole_sillabate_ricomposte() {
+        assert_eq!(dehyphenate("space qual- ified hard- ware"), "space qualified hardware");
+        assert_eq!(dehyphenate("assur\u{ad} ance and soft\u{ad}ware"), "assurance and software");
+        // Trattini veri: nessuno spazio dopo, maiuscola dopo, cifra prima.
+        assert_eq!(dehyphenate("well-known Earth- Moon 3- axis x - y"), "well-known Earth- Moon 3- axis x - y");
+        let md = markdown(
+            r##"{"body": {"children": [{"$ref": "#/texts/0"}]},
+            "texts": [{"label": "text", "text": "The equip- ment shall be qual- ified."}]}"##,
+        );
+        assert_eq!(md, "The equipment shall be qualified.\n");
     }
 
     #[test]
