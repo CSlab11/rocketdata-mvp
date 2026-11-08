@@ -41,6 +41,8 @@
 - REQ-018 implementato — Prototipi di categoria con k-means sferico (`ingest.py`)
 - f5eee83 attribuito a REQ-019 — codice entrato con il primo commit del tool
 - REQ-019 implementato — Descrizione delle categorie nell'indice (`ingest.py`)
+- f5eee83 attribuito a REQ-020 — codice entrato con il primo commit del tool
+- REQ-020 implementato — Vocabolario di parole singole da definizioni, titoli e sigle (`vocabolario.py`)
 
 ## 2026-11-07
 - REQ-001 richiesto — Tool Python autonomo in `rocket-filter/`, dati generati esclusi da git
