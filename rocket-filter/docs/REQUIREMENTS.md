@@ -33,7 +33,7 @@ Requisiti del tool `rocket-filter`. I requisiti di progetto e la tabella dei bug
 | REQ-013 | L'ingestione deve essere incrementale: uno standard viene rielaborato solo se cambia l'impronta SHA-1 del PDF o il modello, o se manca il suo file di vettori; `--forza` rielabora tutti gli standard e `--solo "<codici>"` rielabora quelli indicati, terminando con errore se un codice non è in `categorie.yaml`. | implementato | `ingest.py` |
 | REQ-014 | `ingest.py` deve togliere dall'indice unità, file e vettori degli standard non più presenti in `categorie.yaml`. | implementato | `ingest.py` |
 | REQ-015 | Se un PDF non si riesce a leggere o non produce unità, `ingest.py` deve segnalarlo e proseguire con gli standard successivi. | implementato | `ingest.py` |
-| REQ-016 | A ogni esecuzione `ingest.py` deve rigenerare temi, prototipi e vocabolario; con `--solo-prototipi` deve rigenerare solo questa parte, senza leggere i PDF. | aperto | — |
+| REQ-016 | A ogni esecuzione `ingest.py` deve rigenerare temi, prototipi e vocabolario; con `--solo-prototipi` deve rigenerare solo questa parte, senza leggere i PDF. | implementato | `ingest.py` |
 
 ## Temi, prototipi e vocabolario
 

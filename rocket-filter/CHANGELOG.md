@@ -33,6 +33,8 @@
 - REQ-014 implementato — Rimozione degli standard non più in `categorie.yaml` (`ingest.py`)
 - f5eee83 attribuito a REQ-015 — codice entrato con il primo commit del tool
 - REQ-015 implementato — PDF illeggibili segnalati senza interrompere l'ingestione (`ingest.py`)
+- f5eee83 attribuito a REQ-016 — codice entrato con il primo commit del tool
+- REQ-016 implementato — Rigenerazione di temi, prototipi e vocabolario, `--solo-prototipi` (`ingest.py`)
 
 ## 2026-11-07
 - REQ-001 richiesto — Tool Python autonomo in `rocket-filter/`, dati generati esclusi da git
