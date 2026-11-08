@@ -1,5 +1,32 @@
 # Changelog
 
+## 2026-11-08
+- REQ-048 richiesto — doc-ripper: struttura dei PDF da Docling (JSON), Markdown generato con regole proprie
+- REQ-049 richiesto — doc-ripper: solo i PDF passano da Docling
+- REQ-013 annullato — sostituito da REQ-050, REQ-051 (OCR dei PDF con Docling)
+- REQ-050 richiesto — doc-ripper: nessun OCR sui DOCX, DOCX senza testo segnalati come scansionati
+- REQ-051 richiesto — doc-ripper: OCR con Docling delle pagine dei PDF senza testo
+- REQ-052 richiesto — doc-ripper: ambiente Python con Docling in `dist/`
+- REQ-053 richiesto — doc-ripper: modelli di Docling scaricati una volta in `dist/`, nessun accesso alla rete
+- REQ-043 annullato — sostituito da REQ-054 (avanzamento per blocchi di pagine con Docling)
+- REQ-054 richiesto — doc-ripper: avanzamento per file e per blocco di pagine dei PDF
+- REQ-055 richiesto — doc-ripper: livello dei titoli dalla numerazione di clausola
+- REQ-056 richiesto — doc-ripper: livello dei titoli degli annessi
+- REQ-057 richiesto — doc-ripper: livello di Docling per i titoli non numerati
+- REQ-058 richiesto — doc-ripper: celle unite ripetute nelle tabelle
+- REQ-059 richiesto — doc-ripper: intestazioni di tabella su più righe fuse in una
+- REQ-060 richiesto — doc-ripper: tabelle spezzate tra pagine ricucite
+- REQ-061 richiesto — doc-ripper: intestazioni e piè di pagina esclusi
+- REQ-062 richiesto — doc-ripper: sillabazione a fine riga ricomposta
+- REQ-063 richiesto — doc-ripper: paragrafi interrotti dal cambio pagina riuniti
+- REQ-064 richiesto — doc-ripper: elenchi nidificati con numerazione originale
+- REQ-065 richiesto — doc-ripper: note a piè di pagina in fondo alla sezione
+- REQ-066 richiesto — doc-ripper: posizione delle didascalie
+- REQ-067 richiesto — doc-ripper: marcatori di pagina `<!-- pagina N -->`
+- REQ-068 richiesto — doc-ripper: corpus di PDF di riferimento con Markdown atteso
+- REQ-069 richiesto — doc-ripper: cache del JSON di Docling per sha1 e versione
+- REQ-070 richiesto — doc-ripper: ripiego su PDFium se Docling manca o fallisce
+
 ## 2026-10-23
 - REQ-041 richiesto — doc-ripper: riga di avanzamento per ciascun file elaborato
 - REQ-041 annullato — sostituito da REQ-043 (avanzamento anche per pagina)
