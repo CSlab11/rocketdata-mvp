@@ -51,7 +51,7 @@ Requisiti del tool `rocket-filter`. I requisiti di progetto e la tabella dei bug
 
 | ID | Requisito | Stato | File impattati |
 |----|-----------|-------|----------------|
-| REQ-024 | `query.py categorie` deve mostrare l'albero delle categorie con gruppo e numero di unità di ciascuna. | aperto | — |
+| REQ-024 | `query.py categorie` deve mostrare l'albero delle categorie con gruppo e numero di unità di ciascuna. | implementato | `query.py` |
 | REQ-025 | `query.py termini "<testo>"` deve restituire le `--k` parole del vocabolario più vicine al testo (predefinito 20), con filtri facoltativi `--categoria` (solo parole che compaiono nella categoria) e `--fonte` (`definizione`, `titolo` o `sigla`). | aperto | — |
 | REQ-026 | `query.py lessico --categoria <id>` deve restituire le `--n` parole della categoria con punteggio più alto (predefinito 50), con concentrazione, occorrenze, specificità, fonti ed esempi, e filtri `--min-occorrenze` (predefinito 2), `--min-specificita` e `--fonte`. | aperto | — |
 | REQ-027 | `query.py membri --categoria <tema>` deve restituire le `--n` unità del tema con score più alto (predefinito 40) e il motivo di appartenenza, con filtri `--tipo` e `--origine` (`ancora`, `lessicale` o `semantica`), e terminare con errore se la categoria non è un tema generico. | aperto | — |
