@@ -38,6 +38,7 @@
 - REQ-069 implementato — JSON di Docling riusato da `.doc-ripper\` se sha1 del PDF e versione di Docling (`chiave.txt`) non cambiano; PDF dei test scritti a mano senza PDFium (`Cargo.lock`, `Cargo.toml`, `src/docling.rs`, `src/pdf.rs`, `tests/docling.rs`)
 - REQ-050 implementato — Test che un `.docx` senza testo è saltato come scansionato senza invocare Docling, anche se installato; il comportamento era già quello di `src/docx.rs` (`tests/docling.rs`)
 - REQ-055 implementato — Livello dei titoli dalla numerazione di clausola (`4.2.3` → `###`, massimo sei) (`src/structure.rs`)
+- REQ-056 implementato — Livello dei titoli degli annessi (`Annex A` → `#`, `A.1.2` → `###`) (`src/structure.rs`)
 
 ## 2026-10-23
 - REQ-041 richiesto — doc-ripper: riga di avanzamento per ciascun file elaborato

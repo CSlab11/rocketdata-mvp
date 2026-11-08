@@ -131,9 +131,10 @@ impl Walker<'_> {
     }
 }
 
-/// Livello di un titolo: dalla numerazione di clausola se c'è (REQ-055), altrimenti quello di Docling.
+/// Livello di un titolo: dalla numerazione di clausola (REQ-055) o di annesso (REQ-056) se c'è, altrimenti
+/// quello di Docling.
 fn heading_level(text: &str, label: &str, docling_level: Option<usize>) -> usize {
-    if let Some(level) = clause_level(text) {
+    if let Some(level) = clause_level(text).or_else(|| annex_level(text)) {
         return level;
     }
     if label == "title" { 1 } else { docling_level.unwrap_or(1).clamp(1, 6) }
@@ -147,6 +148,21 @@ fn clause_level(text: &str) -> Option<usize> {
     }
     let parts: Vec<&str> = number.strip_suffix('.').unwrap_or(number).split('.').collect();
     parts.iter().all(|p| !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit())).then(|| parts.len().min(6))
+}
+
+/// `Annex A …` (o `Allegato`, `Appendix`, `Appendice`) → 1; `A.1.2 Titolo` → 3, al massimo sei.
+fn annex_level(text: &str) -> Option<usize> {
+    let is_letter = |s: &str| s.len() == 1 && s.bytes().all(|b| b.is_ascii_uppercase());
+    let mut words = text.split_whitespace();
+    let first = words.next()?;
+    if ["annex", "allegato", "appendix", "appendice"].contains(&first.to_lowercase().as_str()) {
+        let letter = words.next()?.trim_end_matches(|c: char| !c.is_ascii_alphanumeric());
+        return is_letter(letter).then_some(1);
+    }
+    words.next()?;
+    let parts: Vec<&str> = first.strip_suffix('.').unwrap_or(first).split('.').collect();
+    let numbered = parts[1..].iter().all(|p| !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit()));
+    (parts.len() > 1 && is_letter(parts[0]) && numbered).then(|| parts.len().min(6))
 }
 
 /// Markdown dei blocchi: un blocco per paragrafo, voci di elenco consecutive senza riga vuota tra loro.
@@ -278,6 +294,19 @@ mod tests {
         // Non è una numerazione di clausola: livello di Docling.
         assert_eq!(markdown(&header("4.2", 2)), "## 4.2\n");
         assert_eq!(markdown(&header("4.a Varianti", 2)), "## 4.a Varianti\n");
+    }
+
+    #[test]
+    fn livello_dei_titoli_degli_annessi() {
+        assert_eq!(markdown(&header("Annex A (normative) Test methods", 3)), "# Annex A (normative) Test methods\n");
+        assert_eq!(markdown(&header("Allegato B", 2)), "# Allegato B\n");
+        assert_eq!(markdown(&header("Annex C: Glossary", 2)), "# Annex C: Glossary\n");
+        assert_eq!(markdown(&header("A.1 Scope", 1)), "## A.1 Scope\n");
+        assert_eq!(markdown(&header("A.1.2. Detail", 1)), "### A.1.2. Detail\n");
+        // Non sono annessi: livello di Docling.
+        assert_eq!(markdown(&header("Annex", 2)), "## Annex\n");
+        assert_eq!(markdown(&header("AB.1 Sigla", 2)), "## AB.1 Sigla\n");
+        assert_eq!(markdown(&header("A. Introduzione", 2)), "## A. Introduzione\n");
     }
 
     #[test]
