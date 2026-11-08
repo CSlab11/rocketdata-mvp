@@ -81,6 +81,7 @@
 - REQ-039 implementato — `README.md` con installazione, uso e calibrazione; corretta la cartella nelle istruzioni di installazione (`README.md`)
 - f5eee83 attribuito a REQ-040 — codice entrato con il primo commit del tool
 - REQ-040 implementato — `classify.py`: supporto DOCX facoltativo con `python-docx` (sostituisce REQ-031) (`classify.py`, `requirements.txt`)
+- BUG-001 segnalato — BOM dei file TXT e MD nel testo del primo paragrafo (`classify.py`)
 
 ## 2026-11-07
 - REQ-001 richiesto — Tool Python autonomo in `rocket-filter/`, dati generati esclusi da git

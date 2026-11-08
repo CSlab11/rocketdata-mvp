@@ -78,3 +78,9 @@ Requisiti del tool `rocket-filter`. I requisiti di progetto e la tabella dei bug
 | ID | Requisito | Stato | File impattati |
 |----|-----------|-------|----------------|
 | REQ-039 | `README.md` deve descrivere installazione, scaricamento del modello, costruzione dell'indice, comandi di interrogazione e di classificazione, calibrazione delle soglie, definizione dei temi e cambio del modello. | implementato | `README.md` |
+
+## Bug
+
+| ID | Descrizione | Req | Stato | File impattati | Modifiche necessarie |
+|----|-------------|-----|-------|----------------|----------------------|
+| BUG-001 | Con un file TXT o MD salvato in UTF-8 con BOM (default di PowerShell 5.1) `classify.py` lascia il carattere U+FEFF all'inizio del testo del primo paragrafo, che compare a video, nel CSV e nel JSONL; atteso il testo del paragrafo senza BOM. | REQ-040 | aperto | `classify.py` | In `paragraphs_from_file`, ramo TXT e MD, leggere il file con `path.read_text(encoding="utf-8-sig", errors="replace")` al posto di `encoding="utf-8"`. |
