@@ -3,6 +3,7 @@
 ## 2026-11-08
 - REQ-181 richiesto — `package.ps1`: Docling di doc-ripper in `dist\docling\`, non versionato
 - REQ-181 implementato — `package.ps1` prepara il vendor di Docling se manca e lo copia in `dist\docling\`, escluso da git (`.gitignore`, `package.ps1`)
+- BUG-005 segnalato — `test*` nel `.gitignore` ignora le cartelle `tests/` dei tool; test di thin-decoder mai versionati (`.gitignore`)
 
 ## 2026-11-04
 - REQ-151 richiesto — Requisiti di ogni tool in `<cartella del tool>/docs/REQUIREMENTS.md`
