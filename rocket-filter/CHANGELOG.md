@@ -17,6 +17,8 @@
 - REQ-006 implementato — Gruppi ramo, disciplina e nodo e membri delle categorie (`core.py`)
 - f5eee83 attribuito a REQ-007 — codice entrato con il primo commit del tool
 - REQ-007 implementato — Embedder fittizio con `ECSS_TEST_EMBEDDER=1` (`core.py`)
+- f5eee83 attribuito a REQ-008 — codice entrato con il primo commit del tool
+- REQ-008 implementato — Selezione del PDF della versione attiva di ogni standard (`ecss_parser.py`)
 
 ## 2026-11-07
 - REQ-001 richiesto — Tool Python autonomo in `rocket-filter/`, dati generati esclusi da git
