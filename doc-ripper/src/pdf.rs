@@ -66,6 +66,7 @@ fn convert_docling(installation: &Path, src: &Path, dst: &Path, rel: &Path, prog
     let mut images = Images::new(rel);
     let blocks: Vec<structure::Block> =
         documents.iter().flat_map(|document| structure::blocks(document, &work, &mut images)).collect();
+    let blocks = structure::refine(blocks);
     if blocks.is_empty() {
         return Ok(Outcome::skipped(SkipReason::Scanned));
     }

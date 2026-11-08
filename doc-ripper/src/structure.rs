@@ -179,6 +179,32 @@ fn annex_level(text: &str) -> Option<usize> {
     (parts.len() > 1 && is_letter(parts[0]) && numbered).then(|| parts.len().min(6))
 }
 
+/// Regole che riguardano più blocchi, applicate ai blocchi di tutto il documento.
+pub fn refine(blocks: Vec<Block>) -> Vec<Block> {
+    join_tables(blocks)
+}
+
+/// Una tabella che prosegue nella pagina successiva, subito dopo e con lo stesso numero di colonne, diventa
+/// una sola tabella; l'intestazione ripetuta all'inizio della continuazione si scarta (REQ-060).
+fn join_tables(blocks: Vec<Block>) -> Vec<Block> {
+    let mut out: Vec<Block> = Vec::new();
+    let mut last_page = 0;
+    for block in blocks {
+        if let (Kind::Table(rows), Some(Block { kind: Kind::Table(previous), .. })) = (&block.kind, out.last_mut())
+            && block.page == last_page + 1
+            && rows[0].len() == previous[0].len()
+        {
+            let skip = usize::from(rows[0] == previous[0]);
+            previous.extend(rows[skip..].iter().cloned());
+            last_page = block.page;
+            continue;
+        }
+        last_page = block.page;
+        out.push(block);
+    }
+    out
+}
+
 /// Più righe d'intestazione in una sola: per colonna i testi sovrapposti uniti con ` / `, senza ripetere due
 /// volte lo stesso testo (es. una cella unita su più righe) (REQ-059).
 fn merge_header(rows: &[Vec<String>]) -> Vec<String> {
@@ -236,7 +262,16 @@ mod tests {
 
     fn markdown(json: &str) -> String {
         let mut images = Images::new(Path::new("doc.pdf"));
-        to_markdown(&blocks(&document(json), Path::new("."), &mut images))
+        to_markdown(&refine(blocks(&document(json), Path::new("."), &mut images)))
+    }
+
+    fn table(rows: &[&[&str]], page: u32) -> Block {
+        let rows = rows.iter().map(|r| r.iter().map(|c| c.to_string()).collect()).collect();
+        Block { kind: Kind::Table(rows), text: String::new(), page }
+    }
+
+    fn paragraph(text: &str, page: u32) -> Block {
+        Block { kind: Kind::Paragraph, text: text.to_string(), page }
     }
 
     #[test]
@@ -320,6 +355,32 @@ mod tests {
             ]}}]}"##,
         );
         assert_eq!(md, "| Voce |\n|---|\n| Urto |\n");
+    }
+
+    #[test]
+    fn tabella_spezzata_tra_due_pagine_ricucita() {
+        let head: &[&str] = &["Voce", "Valore"];
+        let blocks = vec![
+            table(&[head, &["a", "1"]], 3),
+            table(&[head, &["b", "2"]], 4),
+            table(&[&["c", "3"]], 5),
+        ];
+        assert_eq!(refine(blocks), vec![table(&[head, &["a", "1"], &["b", "2"], &["c", "3"]], 3)]);
+    }
+
+    #[test]
+    fn tabelle_distinte_restano_separate() {
+        let head: &[&str] = &["Voce", "Valore"];
+        // Stessa pagina, colonne diverse, un paragrafo in mezzo, una pagina saltata.
+        let blocks = vec![
+            table(&[head, &["a", "1"]], 3),
+            table(&[head, &["b", "2"]], 3),
+            table(&[&["x", "y", "z"]], 4),
+            paragraph("Testo", 4),
+            table(&[head], 5),
+            table(&[head], 7),
+        ];
+        assert_eq!(refine(blocks.clone()), blocks);
     }
 
     #[test]
