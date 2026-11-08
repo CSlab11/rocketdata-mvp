@@ -13,6 +13,8 @@
 - REQ-004 implementato — Parametri letti da `config.yaml` (`config.yaml`, `core.py`)
 - f5eee83 attribuito a REQ-005 — codice entrato con il primo commit del tool
 - REQ-005 implementato — Categorie, categorie trasversali e temi letti da `categorie.yaml` (`categorie.yaml`, `core.py`)
+- f5eee83 attribuito a REQ-006 — codice entrato con il primo commit del tool
+- REQ-006 implementato — Gruppi ramo, disciplina e nodo e membri delle categorie (`core.py`)
 
 ## 2026-11-07
 - REQ-001 richiesto — Tool Python autonomo in `rocket-filter/`, dati generati esclusi da git
