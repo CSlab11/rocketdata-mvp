@@ -208,6 +208,24 @@ async function renderDocRipper(content) {
   const alert = el("div", { class: "alert error", role: "alert", hidden: "" });
   const src = folderField("src", "Cartella di origine");
   const dst = folderField("dst", "Cartella di destinazione");
+  // Modalità di conversione dei PDF, passata a doc-ripper con --mode (REQ-154).
+  const modeOption = (value) => {
+    const input = el("input", { type: "radio", name: "mode", id: `mode-${value}`, value });
+    return { input, label: el("label", { class: "option", for: input.id }, input, ` ${value}`) };
+  };
+  const modeAi = modeOption("ai");
+  const modeSimple = modeOption("simple");
+  modeAi.input.checked = true;
+  const modeHint = el("p", { id: "mode-hint", class: "hint", hidden: "" });
+  const modeRow = el(
+    "fieldset",
+    { id: "mode", class: "field" },
+    el("legend", {}, "Modalità di conversione dei PDF"),
+    modeAi.label,
+    modeSimple.label,
+    modeHint,
+  );
+  const selectedMode = () => (modeSimple.input.checked ? "simple" : "ai");
   const start = el("button", { id: "start", class: "primary", type: "button", disabled: "" }, "Avvia conversione");
   const cancel = el("button", { id: "cancel", type: "button", hidden: "" }, "Annulla");
   const result = el("div", { id: "result", class: "alert", hidden: "" });
@@ -232,7 +250,7 @@ async function renderDocRipper(content) {
   const previewBody = el("div", { class: "preview-body" });
   const preview = el("section", { id: "preview", class: "preview", hidden: "" }, el("h2", {}, "Anteprima di index.md"), previewBody);
 
-  content.append(alert, src.row, dst.row, el("div", { class: "actions" }, start, cancel), progress, result, results, summary, preview, output);
+  content.append(alert, src.row, dst.row, modeRow, el("div", { class: "actions" }, start, cancel), progress, result, results, summary, preview, output);
 
   const showError = (message) => {
     alert.textContent = message;
@@ -366,7 +384,7 @@ async function renderDocRipper(content) {
     const response = await fetch("/api/doc-ripper/run", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ src: src.input.value, dst: dst.input.value }),
+      body: JSON.stringify({ src: src.input.value, dst: dst.input.value, mode: selectedMode() }),
     });
     if (!response.ok) {
       showError(await response.text());

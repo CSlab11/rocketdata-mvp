@@ -8,6 +8,7 @@
 - gui_REQ-154 richiesto — gui: scelta della modalità "AI" o "Simple" per doc-ripper, passata con `--mode`
 - gui_REQ-155 richiesto — gui: modalità "AI" disabilitata con messaggio se Docling non è installato accanto a doc-ripper
 - gui_REQ-156 richiesto — gui: modalità predefinita "AI", ultima modalità usata ricordata tra i riavvii
+- gui_REQ-154 implementato — scelta della modalità ai o simple nella schermata di doc-ripper, passata con `--mode`; valori diversi rifiutati (`gui/examples/fake_doc_ripper.rs`, `gui/src/server.rs`, `gui/tests/run_doc_ripper.rs`, `gui/tests/ui.rs`, `gui/web/app.js`, `gui/web/style.css`)
 
 ## 2026-11-04
 - REQ-151 richiesto — Requisiti di ogni tool in `<cartella del tool>/docs/REQUIREMENTS.md`

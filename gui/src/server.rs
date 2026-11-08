@@ -114,6 +114,10 @@ async fn doc_ripper_status(State(state): State<Arc<AppState>>) -> Json<DocRipper
 struct RunRequest {
     src: String,
     dst: String,
+    /// Modalità di conversione `ai` o `simple`, passata con `--mode` (REQ-154); se manca doc-ripper usa la
+    /// sua predefinita.
+    #[serde(default)]
+    mode: Option<String>,
 }
 
 /// Avvia doc-ripper con le cartelle indicate (REQ-028).
@@ -126,7 +130,13 @@ async fn doc_ripper_run(
         return Err((StatusCode::BAD_REQUEST, "indicare la cartella di origine e quella di destinazione".into()));
     }
     let (src, dst) = (request.src.trim(), request.dst.trim());
-    let args = ["--src".into(), src.into(), "--dst".into(), dst.into()];
+    let mut args: Vec<std::ffi::OsString> = vec!["--src".into(), src.into(), "--dst".into(), dst.into()];
+    if let Some(mode) = &request.mode {
+        if mode != "ai" && mode != "simple" {
+            return Err((StatusCode::BAD_REQUEST, "modalità non valida: usare ai o simple".into()));
+        }
+        args.extend(["--mode".into(), mode.into()]);
+    }
     {
         let _starting = state.starting.lock().unwrap();
         if same_folder_running(&state.classifier, dst) {

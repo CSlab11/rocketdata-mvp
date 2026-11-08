@@ -2,7 +2,7 @@ mod common;
 
 use std::fs;
 
-use common::{Gui, install_with_fake, run, wait_output};
+use common::{Gui, install_with_fake, post_json, run, wait_output};
 
 fn lines(snapshot: &serde_json::Value) -> Vec<String> {
     snapshot["lines"].as_array().unwrap().iter().map(|l| l.as_str().unwrap().to_string()).collect()
@@ -49,4 +49,22 @@ fn una_esecuzione_alla_volta_e_campi_obbligatori() {
     wait_output(&gui);
     assert_eq!(run(&gui, src, "C:\\dst"), 202);
     wait_output(&gui);
+}
+
+/// La modalità scelta arriva a doc-ripper come `--mode`; valori diversi da ai e simple sono rifiutati (REQ-154).
+#[test]
+fn passa_la_modalita_a_doc_ripper() {
+    let (_dir, exe) = install_with_fake();
+    let gui = Gui::start(&exe);
+    let src = tempfile::tempdir().unwrap();
+    let dst = tempfile::tempdir().unwrap();
+    let (src, dst) = (src.path().to_str().unwrap(), dst.path().to_str().unwrap());
+
+    let (code, body) = post_json(&gui, "/api/doc-ripper/run", &serde_json::json!({"src": src, "dst": dst, "mode": "boh"}));
+    assert_eq!(code, 400, "{body}");
+
+    let (code, body) = post_json(&gui, "/api/doc-ripper/run", &serde_json::json!({"src": src, "dst": dst, "mode": "simple"}));
+    assert_eq!(code, 202, "{body}");
+    let lines = lines(&wait_output(&gui));
+    assert!(lines.contains(&format!("argomenti: --src {src} --dst {dst} --mode simple")), "{lines:?}");
 }

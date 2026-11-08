@@ -18,7 +18,8 @@ fn main() {
         std::process::exit(2);
     };
     let src = PathBuf::from(src);
-    eprintln!("argomenti: --src {} --dst {}", src.display(), dst);
+    let mode = value("--mode").map(|m| format!(" --mode {m}")).unwrap_or_default();
+    eprintln!("argomenti: --src {} --dst {}{mode}", src.display(), dst);
 
     let slow = src.join("lento").exists();
     let fail = src.join("fallisci").exists();

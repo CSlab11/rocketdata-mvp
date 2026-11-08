@@ -295,3 +295,10 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   main { padding: 16px; }
   .results { grid-template-columns: 1fr; }
 }
+
+/* Modalità di conversione dei PDF (REQ-154): pulsanti di opzione sulla stessa riga. */
+fieldset.field { border: 0; padding: 0; margin: 0 0 14px; min-width: 0; }
+fieldset.field legend { font-weight: 600; margin-bottom: 4px; padding: 0; }
+.field label.option { display: inline-flex; align-items: center; gap: 4px; font-weight: 400; margin: 0 16px 0 0; }
+.field input[type="radio"] { flex: none; padding: 0; margin: 0; }
+.field .hint { color: var(--muted); margin: 6px 0 0; }
