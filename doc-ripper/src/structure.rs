@@ -208,7 +208,30 @@ fn dehyphenate(text: &str) -> String {
 
 /// Regole che riguardano più blocchi, applicate ai blocchi di tutto il documento.
 pub fn refine(blocks: Vec<Block>) -> Vec<Block> {
-    join_tables(blocks)
+    join_tables(join_paragraphs(blocks))
+}
+
+/// Un paragrafo interrotto dal cambio di pagina diventa un solo paragrafo: l'ultimo blocco di una pagina non
+/// chiuso da punteggiatura finale e il primo della pagina successiva che inizia in minuscolo (REQ-063).
+fn join_paragraphs(blocks: Vec<Block>) -> Vec<Block> {
+    let mut out: Vec<Block> = Vec::new();
+    let mut last_page = 0;
+    for block in blocks {
+        if let Some(previous) = out.last_mut()
+            && previous.kind == Kind::Paragraph
+            && block.kind == Kind::Paragraph
+            && block.page == last_page + 1
+            && !previous.text.ends_with(['.', ':', ';', '!', '?'])
+            && block.text.starts_with(char::is_lowercase)
+        {
+            previous.text = dehyphenate(&format!("{} {}", previous.text, block.text));
+            last_page = block.page;
+            continue;
+        }
+        last_page = block.page;
+        out.push(block);
+    }
+    out
 }
 
 /// Una tabella che prosegue nella pagina successiva, subito dopo e con lo stesso numero di colonne, diventa
@@ -438,6 +461,34 @@ mod tests {
             "texts": [{"label": "text", "text": "The equip- ment shall be qual- ified."}]}"##,
         );
         assert_eq!(md, "The equipment shall be qualified.\n");
+    }
+
+    #[test]
+    fn paragrafo_interrotto_dal_cambio_pagina_riunito() {
+        let blocks = vec![
+            paragraph("The supplier shall", 1),
+            paragraph("establish a pro-", 2),
+            paragraph("gramme for the whole project.", 3),
+            paragraph("Next paragraph.", 3),
+        ];
+        assert_eq!(
+            refine(blocks),
+            vec![paragraph("The supplier shall establish a programme for the whole project.", 1), paragraph("Next paragraph.", 3)]
+        );
+    }
+
+    #[test]
+    fn paragrafi_distinti_restano_separati() {
+        let blocks = vec![
+            paragraph("Ends with a period.", 1),
+            paragraph("continues lowercase", 2),
+            paragraph("No punctuation", 2),
+            paragraph("Uppercase start", 3),
+            paragraph("no punctuation", 3),
+            paragraph("same page lowercase", 3),
+            paragraph("skipped page", 5),
+        ];
+        assert_eq!(refine(blocks.clone()), blocks);
     }
 
     #[test]
