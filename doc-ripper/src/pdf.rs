@@ -99,7 +99,7 @@ fn extract(pdfium: &Pdfium, path: &Path, images: &mut Images, progress: &str) ->
     let total = document.pages().len();
     let mut pages = Vec::new();
     for (index, page) in document.pages().iter().enumerate() {
-        let mut result = layout::Page::default();
+        let mut result = layout::Page { height: page.height().value, ..Default::default() };
         for object in page.objects().iter() {
             let Ok(bounds) = object.bounds() else { continue };
             if let Some(image_object) = object.as_image_object() {
@@ -144,6 +144,7 @@ fn encode_png(image: &image::DynamicImage) -> Option<Vec<u8>> {
 /// Ricostruzione della struttura da testo posizionato. Coordinate PDF: y cresce verso l'alto.
 mod layout {
     use super::escape;
+    use crate::furniture;
 
     #[derive(Debug, Clone)]
     pub struct Run {
@@ -155,11 +156,13 @@ mod layout {
         pub text: String,
     }
 
-    /// Contenuto di una pagina: frammenti di testo e immagini (bordo superiore, riferimento Markdown).
+    /// Contenuto di una pagina: frammenti di testo e immagini (bordo superiore, riferimento Markdown), e altezza
+    /// della pagina in punti.
     #[derive(Debug, Default)]
     pub struct Page {
         pub runs: Vec<Run>,
         pub images: Vec<(f32, String)>,
+        pub height: f32,
     }
 
     /// Riga di testo; `cells` separate da spazi orizzontali ampi (possibili colonne di tabella).
@@ -270,7 +273,7 @@ mod layout {
     }
 
     pub fn to_markdown(pages: &[Page]) -> String {
-        let lines_by_page: Vec<Vec<Line>> = pages.iter().map(|p| lines(&p.runs)).collect();
+        let lines_by_page = without_repeated(pages.iter().map(|p| lines(&p.runs)).collect(), pages);
         let body = body_size(&lines_by_page);
         let heading_sizes = heading_sizes(&lines_by_page, body);
 
@@ -320,6 +323,27 @@ mod layout {
             blocks.extend(images.map(|(_, md)| Block::Image(md.clone())));
         }
         render(&blocks)
+    }
+
+    /// Righe senza le intestazioni e i piè di pagina ripetuti, anche quelle che formerebbero righe di tabella
+    /// (REQ-076, criterio di REQ-074).
+    fn without_repeated(lines_by_page: Vec<Vec<Line>>, pages: &[Page]) -> Vec<Vec<Line>> {
+        let items: Vec<furniture::Placed> = lines_by_page
+            .iter()
+            .zip(pages)
+            .enumerate()
+            .flat_map(|(index, (lines, page))| {
+                lines.iter().map(move |line| furniture::Placed {
+                    page: index as u32 + 1,
+                    text: line.text(),
+                    top: page.height - line.top,
+                    bottom: page.height - line.bottom,
+                    page_height: page.height,
+                })
+            })
+            .collect();
+        let mut found = furniture::detect(&items, pages.len()).into_iter();
+        lines_by_page.into_iter().map(|lines| lines.into_iter().filter(|_| !found.next().unwrap()).collect()).collect()
     }
 
     /// Unisce una riga al paragrafo, ricomponendo le parole spezzate con il trattino.
@@ -487,6 +511,7 @@ mod layout {
             let page = Page {
                 runs: vec![run(72.0, 700.0, 11.0, "Sopra."), run(72.0, 400.0, 11.0, "Sotto.")],
                 images: vec![(100.0, "![b](x_img/b.png)".into()), (600.0, "![a](x_img/a.png)".into())],
+                height: 842.0,
             };
             assert_eq!(to_markdown(&[page]), "Sopra.\n\n![a](x_img/a.png)\n\nSotto.\n\n![b](x_img/b.png)\n");
         }
@@ -514,7 +539,7 @@ mod layout {
                 run(72.0, 545.0, 14.0, "Conclusioni"),
                 run(72.0, 525.0, 11.0, "Fine."),
             ];
-            let md = to_markdown(&[Page { runs: page, images: Vec::new() }]);
+            let md = to_markdown(&[Page { runs: page, images: Vec::new(), height: 842.0 }]);
             let expected = concat!(
                 "# Relazione annuale\n\n",
                 "## Introduzione\n\n",
@@ -526,6 +551,31 @@ mod layout {
                 "Fine.\n",
             );
             assert_eq!(md, expected);
+        }
+
+        #[test]
+        fn intestazioni_e_pie_di_pagina_ripetuti_esclusi() {
+            // Quattro pagine alte 842 punti: intestazione su due colonne con il numero di pagina, piè di pagina,
+            // e nel corpo lo stesso testo dell'intestazione a metà della prima pagina.
+            let pages: Vec<Page> = (1..=4)
+                .map(|p| {
+                    let mut runs = vec![
+                        run(72.0, 800.0, 9.0, "Doc ID"),
+                        run(300.0, 800.0, 9.0, &format!("Page {p} of 53")),
+                        run(72.0, 786.0, 9.0, "Title"),
+                        run(300.0, 786.0, 9.0, "Safety Plan"),
+                        run(72.0, 500.0, 11.0, &format!("Corpo {p}.")),
+                        run(72.0, 40.0, 8.0, "Confidential"),
+                    ];
+                    if p == 1 {
+                        runs.push(run(72.0, 400.0, 11.0, "Title"));
+                    }
+                    Page { runs, images: Vec::new(), height: 842.0 }
+                })
+                .collect();
+            assert_eq!(to_markdown(&pages), "Corpo 1.\n\nTitle\n\nCorpo 2.\n\nCorpo 3.\n\nCorpo 4.\n");
+            // Con due pagine resta tutto.
+            assert!(to_markdown(&pages[..2]).starts_with("| Doc ID | Page 1 of 53 |"));
         }
     }
 }

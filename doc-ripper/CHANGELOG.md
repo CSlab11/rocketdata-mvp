@@ -60,6 +60,7 @@
 - REQ-076 richiesto — doc-ripper: intestazioni e piè di pagina ripetuti esclusi dal `.md` dei PDF anche in modalità simple
 - REQ-074 implementato — Testi ripetuti nella fascia alta o bassa su metà delle pagine esclusi qualunque sia la classificazione di Docling, contati sull'intero PDF (`src/docling.rs`, `src/furniture.rs`, `src/main.rs`, `src/pdf.rs`, `src/structure.rs`)
 - REQ-075 implementato — Righe di tabella con tutte le celle nelle zone occupate da intestazioni e piè di pagina ripetuti escluse; tabella vuota non scritta (`src/docling.rs`, `src/furniture.rs`, `src/structure.rs`)
+- REQ-076 implementato — In modalità simple le righe ricostruite da PDFium che si ripetono come intestazione o piè di pagina sono escluse, anche dentro le tabelle (`src/pdf.rs`)
 
 ## 2026-10-23
 - REQ-041 richiesto — doc-ripper: riga di avanzamento per ciascun file elaborato
