@@ -5,7 +5,7 @@ use std::path::Path;
 use image::ImageFormat;
 use pdfium_render::prelude::*;
 
-use crate::convert::base_name;
+use crate::convert::{Mode, base_name};
 use crate::docling;
 use crate::docx::escape;
 use crate::images::Images;
@@ -33,7 +33,7 @@ fn load_pdfium() -> Result<Pdfium, String> {
 /// Converte un `.pdf` in `<nome>_pdf.md` ricostruendo titoli, paragrafi, elenchi e tabelle (REQ-010)
 /// ed estraendo le immagini (REQ-020): con Docling se è installato accanto all'eseguibile (REQ-048);
 /// se Docling manca o fallisce, con PDFium, indicandolo nel riepilogo (REQ-070).
-pub fn convert(src: &Path, dst: &Path, rel: &Path, progress: &str) -> Result<Outcome, String> {
+pub fn convert(src: &Path, dst: &Path, rel: &Path, progress: &str, _mode: Mode) -> Result<Outcome, String> {
     let reason = match docling::installation() {
         Some(installation) => match convert_docling(&installation, src, dst, rel, progress) {
             Ok(outcome) => return Ok(outcome),

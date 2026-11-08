@@ -29,6 +29,9 @@ struct Args {
     /// Cartella di destinazione
     #[arg(long, value_name = "DESTINAZIONE")]
     dst: PathBuf,
+    /// Modalità di conversione dei PDF: `ai` con Docling, `simple` con PDFium (REQ-072)
+    #[arg(long, value_enum, default_value_t = convert::Mode::Ai)]
+    mode: convert::Mode,
 }
 
 fn main() -> ExitCode {
@@ -62,7 +65,7 @@ fn main() -> ExitCode {
         current += 1;
         let progress = format!("[{current}/{total}]");
         println!("{progress} {}", rel.display());
-        convert::convert(&src, &dst, rel, &progress)
+        convert::convert(&src, &dst, rel, &progress, args.mode)
     });
     report.failed.extend(failed_dirs);
     report.failed.extend(tree.errors);
