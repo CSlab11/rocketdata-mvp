@@ -34,7 +34,18 @@ pub struct Block {
 /// Blocchi del corpo del documento nell'ordine di lettura di Docling. Le immagini vengono registrate in
 /// `images`; i loro file si leggono a partire da `base`, la cartella del JSON.
 pub fn blocks(document: &Document, base: &Path, images: &mut Images) -> Vec<Block> {
-    let mut walker = Walker { document, base, images, done: HashSet::new(), per_page: HashMap::new(), out: Vec::new() };
+    // Le didascalie delle immagini si scrivono solo dopo l'immagine, anche se nel corpo la precedono (REQ-066).
+    let picture_captions = document.pictures.iter().flat_map(|p| p.captions.iter().map(|r| r.target.clone())).collect();
+    let mut walker = Walker {
+        document,
+        base,
+        images,
+        done: HashSet::new(),
+        picture_captions,
+        in_picture: false,
+        per_page: HashMap::new(),
+        out: Vec::new(),
+    };
     walker.children(&document.body.children, 0);
     walker.out
 }
@@ -45,6 +56,9 @@ struct Walker<'a> {
     images: &'a mut Images,
     /// Elementi già emessi: una didascalia può comparire sia nel corpo sia tra quelle di una tabella.
     done: HashSet<String>,
+    /// Didascalie delle immagini e se si stanno scrivendo quelle dell'immagine corrente.
+    picture_captions: HashSet<String>,
+    in_picture: bool,
     /// Immagini già estratte per pagina, per i nomi dei file.
     per_page: HashMap<u32, usize>,
     out: Vec<Block>,
@@ -58,6 +72,9 @@ impl Walker<'_> {
     }
 
     fn reference(&mut self, reference: &Ref, depth: usize) {
+        if self.picture_captions.contains(&reference.target) && !self.in_picture {
+            return;
+        }
         if !self.done.insert(reference.target.clone()) {
             return;
         }
@@ -128,10 +145,11 @@ impl Walker<'_> {
                 if header_rows > 1 {
                     rows.splice(0..header_rows, [merge_header(&rows[..header_rows])]);
                 }
+                // Didascalia subito prima della tabella, anche se nel corpo la segue (REQ-066).
+                self.children(&table.captions, depth);
                 if !rows.is_empty() && data.num_cols > 0 {
                     self.out.push(Block { kind: Kind::Table(rows), text: String::new(), page });
                 }
-                self.children(&table.captions, depth);
                 self.children(&table.footnotes, depth);
             }
             Some(Item::Picture(picture)) => {
@@ -142,8 +160,11 @@ impl Walker<'_> {
                     let link = self.images.add(&format!("pagina{page}_immagine{count}.png"), &bytes);
                     self.out.push(Block { kind: Kind::Image(link), text: String::new(), page });
                 }
-                // Il testo dentro l'immagine (etichette di un diagramma) non entra nel Markdown: solo le didascalie.
+                // Il testo dentro l'immagine (etichette di un diagramma) non entra nel Markdown: solo le didascalie,
+                // subito dopo l'immagine (REQ-066).
+                self.in_picture = true;
                 self.children(&picture.captions, depth);
+                self.in_picture = false;
             }
             None => {}
         }
@@ -636,6 +657,27 @@ mod tests {
             "texts": [{"label": "footnote", "text": "3 Nota."}, {"label": "text", "text": "Corpo."}]}"##,
         );
         assert_eq!(md, "Corpo.\n\n3 Nota.\n");
+    }
+
+    #[test]
+    fn didascalie_prima_della_tabella_e_dopo_l_immagine() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("a.png"), b"png").unwrap();
+        // Nel corpo la didascalia della tabella segue la tabella e quella dell'immagine la precede.
+        let doc = document(
+            r##"{
+            "body": {"children": [{"$ref": "#/tables/0"}, {"$ref": "#/texts/0"}, {"$ref": "#/texts/1"}, {"$ref": "#/pictures/0"}]},
+            "texts": [{"label": "caption", "text": "Table 4-1: Levels"}, {"label": "caption", "text": "Figure 4-1: Setup"}],
+            "tables": [{"captions": [{"$ref": "#/texts/0"}],
+                "data": {"num_rows": 1, "num_cols": 1, "table_cells": [{"text": "x", "start_row_offset_idx": 0, "start_col_offset_idx": 0}]}}],
+            "pictures": [{"image": {"uri": "a.png"}, "prov": [{"page_no": 2}], "captions": [{"$ref": "#/texts/1"}]}]}"##,
+        );
+        let mut images = Images::new(Path::new("doc.pdf"));
+        let md = to_markdown(&refine(blocks(&doc, dir.path(), &mut images)));
+        assert_eq!(
+            md,
+            "Table 4-1: Levels\n\n| x |\n|---|\n\n![pagina2_immagine1.png](doc_pdf_img/pagina2_immagine1.png)\n\nFigure 4-1: Setup\n"
+        );
     }
 
     #[test]
