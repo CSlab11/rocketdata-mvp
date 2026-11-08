@@ -50,7 +50,7 @@ def paragraphs_from_file(path: Path, min_chars: int) -> list[dict]:
             if len(text) >= min_chars:
                 out.append({"file": path.name, "pagina": None, "testo": text})
     else:
-        raw = path.read_text(encoding="utf-8", errors="replace")
+        raw = path.read_text(encoding="utf-8-sig", errors="replace")
         for block in re.split(r"\n\s*\n", raw):
             text = re.sub(r"\s+", " ", block).strip()
             if len(text) >= min_chars:

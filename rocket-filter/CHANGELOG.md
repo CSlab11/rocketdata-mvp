@@ -82,6 +82,7 @@
 - f5eee83 attribuito a REQ-040 — codice entrato con il primo commit del tool
 - REQ-040 implementato — `classify.py`: supporto DOCX facoltativo con `python-docx` (sostituisce REQ-031) (`classify.py`, `requirements.txt`)
 - BUG-001 segnalato — BOM dei file TXT e MD nel testo del primo paragrafo (`classify.py`)
+- BUG-001 risolto — File TXT e MD letti con `utf-8-sig`, che toglie il BOM (`classify.py`)
 
 ## 2026-11-07
 - REQ-001 richiesto — Tool Python autonomo in `rocket-filter/`, dati generati esclusi da git
