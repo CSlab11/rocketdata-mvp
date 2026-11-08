@@ -13,8 +13,8 @@ pub enum Kind {
     /// Titolo con il suo livello (1-6).
     Heading(usize),
     Paragraph,
-    /// Voce di elenco con la profondità di nidificazione (0 per il primo livello).
-    ListItem(usize),
+    /// Voce di elenco: profondità di nidificazione (0 per il primo livello) e rientro sinistro in punti.
+    ListItem { depth: usize, indent: i32 },
     /// Tabella come griglia di celle; la prima riga è l'intestazione.
     Table(Vec<Vec<String>>),
     /// Riferimento Markdown all'immagine estratta.
@@ -88,13 +88,18 @@ impl Walker<'_> {
                 _ => self.children(&group.children, depth),
             },
             Some(Item::Text(text)) => {
+                let mut body = text.text.trim().to_string();
                 let kind = match text.label.as_str() {
                     "title" | "section_header" => Kind::Heading(heading_level(&text.text, &text.label, text.level)),
-                    "list_item" => Kind::ListItem(depth.saturating_sub(1)),
+                    "list_item" => {
+                        body = with_marker(text.marker.as_deref(), &body);
+                        let indent = text.prov.first().and_then(|p| p.bbox.as_ref()).map_or(0, |b| b.l.round() as i32);
+                        Kind::ListItem { depth: depth.saturating_sub(1), indent }
+                    }
                     "code" => Kind::Code,
                     _ => Kind::Paragraph,
                 };
-                self.push(kind, text.text.trim().to_string(), docling::page(&text.prov));
+                self.push(kind, body, docling::page(&text.prov));
                 self.children(&text.children, depth);
             }
             Some(Item::Table(table)) => {
@@ -208,7 +213,48 @@ fn dehyphenate(text: &str) -> String {
 
 /// Regole che riguardano più blocchi, applicate ai blocchi di tutto il documento.
 pub fn refine(blocks: Vec<Block>) -> Vec<Block> {
-    join_tables(join_paragraphs(blocks))
+    join_tables(join_paragraphs(nest_lists(blocks)))
+}
+
+/// Numerazione originale in testa al testo della voce (`a) testo`); i simboli (`•`, `-`) si tolgono (REQ-064).
+fn with_marker(marker: Option<&str>, text: &str) -> String {
+    match marker.map(str::trim) {
+        Some(m) if m.chars().any(char::is_alphanumeric) && !text.starts_with(m) => format!("{m} {text}"),
+        _ => text.to_string(),
+    }
+}
+
+/// Rientro massimo, in punti, tra voci considerate allo stesso livello.
+const INDENT_TOLERANCE: i32 = 4;
+
+/// Profondità delle voci di elenco: Docling non sempre annida i gruppi, quindi in ogni serie di voci consecutive
+/// il livello si ricava anche dal rientro sinistro, ogni rientro distinto un livello più in basso (REQ-064).
+fn nest_lists(mut blocks: Vec<Block>) -> Vec<Block> {
+    let indent = |b: &Block| match b.kind {
+        Kind::ListItem { indent, .. } => Some(indent),
+        _ => None,
+    };
+    let mut i = 0;
+    while i < blocks.len() {
+        let start = i;
+        while i < blocks.len() && indent(&blocks[i]).is_some() {
+            i += 1;
+        }
+        if start == i {
+            i += 1;
+            continue;
+        }
+        let mut levels: Vec<i32> = blocks[start..i].iter().filter_map(indent).collect();
+        levels.sort_unstable();
+        levels.dedup_by(|b, a| *b - *a <= INDENT_TOLERANCE);
+        for block in &mut blocks[start..i] {
+            if let Kind::ListItem { depth, indent } = &mut block.kind {
+                let level = levels.iter().filter(|&&l| l <= *indent + INDENT_TOLERANCE).count().saturating_sub(1);
+                *depth = (*depth).max(level);
+            }
+        }
+    }
+    blocks
 }
 
 /// Un paragrafo interrotto dal cambio di pagina diventa un solo paragrafo: l'ultimo blocco di una pagina non
@@ -276,13 +322,13 @@ pub fn to_markdown(blocks: &[Block]) -> String {
     let mut out = String::new();
     for (i, block) in blocks.iter().enumerate() {
         if i > 0 {
-            let tight = matches!(block.kind, Kind::ListItem(_)) && matches!(blocks[i - 1].kind, Kind::ListItem(_));
+            let tight = matches!(block.kind, Kind::ListItem { .. }) && matches!(blocks[i - 1].kind, Kind::ListItem { .. });
             out.push_str(if tight { "\n" } else { "\n\n" });
         }
         match &block.kind {
             Kind::Heading(level) => out.push_str(&format!("{} {}", "#".repeat(*level), escape(&block.text))),
             Kind::Paragraph => out.push_str(&escape(&block.text)),
-            Kind::ListItem(depth) => out.push_str(&format!("{}- {}", "  ".repeat(*depth), escape(&block.text))),
+            Kind::ListItem { depth, .. } => out.push_str(&format!("{}- {}", "  ".repeat(*depth), escape(&block.text))),
             Kind::Table(rows) => out.push_str(&table(rows)),
             Kind::Image(link) => out.push_str(link),
             Kind::Code => out.push_str(&format!("```\n{}\n```", block.text)),
@@ -489,6 +535,54 @@ mod tests {
             paragraph("skipped page", 5),
         ];
         assert_eq!(refine(blocks.clone()), blocks);
+    }
+
+    #[test]
+    fn elenchi_annidati_dal_rientro_con_numerazione_originale() {
+        let item = |marker: &str, text: &str, left: u32| {
+            format!(r#"{{"label": "list_item", "marker": "{marker}", "text": "{text}", "prov": [{{"page_no": 1, "bbox": {{"l": {left}}}}}]}}"#)
+        };
+        let texts = [
+            item("a.", "Materials shall be selected.", 50),
+            item("b.", "Deviations shall be approved:", 51),
+            item("1.", "by the customer;", 70),
+            item("2.", "by the supplier.", 71),
+            item("•", "Bullet back at the first level.", 50),
+            item("c)", "c) Marker already in the text.", 50),
+        ];
+        let json = format!(
+            r##"{{"body": {{"children": [{{"$ref": "#/groups/0"}}]}},
+               "groups": [{{"label": "list", "children": [{}]}}],
+               "texts": [{}]}}"##,
+            (0..texts.len()).map(|i| format!(r##"{{"$ref": "#/texts/{i}"}}"##)).collect::<Vec<_>>().join(","),
+            texts.join(",")
+        );
+        assert_eq!(
+            markdown(&json),
+            concat!(
+                "- a. Materials shall be selected.\n",
+                "- b. Deviations shall be approved:\n",
+                "  - 1. by the customer;\n",
+                "  - 2. by the supplier.\n",
+                "- Bullet back at the first level.\n",
+                "- c) Marker already in the text.\n"
+            )
+        );
+    }
+
+    #[test]
+    fn elenchi_annidati_dai_gruppi_di_docling() {
+        let md = markdown(
+            r##"{
+            "body": {"children": [{"$ref": "#/groups/0"}]},
+            "groups": [{"label": "list", "children": [{"$ref": "#/texts/0"}]},
+                       {"label": "list", "children": [{"$ref": "#/texts/1"}]}],
+            "texts": [
+                {"label": "list_item", "marker": "1)", "text": "Primo", "children": [{"$ref": "#/groups/1"}]},
+                {"label": "list_item", "marker": "a)", "text": "Dettaglio"}
+            ]}"##,
+        );
+        assert_eq!(md, "- 1) Primo\n  - a) Dettaglio\n");
     }
 
     #[test]

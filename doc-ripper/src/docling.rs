@@ -167,6 +167,9 @@ pub struct Text {
     pub text: String,
     #[serde(default)]
     pub level: Option<usize>,
+    /// Numerazione o simbolo della voce di elenco (es. `a)`, `1.`, `•`).
+    #[serde(default)]
+    pub marker: Option<String>,
     #[serde(default)]
     pub children: Vec<Ref>,
     #[serde(default)]
@@ -227,6 +230,14 @@ pub struct ImageRef {
 #[derive(Debug, Deserialize)]
 pub struct Prov {
     pub page_no: u32,
+    #[serde(default)]
+    pub bbox: Option<BBox>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct BBox {
+    /// Margine sinistro in punti.
+    pub l: f32,
 }
 
 /// Livello predefinito degli elementi: il corpo del documento.
