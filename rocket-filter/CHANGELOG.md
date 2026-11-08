@@ -73,6 +73,8 @@
 - REQ-035 implementato — `classify.py`: `--soglia` e `--margine` per tutti i livelli (`classify.py`)
 - f5eee83 attribuito a REQ-036 — codice entrato con il primo commit del tool
 - REQ-036 implementato — `classify.py`: termini di supporto per paragrafo (`classify.py`)
+- f5eee83 attribuito a REQ-037 — codice entrato con il primo commit del tool
+- REQ-037 implementato — `classify.py`: uscita JSONL o CSV (`classify.py`)
 
 ## 2026-11-07
 - REQ-001 richiesto — Tool Python autonomo in `rocket-filter/`, dati generati esclusi da git
