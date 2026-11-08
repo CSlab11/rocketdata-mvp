@@ -196,6 +196,11 @@ pub struct Cell {
     pub text: String,
     pub start_row_offset_idx: usize,
     pub start_col_offset_idx: usize,
+    /// Fine (esclusa) dell'estensione della cella; assente vale una sola riga o colonna.
+    #[serde(default)]
+    pub end_row_offset_idx: Option<usize>,
+    #[serde(default)]
+    pub end_col_offset_idx: Option<usize>,
 }
 
 #[derive(Debug, Deserialize)]

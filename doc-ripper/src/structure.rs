@@ -98,9 +98,14 @@ impl Walker<'_> {
                 let page = docling::page(&table.prov);
                 let data = &table.data;
                 let mut rows = vec![vec![String::new(); data.num_cols]; data.num_rows];
+                // Una cella unita ripete il suo valore in ogni cella che copre (REQ-058).
                 for cell in &data.table_cells {
-                    if let Some(slot) = rows.get_mut(cell.start_row_offset_idx).and_then(|r| r.get_mut(cell.start_col_offset_idx)) {
-                        *slot = cell.text.trim().to_string();
+                    let row_end = cell.end_row_offset_idx.unwrap_or(cell.start_row_offset_idx + 1).min(data.num_rows);
+                    let col_end = cell.end_col_offset_idx.unwrap_or(cell.start_col_offset_idx + 1).min(data.num_cols);
+                    for row in rows.iter_mut().take(row_end).skip(cell.start_row_offset_idx) {
+                        for slot in row.iter_mut().take(col_end).skip(cell.start_col_offset_idx) {
+                            *slot = cell.text.trim().to_string();
+                        }
                     }
                 }
                 if !rows.is_empty() && data.num_cols > 0 {
@@ -239,6 +244,23 @@ mod tests {
             ]}}]}"##,
         );
         assert_eq!(md, "| Voce | Valore |\n|---|---|\n| a\\|b | 5 |\n");
+    }
+
+    #[test]
+    fn celle_unite_ripetute_in_ogni_cella_coperta() {
+        let md = markdown(
+            r##"{
+            "body": {"children": [{"$ref": "#/tables/0"}]},
+            "tables": [{"data": {"num_rows": 3, "num_cols": 3, "table_cells": [
+                {"text": "Voce", "start_row_offset_idx": 0, "end_row_offset_idx": 1, "start_col_offset_idx": 0, "end_col_offset_idx": 1},
+                {"text": "Livello", "start_row_offset_idx": 0, "end_row_offset_idx": 1, "start_col_offset_idx": 1, "end_col_offset_idx": 3},
+                {"text": "Urto", "start_row_offset_idx": 1, "end_row_offset_idx": 3, "start_col_offset_idx": 0, "end_col_offset_idx": 1},
+                {"text": "5", "start_row_offset_idx": 1, "end_row_offset_idx": 2, "start_col_offset_idx": 1, "end_col_offset_idx": 2},
+                {"text": "20", "start_row_offset_idx": 1, "end_row_offset_idx": 2, "start_col_offset_idx": 2, "end_col_offset_idx": 3},
+                {"text": "100", "start_row_offset_idx": 2, "end_row_offset_idx": 3, "start_col_offset_idx": 1, "end_col_offset_idx": 3}
+            ]}}]}"##,
+        );
+        assert_eq!(md, "| Voce | Livello | Livello |\n|---|---|---|\n| Urto | 5 | 20 |\n| Urto | 100 | 100 |\n");
     }
 
     #[test]

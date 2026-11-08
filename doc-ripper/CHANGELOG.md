@@ -40,6 +40,7 @@
 - REQ-055 implementato — Livello dei titoli dalla numerazione di clausola (`4.2.3` → `###`, massimo sei) (`src/structure.rs`)
 - REQ-056 implementato — Livello dei titoli degli annessi (`Annex A` → `#`, `A.1.2` → `###`) (`src/structure.rs`)
 - REQ-057 implementato — Test dei titoli senza numerazione: livello di Docling, `title` a livello 1; il comportamento era già in `heading_level` (`src/structure.rs`)
+- REQ-058 implementato — Valore delle celle unite ripetuto in ogni cella coperta (`src/docling.rs`, `src/structure.rs`)
 
 ## 2026-10-23
 - REQ-041 richiesto — doc-ripper: riga di avanzamento per ciascun file elaborato
