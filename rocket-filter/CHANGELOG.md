@@ -39,6 +39,8 @@
 - REQ-017 implementato — Membri dei temi generici da ancore e semi (`core.py`, `ingest.py`)
 - f5eee83 attribuito a REQ-018 — codice entrato con il primo commit del tool
 - REQ-018 implementato — Prototipi di categoria con k-means sferico (`ingest.py`)
+- f5eee83 attribuito a REQ-019 — codice entrato con il primo commit del tool
+- REQ-019 implementato — Descrizione delle categorie nell'indice (`ingest.py`)
 
 ## 2026-11-07
 - REQ-001 richiesto — Tool Python autonomo in `rocket-filter/`, dati generati esclusi da git
