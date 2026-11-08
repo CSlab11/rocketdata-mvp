@@ -57,6 +57,8 @@
 - REQ-026 implementato — `query.py lessico` (`query.py`)
 - f5eee83 attribuito a REQ-027 — codice entrato con il primo commit del tool
 - REQ-027 implementato — `query.py membri` (`query.py`)
+- f5eee83 attribuito a REQ-028 — codice entrato con il primo commit del tool
+- REQ-028 implementato — `query.py unita` (`core.py`, `query.py`)
 
 ## 2026-11-07
 - REQ-001 richiesto — Tool Python autonomo in `rocket-filter/`, dati generati esclusi da git
