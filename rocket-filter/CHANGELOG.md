@@ -19,6 +19,8 @@
 - REQ-007 implementato — Embedder fittizio con `ECSS_TEST_EMBEDDER=1` (`core.py`)
 - f5eee83 attribuito a REQ-008 — codice entrato con il primo commit del tool
 - REQ-008 implementato — Selezione del PDF della versione attiva di ogni standard (`ecss_parser.py`)
+- f5eee83 attribuito a REQ-009 — codice entrato con il primo commit del tool
+- REQ-009 implementato — Segmentazione dei PDF in unità con metadati (`ecss_parser.py`)
 
 ## 2026-11-07
 - REQ-001 richiesto — Tool Python autonomo in `rocket-filter/`, dati generati esclusi da git
