@@ -17,10 +17,54 @@ fn python(installation: &Path) -> PathBuf {
     installation.join("python").join("python.exe")
 }
 
+/// Blocchi del documento `pdf`, dalla cache in `out` se il PDF (sha1) e la versione di Docling sono quelli
+/// dell'esecuzione precedente (REQ-069), altrimenti eseguendo Docling.
+pub fn convert(installation: &Path, pdf: &Path, out: &Path, progress: &str) -> Result<Vec<Document>, String> {
+    let key = format!("sha1 {}\ndocling {}\n", sha1(pdf)?, version(installation));
+    let key_path = out.join("chiave.txt");
+    if std::fs::read_to_string(&key_path).is_ok_and(|saved| saved == key)
+        && let Ok(documents) = read_blocks(out)
+    {
+        return Ok(documents);
+    }
+    // Una conversione interrotta non deve lasciare una chiave valida accanto a blocchi incompleti.
+    let _ = std::fs::remove_file(&key_path);
+    let documents = run(installation, pdf, out, progress)?;
+    std::fs::write(&key_path, key).map_err(|e| format!("{}: {e}", key_path.display()))?;
+    Ok(documents)
+}
+
+fn sha1(path: &Path) -> Result<String, String> {
+    let mut file = std::fs::File::open(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    let mut hasher = sha1_smol::Sha1::new();
+    let mut buffer = vec![0u8; 1 << 16];
+    loop {
+        let n = file.read(&mut buffer).map_err(|e| format!("{}: {e}", path.display()))?;
+        if n == 0 {
+            return Ok(hasher.digest().to_string());
+        }
+        hasher.update(&buffer[..n]);
+    }
+}
+
+/// Versione di Docling installata, dal nome della cartella `docling-<versione>.dist-info` del Python distribuito.
+fn version(installation: &Path) -> String {
+    let packages = installation.join("python").join("Lib").join("site-packages");
+    std::fs::read_dir(packages)
+        .into_iter()
+        .flatten()
+        .filter_map(|entry| entry.ok()?.file_name().into_string().ok())
+        .find_map(|name| {
+            let version = name.strip_prefix("docling-")?.strip_suffix(".dist-info")?;
+            version.starts_with(|c: char| c.is_ascii_digit()).then(|| version.to_string())
+        })
+        .unwrap_or_else(|| "sconosciuta".to_string())
+}
+
 /// Esegue Docling su `pdf`, scrivendo i blocchi JSON e le immagini in `out`, e restituisce i blocchi del
 /// documento nell'ordine delle pagine. Lo script converte a blocchi di pagine e dopo ciascuno scrive
 /// `pagina X/Y`, che diventa la riga di avanzamento `<progress> pagina X/Y` (REQ-054).
-pub fn run(installation: &Path, pdf: &Path, out: &Path, progress: &str) -> Result<Vec<Document>, String> {
+fn run(installation: &Path, pdf: &Path, out: &Path, progress: &str) -> Result<Vec<Document>, String> {
     let mut command = Command::new(python(installation));
     // -I: le variabili PYTHON* e i pacchetti dell'utente non entrano nel Python distribuito.
     command.arg("-I").arg(installation.join("convert_pdf.py")).arg("--pdf").arg(pdf).arg("--out").arg(out);

@@ -62,7 +62,7 @@ fn convert_pdfium(src: &Path, dst: &Path, rel: &Path, progress: &str) -> Result<
 /// Struttura da Docling, salvata in `<dst>\.doc-ripper\<cartella>\<nome>_pdf\`, e Markdown con regole proprie.
 fn convert_docling(installation: &Path, src: &Path, dst: &Path, rel: &Path, progress: &str) -> Result<Outcome, String> {
     let work = dst.join(".doc-ripper").join(rel.with_file_name(base_name(rel)));
-    let documents = docling::run(installation, &src.join(rel), &work, progress)?;
+    let documents = docling::convert(installation, &src.join(rel), &work, progress)?;
     let mut images = Images::new(rel);
     let blocks: Vec<structure::Block> =
         documents.iter().flat_map(|document| structure::blocks(document, &work, &mut images)).collect();

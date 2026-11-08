@@ -35,6 +35,7 @@
 - REQ-070 implementato — Ripiego su PDFium se Docling manca o fallisce, con la nota `(ripiego PDFium: <motivo>)` nel riepilogo (`examples/fake_python.rs`, `src/docx.rs`, `src/pdf.rs`, `src/report.rs`, `src/run.rs`, `tests/docling.rs`)
 - REQ-049 implementato — Test che Docling viene invocato solo per i `.pdf`, non per `.docx` e fogli di calcolo (`tests/docling.rs`)
 - REQ-054 implementato — Docling eseguito a blocchi di 10 pagine, con la riga `[n/t] pagina X/Y` dopo ogni blocco (`docling/convert_pdf.py`, `examples/fake_python.rs`, `src/docling.rs`, `src/pdf.rs`, `tests/docling.rs`)
+- REQ-069 implementato — JSON di Docling riusato da `.doc-ripper\` se sha1 del PDF e versione di Docling (`chiave.txt`) non cambiano; PDF dei test scritti a mano senza PDFium (`Cargo.lock`, `Cargo.toml`, `src/docling.rs`, `src/pdf.rs`, `tests/docling.rs`)
 
 ## 2026-10-23
 - REQ-041 richiesto — doc-ripper: riga di avanzamento per ciascun file elaborato

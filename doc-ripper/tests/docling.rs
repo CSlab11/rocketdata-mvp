@@ -4,13 +4,12 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
-use pdfium_render::prelude::*;
-
 fn exe() -> PathBuf {
     PathBuf::from(env!("CARGO_BIN_EXE_doc-ripper"))
 }
 
-/// doc-ripper.exe e pdfium.dll in `dir`, con accanto `docling\` contenente il Python finto e lo script.
+/// doc-ripper.exe e pdfium.dll in `dir`, con accanto `docling\` contenente il Python finto, lo script e la
+/// cartella `docling-1.0.0.dist-info` da cui doc-ripper ricava la versione di Docling.
 fn install(dir: &Path) -> PathBuf {
     let build = exe().parent().unwrap().to_path_buf();
     fs::create_dir_all(dir.join("docling").join("python")).unwrap();
@@ -18,6 +17,7 @@ fn install(dir: &Path) -> PathBuf {
     fs::copy(build.join("pdfium.dll"), dir.join("pdfium.dll")).unwrap();
     fs::copy(build.join("examples").join("fake_python.exe"), dir.join("docling").join("python").join("python.exe")).unwrap();
     fs::write(dir.join("docling").join("convert_pdf.py"), "").unwrap();
+    fs::create_dir_all(dir.join("docling/python/Lib/site-packages/docling-1.0.0.dist-info")).unwrap();
     dir.join("doc-ripper.exe")
 }
 
@@ -29,17 +29,31 @@ fn run(exe: &Path, src: &Path, dst: &Path, envs: &[(&str, &str)]) -> Output {
         .unwrap()
 }
 
-/// PDF di una pagina con un testo, creato con la PDFium di doc-ripper.
+/// PDF di una pagina con un testo in Helvetica, scritto a mano: nei test in parallelo PDFium non si può
+/// collegare alla libreria da più thread insieme, quindi qui non si usa.
 fn sample_pdf(path: &Path, text: &str) {
-    let dir = exe().parent().unwrap().to_path_buf();
-    let pdfium = Pdfium::new(Pdfium::bind_to_library(Pdfium::pdfium_platform_library_name_at_path(&dir)).unwrap());
-    let mut document = pdfium.create_new_pdf().unwrap();
-    let font = document.fonts_mut().helvetica();
-    let mut page = document.pages_mut().create_page_at_end(PdfPagePaperSize::a4()).unwrap();
-    page.objects_mut().create_text_object(PdfPoints::new(72.0), PdfPoints::new(700.0), text, font, PdfPoints::new(12.0)).unwrap();
-    document.save_to_file(path).unwrap();
+    let stream = format!("BT /F1 12 Tf 72 700 Td ({text}) Tj ET");
+    let objects = [
+        "<< /Type /Catalog /Pages 2 0 R >>".to_string(),
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>".to_string(),
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>".to_string(),
+        format!("<< /Length {} >>\nstream\n{stream}\nendstream", stream.len()),
+        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>".to_string(),
+    ];
+    let mut pdf = String::from("%PDF-1.4\n");
+    let mut offsets = Vec::new();
+    for (i, object) in objects.iter().enumerate() {
+        offsets.push(pdf.len());
+        pdf.push_str(&format!("{} 0 obj\n{object}\nendobj\n", i + 1));
+    }
+    let xref = pdf.len();
+    pdf.push_str(&format!("xref\n0 {}\n0000000000 65535 f \n", objects.len() + 1));
+    for offset in offsets {
+        pdf.push_str(&format!("{offset:010} 00000 n \n"));
+    }
+    pdf.push_str(&format!("trailer\n<< /Size {} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n", objects.len() + 1));
+    fs::write(path, pdf).unwrap();
 }
-
 fn markdown(dst: &Path, name: &str) -> String {
     let md = fs::read_to_string(dst.join(name)).unwrap();
     md.split_once("\n\n").unwrap().1.to_string()
@@ -121,4 +135,38 @@ fn docling_solo_per_i_pdf() {
     assert_eq!(calls.len(), 1, "{calls:?}");
     assert!(calls[0].ends_with("report.pdf"), "{calls:?}");
     assert!(fs::read_to_string(dst.path().join("nota_docx.md")).unwrap().contains("Testo DOCX"));
+}
+/// Il JSON di Docling si riusa se il PDF e la versione di Docling non sono cambiati (REQ-069).
+#[test]
+fn riusa_il_json_se_pdf_e_versione_non_cambiano() {
+    let bin = tempfile::tempdir().unwrap();
+    let src = tempfile::tempdir().unwrap();
+    let dst = tempfile::tempdir().unwrap();
+    let log = bin.path().join("chiamate.txt");
+    let exe = install(bin.path());
+    let pdf = src.path().join("report.pdf");
+    let envs = [("FAKE_DOCLING_LOG", log.to_str().unwrap())];
+    let calls = || fs::read_to_string(&log).unwrap().lines().count();
+
+    sample_pdf(&pdf, "Prima versione");
+    assert!(run(&exe, src.path(), dst.path(), &envs).status.success());
+    assert_eq!(calls(), 1);
+
+    // Stesso PDF e stessa versione: nessuna nuova esecuzione, nessuna riga di avanzamento per pagina.
+    let output = run(&exe, src.path(), dst.path(), &envs);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert_eq!(calls(), 1);
+    assert!(!stdout.contains("pagina"), "{stdout}");
+    assert!(markdown(dst.path(), "report_pdf.md").contains("Seconda parte."));
+
+    // PDF cambiato: Docling di nuovo.
+    sample_pdf(&pdf, "Seconda versione");
+    assert!(run(&exe, src.path(), dst.path(), &envs).status.success());
+    assert_eq!(calls(), 2);
+
+    // Versione di Docling cambiata: Docling di nuovo.
+    let packages = bin.path().join("docling/python/Lib/site-packages");
+    fs::rename(packages.join("docling-1.0.0.dist-info"), packages.join("docling-1.1.0.dist-info")).unwrap();
+    assert!(run(&exe, src.path(), dst.path(), &envs).status.success());
+    assert_eq!(calls(), 3);
 }
