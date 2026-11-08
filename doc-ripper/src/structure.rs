@@ -60,6 +60,9 @@ impl Walker<'_> {
             return;
         }
         match self.document.get(reference) {
+            // Intestazioni e piè di pagina (furniture) non entrano nel Markdown (REQ-061).
+            Some(Item::Group(group)) if group.content_layer != "body" => {}
+            Some(Item::Text(text)) if text.content_layer != "body" || matches!(text.label.as_str(), "page_header" | "page_footer") => {}
             Some(Item::Group(group)) => match group.label.as_str() {
                 "list" | "ordered_list" => self.children(&group.children, depth + 1),
                 // Testo spezzato da formattazioni diverse: un solo paragrafo.
@@ -381,6 +384,23 @@ mod tests {
             table(&[head], 7),
         ];
         assert_eq!(refine(blocks.clone()), blocks);
+    }
+
+    #[test]
+    fn intestazioni_e_pie_di_pagina_esclusi() {
+        let md = markdown(
+            r##"{
+            "body": {"children": [{"$ref": "#/texts/0"}, {"$ref": "#/texts/1"}, {"$ref": "#/texts/2"}, {"$ref": "#/texts/3"}, {"$ref": "#/groups/0"}]},
+            "groups": [{"label": "list", "content_layer": "furniture", "children": [{"$ref": "#/texts/4"}]}],
+            "texts": [
+                {"label": "page_header", "text": "ECSS-Q-ST-70C"},
+                {"label": "text", "text": "Corpo."},
+                {"label": "page_footer", "text": "12"},
+                {"label": "text", "content_layer": "furniture", "text": "1 March 2026"},
+                {"label": "list_item", "text": "voce di servizio"}
+            ]}"##,
+        );
+        assert_eq!(md, "Corpo.\n");
     }
 
     #[test]

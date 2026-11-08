@@ -153,12 +153,16 @@ pub struct Group {
     pub label: String,
     #[serde(default)]
     pub children: Vec<Ref>,
+    #[serde(default = "body")]
+    pub content_layer: String,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Text {
     #[serde(default)]
     pub label: String,
+    #[serde(default = "body")]
+    pub content_layer: String,
     #[serde(default)]
     pub text: String,
     #[serde(default)]
@@ -223,6 +227,11 @@ pub struct ImageRef {
 #[derive(Debug, Deserialize)]
 pub struct Prov {
     pub page_no: u32,
+}
+
+/// Livello predefinito degli elementi: il corpo del documento.
+fn body() -> String {
+    "body".to_string()
 }
 
 /// Elemento a cui punta un riferimento.
