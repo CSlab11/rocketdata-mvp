@@ -65,6 +65,8 @@
 - REQ-030 implementato — Errore se mancano prototipi o vocabolario; lessico senza vocabolario termina con il messaggio di ingest.py invece di un errore SQLite (`core.py`, `query.py`, `vocabolario.py`)
 - f5eee83 attribuito a REQ-032 — codice entrato con il primo commit del tool
 - REQ-032 implementato — `classify.py`: cache degli embeddings dei paragrafi (`classify.py`)
+- f5eee83 attribuito a REQ-033 — codice entrato con il primo commit del tool
+- REQ-033 implementato — `classify.py`: scelta dei livelli con `--livelli` (`classify.py`)
 
 ## 2026-11-07
 - REQ-001 richiesto — Tool Python autonomo in `rocket-filter/`, dati generati esclusi da git
