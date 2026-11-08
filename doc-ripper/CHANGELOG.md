@@ -27,6 +27,8 @@
 - REQ-069 richiesto — doc-ripper: cache del JSON di Docling per sha1 e versione
 - REQ-070 richiesto — doc-ripper: ripiego su PDFium se Docling manca o fallisce
 - REQ-067 annullato — opzionale, rinviato finché un tool non usa i marcatori di pagina
+- REQ-068 annullato — sostituito da REQ-071 (corpus con ECSS reale e PDF generati)
+- REQ-071 richiesto — doc-ripper: corpus di riferimento con uno standard ECSS e PDF generati da HTML con Edge
 
 ## 2026-10-23
 - REQ-041 richiesto — doc-ripper: riga di avanzamento per ciascun file elaborato
